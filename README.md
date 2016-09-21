@@ -40,25 +40,25 @@ my_model_resource = {
      'model': 'myapp.models.MyModel',
      'fields': ('id', 'url', 'name', 'number'),
      'read_only_fields': ('id', 'url'),
-     'filter_fields': ('name'),
+     'filter_fields': ('name',),
      'allowable_operations': ('list', 'retrieve', 'create', 'update', 'delete') # This is default
 }
 
 API_SCHEMA = {
-    'resources': [{
+    'resources': {
          'myresource': my_model_resource
-    }]
+    }
 }
 ```
 
 Then just create the corresponding view:
 
 ```
-from apimas.controller import Controller
+from apimas.container import Container
 from myapp.models import MyModel
 
-controller = Controller('myapi')
-view = controller.create_view('myresource', MyModel, my_model_resource)
+container = Container('myapi')
+view = container.create_view('myresource', MyModel, my_model_resource)
 url_patterns = [view]
 
 ## your code
@@ -67,7 +67,7 @@ url_patterns = [view]
 or simply
 
 ```
-url_patterns = [controller.create_api_views(API_SCHEMA)] # In case of multiple resources.
+url_patterns = [container.create_api_views(API_SCHEMA)] # In case of multiple resources.
 ```
 At the end of this procedure, you easily created the following endpoints:
 
