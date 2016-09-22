@@ -2,6 +2,8 @@ from django.apps import apps
 from django.conf.urls import url, include
 from rest_framework import routers
 from apimas.modeling import utils
+from apimas.modeling.schemas import (
+    RESOURCE_SCHEMA_VALIDATOR, API_SCHEMA_VALIDATOR)
 from apimas.modeling.views import generate
 
 
@@ -20,6 +22,7 @@ class Container(object):
     def __init__(self, api):
         self.api = api
         self.router = routers.DefaultRouter()
+        self._validated_schema = None
 
     def create_view(self, resource_name, model, config):
         """
@@ -31,9 +34,7 @@ class Container(object):
         :param config: Dictionary which includes all required configuration
         of this endpoint.
         """
-        self.validate_view(model, config)
-        self.router.register(resource_name, generate(model, config),
-                             base_name=model._meta.model_name)
+        self.register_view(resource_name, model, config)
         return url(r'^' + self.api + '/', include(self.router.urls))
 
     def register_view(self, resource_name, model, config):
@@ -45,7 +46,9 @@ class Container(object):
         :param config: Dictionary which includes all required configuration
         of this endpoint.
         """
-        self.validate_view(model, config)
+        if not self._validated_schema:
+            self.validate_schema(config, RESOURCE_SCHEMA_VALIDATOR)
+        self.validate_model(model)
         self.router.register(resource_name, generate(model, config),
                              base_name=model._meta.model_name)
 
@@ -53,16 +56,26 @@ class Container(object):
         """
         Create a multiple views according to the API Schema given as parameter.
         """
+        self._validated_schema = self.validate_schema(
+            api_schema, API_SCHEMA_VALIDATOR)
         for resource, config in api_schema.get(
                 RESOURCES_LOOKUP_FIELD, {}).iteritems():
             model = utils.import_object(config.get(MODEL_LOOKUP_FIELD, ''))
             self.register_view(resource, model, config)
         return url(r'^' + self.api + '/', include(self.router.urls))
 
-    def validate_view(self, model, config):
-        # TODO perhaps we could define a validation schema for the given
-        # configuration schema, like JSON schema, XSD, etc.
-        if not config:
-            raise utils.ApimasException()
+    def validate_schema(self, schema, validator):
+        """ Validates a configuration object against a validation schema. """
+        if not validator.validate(schema):
+            raise utils.ApimasException(API_SCHEMA_VALIDATOR.errors)
+        return schema
+
+    def validate_model(self, model):
+        """
+        Checks if given model is in the list of registered models of the
+        current app.
+        """
         if model not in APP_MODELS:
-            raise utils.ApimasException()
+            raise utils.ApimasException(
+                'Model %s is not a registered model of this app' % (
+                    model._meta.model_name))
