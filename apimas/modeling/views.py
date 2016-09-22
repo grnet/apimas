@@ -1,6 +1,6 @@
 from rest_framework import viewsets, filters, mixins
-from apimas import utils
-from apimas.serializers import generate as generate_serializer
+from apimas.modeling import utils
+from apimas.modeling.serializers import generate as generate_serializer
 
 
 FILTERING_BACKENDS = {

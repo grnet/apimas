@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apimas import utils
+from apimas.modeling import utils
 
 
 READ_ONLY_FIELDS = ('id', 'url')

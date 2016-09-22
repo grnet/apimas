@@ -1,8 +1,8 @@
 from django.apps import apps
 from django.conf.urls import url, include
 from rest_framework import routers
-from apimas import utils
-from apimas.views import generate
+from apimas.modeling import utils
+from apimas.modeling.views import generate
 
 
 APP_MODELS = apps.get_models()
