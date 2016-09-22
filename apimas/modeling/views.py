@@ -43,17 +43,18 @@ def generate(model, config):
     def get_queryset(self):
         return model.objects.all()
 
-    authentication_classes = config.get('authentication_classes', [])
-    permission_classes = config.get('permission_classes', [])
+    authentication_classes = config.pop('authentication_classes', [])
+    permission_classes = config.pop('permission_classes', [])
+    field_schema = config.pop('field_schema', {})
     standard_content = {
-        'serializer_class': generate_serializer(model, config),
+        'serializer_class': generate_serializer(model, field_schema),
         'get_queryset': get_queryset,
         'authentication_classes': map(LOAD_CLASS, authentication_classes),
         'permission_classes': map(LOAD_CLASS, permission_classes)
     }
     attrs = {field: config.get(field, default)
              for field, default in VIEWSET_ATTRS}
-    custom_methods = utils.get_methods(config.get('viewset_code', None))
+    custom_methods = utils.get_methods(config.pop('viewset_code', None))
     filter_backends = get_filter_backends(config)
     dicts = [standard_content, attrs, custom_methods, filter_backends]
     # Compose content i.e. standard content, attributes, methods.
@@ -69,7 +70,7 @@ def get_filter_backends(config):
     """
     filter_backends = ()
     for filter_option, filter_backend in FILTERING_BACKENDS.iteritems():
-        value = config.get(filter_option, None)
+        value = config.pop(filter_option, None)
         if value:
             filter_backends += (filter_backend,)
     return {'filter_backends': filter_backends}
@@ -92,9 +93,9 @@ def get_bases_classes(config):
     :returns: A tuple of the corresponding base classes.
     """
     bases = ()
-    operations = config.get('allowable_operations', None)
+    operations = config.pop('allowable_operations', None)
     bases += (viewsets.ModelViewSet,) if not operations\
         else tuple([MIXINS[operation] for operation in operations]) + (
-            viewsets.GenericViewSet,) + tuple(map(LOAD_CLASS, config.get(
+            viewsets.GenericViewSet,) + tuple(map(LOAD_CLASS, config.pop(
                 'custom_mixins', [])))
     return bases

@@ -24,7 +24,7 @@ def generate(model, config):
     """
     meta = generate_meta(model, config)
     nested_serializers = generate_nested_serializers(model, config)
-    custom_methods = utils.get_methods(config.get('serializer_code', None))
+    custom_methods = utils.get_methods(config.pop('serializer_code', None))
     dicts = [meta, nested_serializers, custom_methods]
     # Compose content i.e. nested serializers, Meta class and custom methods.
     class_dict = dict(sum((list(content.items()) for content in dicts), []))
@@ -95,19 +95,20 @@ def generate_nested_serializers(model, config):
     :returns: A dictionary keyed by the api field name which corresponds to
     the nested serializer and it maps to the corresponding serializer class.
     """
-    nested_objects = config.get('nested_objects', [])
+    nested_objects = config.pop('nested_objects', {})
     if not nested_objects:
         return {}
     nested_serializers = {}
     for api_field_name, nested_object in nested_objects.iteritems():
         model_field_name = nested_object.get('model_field', None)
         rel_model = get_related_model(model, model_field_name)
-        serializer_class = generate(rel_model, nested_object)
+        serializer_class = generate(rel_model, nested_object.pop(
+            'field_schema', {}))
         many = model._meta.get_field(
             model_field_name).get_internal_type() == MANY_TO_MANY_REL
         source = None if api_field_name == model_field_name\
             else model_field_name
-        extra_kwargs = config.get('extra_kwargs', {})
+        extra_kwargs = config.pop('extra_kwargs', {})
         field_kwargs = extra_kwargs.get(api_field_name, {})\
             if extra_kwargs else {}
         nested_serializers[api_field_name] = serializer_class(
@@ -125,6 +126,6 @@ def generate_meta(model, config):
     serializer.
     """
     class_dict = {'model': model}
-    class_dict.update({field: config.get(field, default)
+    class_dict.update({field: config.pop(field, default)
                        for field, default in SERIALIZER_ATTRS})
     return {'Meta': type('Meta', (object,), class_dict)}

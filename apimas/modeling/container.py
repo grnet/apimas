@@ -60,7 +60,7 @@ class Container(object):
             api_schema, API_SCHEMA_VALIDATOR)
         for resource, config in api_schema.get(
                 RESOURCES_LOOKUP_FIELD, {}).iteritems():
-            model = utils.import_object(config.get(MODEL_LOOKUP_FIELD, ''))
+            model = utils.import_object(config.pop(MODEL_LOOKUP_FIELD, ''))
             self.register_view(resource, model, config)
         return url(r'^' + self.api + '/', include(self.router.urls))
 
