@@ -84,7 +84,7 @@ def get_base_or_proxy(base_model_class, proxy_model_class):
     :param proxy_model_class: Specified proxy model class.
     :returns: Either the base model class or proxy model class.
 
-    :raises: InvalidProxyModel if the given proxy model is not an actual
+    :raises: ApimasException if the given proxy model is not an actual
     proxy model of the defined base model.
     """
     if not proxy_model_class:
