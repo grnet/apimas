@@ -122,9 +122,6 @@ RESOURCE_SCHEMA = {
         'type': 'string',
         'required': True,
     },
-    'viewset_code': {
-        'type': 'string'
-    },
     'filter_fields': {
         'type': 'list',
         'schema': {'type': 'string'},

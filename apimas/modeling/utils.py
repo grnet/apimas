@@ -35,22 +35,3 @@ def get_package_module(module_name):
         return importlib.import_module(module_name)
     except ImportError:
         return None
-
-
-def get_methods(module):
-    """
-    This function looks up for specific methods in a specified module and if
-    methods exist, then it bounds them to the given class.
-    """
-    if module is None:
-        return {}
-    module = get_package_module(module)
-    if module is None:
-        return {}
-    exposed_methods = getattr(module, 'EXPOSED_METHODS', [])
-    methods = {}
-    for method_name in exposed_methods:
-        custom_method = getattr(module, method_name, None)
-        if custom_method is not None:
-            methods[method_name] = custom_method
-    return methods

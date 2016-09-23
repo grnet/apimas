@@ -54,9 +54,8 @@ def generate(model, config):
     }
     attrs = {field: config.get(field, default)
              for field, default in VIEWSET_ATTRS}
-    custom_methods = utils.get_methods(config.pop('viewset_code', None))
     filter_backends = get_filter_backends(config)
-    dicts = [standard_content, attrs, custom_methods, filter_backends]
+    dicts = [standard_content, attrs, filter_backends]
     # Compose content i.e. standard content, attributes, methods.
     class_dict = dict(sum((list(content.items()) for content in dicts), []))
     bases = get_bases_classes(config)

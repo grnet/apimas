@@ -36,8 +36,7 @@ def generate(model, config, is_hyperlinked=True):
         if is_hyperlinked else serializers.ModelSerializer
     meta = generate_meta(model, config)
     nested_serializers = generate_nested_serializers(model, config)
-    custom_methods = utils.get_methods(config.get('serializer_code', None))
-    dicts = [meta, nested_serializers, custom_methods]
+    dicts = [meta, nested_serializers]
     # Compose content i.e. nested serializers, Meta class and custom methods.
     class_dict = dict(sum((list(content.items()) for content in dicts), []))
     custom_mixins = map(utils.LOAD_CLASS, config.pop('custom_mixins', []))
