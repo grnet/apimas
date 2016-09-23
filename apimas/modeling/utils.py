@@ -5,6 +5,9 @@ class ApimasException(Exception):
     pass
 
 
+LOAD_CLASS = lambda x: import_object(x)
+
+
 def import_object(obj_path):
     try:
         module_name, obj_name = obj_path.rsplit('.', 1)

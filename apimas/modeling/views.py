@@ -21,9 +21,6 @@ MIXINS = {
 }
 
 
-LOAD_CLASS = lambda x: utils.import_object(x)
-
-
 def generate(model, config):
     """
     A function to generate a viewset according to the model given as
@@ -51,8 +48,9 @@ def generate(model, config):
         'serializer_class': generate_serializer(
             model, field_schema, is_hyperlinked),
         'get_queryset': get_queryset,
-        'authentication_classes': map(LOAD_CLASS, authentication_classes),
-        'permission_classes': map(LOAD_CLASS, permission_classes)
+        'authentication_classes': map(
+            utils.LOAD_CLASS, authentication_classes),
+        'permission_classes': map(utils.LOAD_CLASS, permission_classes)
     }
     attrs = {field: config.get(field, default)
              for field, default in VIEWSET_ATTRS}

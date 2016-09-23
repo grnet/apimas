@@ -27,8 +27,9 @@ FIELD_SCHEMA = {
         'type': 'list',
         'schema': {'type': 'string'}
     },
-    'serializer_code': {
-        'type': 'string'
+    'custom_mixins': {
+        'type': 'list',
+        'schema': {'type': 'string'}
     },
     'extra_kwargs': {
         'type': 'dict',
