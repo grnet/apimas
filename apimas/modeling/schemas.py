@@ -42,6 +42,9 @@ FIELD_SCHEMA = {
                 'allow_blank': {
                     'type': 'boolean'
                 },
+                'allow_empty': {
+                    'type': 'boolean'
+                },
                 'required': {
                     'type': 'boolean'
                 },
@@ -50,6 +53,26 @@ FIELD_SCHEMA = {
                 },
                 'write_only': {
                     'type': 'boolean'
+                },
+                'label': {
+                    'type': 'string'
+                },
+                'help_text': {
+                    'type': 'string'
+                },
+                'validators': {
+                    'type': 'list'
+                },
+                'error_messages': {
+                    'type': 'dict',
+                    'allow_unknown': True,
+                    'valueschema': {
+                        'type': 'list',
+                        'schema': {'type': 'string'}
+                    }
+                },
+                'source': {
+                    'type': 'string'
                 },
             }
         }
