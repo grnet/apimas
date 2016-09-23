@@ -106,6 +106,9 @@ NESTED_OBJECT_SCHEMA = {
 
 
 RESOURCE_SCHEMA = {
+    'hyperlinked': {
+        'type': 'boolean'
+    },
     'authentication_classes': {
         'type': 'list',
         'schema': {'type': 'string'},

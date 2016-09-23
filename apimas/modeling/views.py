@@ -46,8 +46,10 @@ def generate(model, config):
     authentication_classes = config.pop('authentication_classes', [])
     permission_classes = config.pop('permission_classes', [])
     field_schema = config.pop('field_schema', {})
+    is_hyperlinked = config.pop('hyperlinked', True)
     standard_content = {
-        'serializer_class': generate_serializer(model, field_schema),
+        'serializer_class': generate_serializer(
+            model, field_schema, is_hyperlinked),
         'get_queryset': get_queryset,
         'authentication_classes': map(LOAD_CLASS, authentication_classes),
         'permission_classes': map(LOAD_CLASS, permission_classes)

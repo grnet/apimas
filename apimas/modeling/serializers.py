@@ -18,7 +18,7 @@ PROPERTIES = {
 }
 
 
-def generate(model, config):
+def generate(model, config, is_hyperlinked=True):
     """
     A function to generate a serializer according to the model given
     as parameter.
@@ -32,14 +32,15 @@ def generate(model, config):
     serializer.
     :return: A `ModelSerializer` or `HyperLinkedModelSerializer` class.
     """
+    serializer_base_class = serializers.HyperlinkedModelSerializer\
+        if is_hyperlinked else serializers.ModelSerializer
     meta = generate_meta(model, config)
     nested_serializers = generate_nested_serializers(model, config)
     custom_methods = utils.get_methods(config.get('serializer_code', None))
     dicts = [meta, nested_serializers, custom_methods]
     # Compose content i.e. nested serializers, Meta class and custom methods.
     class_dict = dict(sum((list(content.items()) for content in dicts), []))
-    cls = type(model.__name__, (serializers.HyperlinkedModelSerializer,),
-               class_dict)
+    cls = type(model.__name__, (serializer_base_class,), class_dict)
     return cls
 
 
