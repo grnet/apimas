@@ -15,6 +15,18 @@ FIELD_SCHEMA = {
         'type': 'list',
         'schema': {'type': 'string'}
     },
+    'required_fields': {
+        'type': 'list',
+        'schema': {'type': 'string'}
+    },
+    'nullable_fields': {
+        'type': 'list',
+        'schema': {'type': 'string'}
+    },
+    'blankable_fields': {
+        'type': 'list',
+        'schema': {'type': 'string'}
+    },
     'serializer_code': {
         'type': 'string'
     },
