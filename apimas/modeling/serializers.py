@@ -3,6 +3,12 @@ from rest_framework import serializers
 from apimas.modeling import utils
 
 
+NON_INTERSECTION_PAIRS = [
+    ('required_fields', 'read_only_fields'),
+    ('wrte_only_fields', 'read_only_fields'),
+]
+
+
 PROPERTIES = {
     'read_only_fields': 'read_only',
     'write_only_fields': 'write_only',
@@ -143,6 +149,23 @@ def generate_meta(model, config):
     return {'Meta': type('Meta', (object,), class_dict)}
 
 
+def run_constraints(config):
+    """
+    Run constraints for the field attributes.
+
+    It is not meaningful for some attributes to placed together, e.g.
+    a field cannot be set as required and read only, etc.
+
+    :raises ApimasException: if there are intersections between lists of
+    attributes.
+    """
+    for u, v in NON_INTERSECTION_PAIRS:
+        inter = set(config.get(u, [])) & set(config.get(v, []))
+        if inter:
+            raise utils.ApimasException('%s should not both %s and %s' % (
+                ','.join(inter), u, v))
+
+
 def build_field_properties(exposed_fields, config, extra_kwargs):
     """
     This functions builds a dictionary with the exposed fields to API and their
@@ -157,6 +180,7 @@ def build_field_properties(exposed_fields, config, extra_kwargs):
 
     :returns: A dictionary of exposed fields along with their properties.
     """
+    run_constraints(config)
     field_properties = defaultdict(dict, extra_kwargs or {})
     for field in exposed_fields:
         for attr, prop in PROPERTIES.iteritems():
