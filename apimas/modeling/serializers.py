@@ -1,11 +1,15 @@
+from collections import defaultdict
 from rest_framework import serializers
 from apimas.modeling import utils
 
 
-READ_ONLY_FIELDS = ('id', 'url')
-SERIALIZER_ATTRS = [('fields', '__all__'),
-                    ('read_only_fields', READ_ONLY_FIELDS),
-                    ('write_only_fields', None), ('extra_kwargs', {})]
+PROPERTIES = {
+    'read_only_fields': 'read_only',
+    'write_only_fields': 'write_only',
+    'required_fields': 'required',
+    'nullable_fields': 'allow_null',
+    'blankable_fields': 'allow_blank',
+}
 
 
 def generate(model, config):
@@ -24,7 +28,7 @@ def generate(model, config):
     """
     meta = generate_meta(model, config)
     nested_serializers = generate_nested_serializers(model, config)
-    custom_methods = utils.get_methods(config.pop('serializer_code', None))
+    custom_methods = utils.get_methods(config.get('serializer_code', None))
     dicts = [meta, nested_serializers, custom_methods]
     # Compose content i.e. nested serializers, Meta class and custom methods.
     class_dict = dict(sum((list(content.items()) for content in dicts), []))
@@ -95,24 +99,26 @@ def generate_nested_serializers(model, config):
     :returns: A dictionary keyed by the api field name which corresponds to
     the nested serializer and it maps to the corresponding serializer class.
     """
-    nested_objects = config.pop('nested_objects', {})
+    nested_objects = config.get('nested_objects', {})
     if not nested_objects:
         return {}
     nested_serializers = {}
     for api_field_name, nested_object in nested_objects.iteritems():
         model_field_name = nested_object.get('model_field', None)
         rel_model = get_related_model(model, model_field_name)
-        serializer_class = generate(rel_model, nested_object.pop(
+        serializer_class = generate(rel_model, nested_object.get(
             'field_schema', {}))
         many = model._meta.get_field(
             model_field_name).get_internal_type() == MANY_TO_MANY_REL
         source = None if api_field_name == model_field_name\
             else model_field_name
-        extra_kwargs = config.pop('extra_kwargs', {})
+        extra_kwargs = config.get('extra_kwargs', {})
         field_kwargs = extra_kwargs.get(api_field_name, {})\
             if extra_kwargs else {}
         nested_serializers[api_field_name] = serializer_class(
-            many=many, source=source, **field_kwargs)
+            many=many, source=source, **build_field_properties(
+                [api_field_name], config, field_kwargs).get(
+                    api_field_name, {}))
     return nested_serializers
 
 
@@ -125,7 +131,35 @@ def generate_meta(model, config):
     :param config: Dictionary which includes all required configuration of
     serializer.
     """
-    class_dict = {'model': model}
-    class_dict.update({field: config.pop(field, default)
-                       for field, default in SERIALIZER_ATTRS})
+    exposed_fields = config.get('fields', [])
+    extra_kwargs = config.get('extra_kwargs', {})
+    field_properties = build_field_properties(
+        exposed_fields, config, extra_kwargs)
+    class_dict = {
+        'fields': exposed_fields,
+        'extra_kwargs': field_properties,
+        'model': model,
+    }
     return {'Meta': type('Meta', (object,), class_dict)}
+
+
+def build_field_properties(exposed_fields, config, extra_kwargs):
+    """
+    This functions builds a dictionary with the exposed fields to API and their
+    attributes.
+
+    It actually maps each field to a property according to its specified
+    category. For example, fields which are included in the category of
+    `required_fields`, they have property `required` as `True`.
+
+    :param exposed_fields: Iterable with the fields exposed to API.
+    :param config: Dictionary with the field configuration.
+
+    :returns: A dictionary of exposed fields along with their properties.
+    """
+    field_properties = defaultdict(dict, extra_kwargs or {})
+    for field in exposed_fields:
+        for attr, prop in PROPERTIES.iteritems():
+            if field in config.get(attr, []):
+                field_properties[field][prop] = True
+    return field_properties
