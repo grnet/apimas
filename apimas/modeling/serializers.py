@@ -66,12 +66,13 @@ def get_related_model(model, model_field_name):
     :raises: ApimasException If the given field is not related to another
     model.
     """
+
     model_field = model._meta.get_field(model_field_name)
     if model_field.rel is None:
         raise utils.ApimasException(
             'Field %s is not related with another model' % (
                 repr(model_field_name)))
-    return model_field.rel.to
+    return model_field.related_model
 
 
 def get_base_or_proxy(base_model_class, proxy_model_class):
