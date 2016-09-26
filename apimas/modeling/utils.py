@@ -5,6 +5,18 @@ class ApimasException(Exception):
     pass
 
 
+AUTH_CLASSES_LOOKUP_FIELD = 'authentication_classes'
+PERM_CLASSES_LOOKUP_FIELD = 'permission_classes'
+SER_CLASS_LOOKUP_FIELD = 'serializer_class'
+HYPERLINKED_LOOKUP_FIELD = 'hyperlinked'
+OPERATIONS_LOOKUP_FIELD = 'allowable_operations'
+FIELD_SCHEMA_LOOKUP_FIELD = 'field_schema'
+CUSTOM_MIXINS_LOOKUP_FIELD = 'custom_mixins'
+NESTED_OBJECTS_LOOKUP_FIELD = 'nested_objects'
+FIELDS_LOOKUP_FIELD = 'fields'
+MODEL_LOOKUP_FIELD = 'model_field'
+EXTRA_KWARGS_LOOKUP_FIELD = 'extra_kwargs'
+
 LOAD_CLASS = lambda x: import_object(x)
 
 

@@ -41,11 +41,15 @@ def generate(model, config, **kwargs):
         return model.objects.all()
 
     authentication_classes = config.pop(
-        'authentication_classes', kwargs.pop('authentication_classes', []))
+        utils.AUTH_CLASSES_LOOKUP_FIELD,
+        kwargs.pop(utils.AUTH_CLASSES_LOOKUP_FIELD, []))
     permission_classes = config.pop(
-        'permission_classes', kwargs.pop('permission_classes', []))
-    field_schema = config.pop('field_schema', {})
-    is_hyperlinked = config.pop('hyperlinked', kwargs.pop('hyperlinked', True))
+        utils.PERM_CLASSES_LOOKUP_FIELD,
+        kwargs.pop(utils.PERM_CLASSES_LOOKUP_FIELD, []))
+    field_schema = config.pop(utils.FIELD_SCHEMA_LOOKUP_FIELD, {})
+    is_hyperlinked = config.pop(
+        utils.HYPERLINKED_LOOKUP_FIELD,
+        kwargs.pop(utils.HYPERLINKED_LOOKUP_FIELD, True))
     standard_content = {
         'serializer_class': generate_serializer(
             model, field_schema, is_hyperlinked),
@@ -94,9 +98,9 @@ def get_bases_classes(config):
     :returns: A tuple of the corresponding base classes.
     """
     bases = ()
-    operations = config.pop('allowable_operations', None)
+    operations = config.pop(utils.OPERATIONS_LOOKUP_FIELD, None)
     bases += (viewsets.ModelViewSet,) if not operations\
         else tuple([MIXINS[operation] for operation in operations]) + (
             viewsets.GenericViewSet,) + tuple(map(utils.LOAD_CLASS, config.pop(
-                'custom_mixins', [])))
+                utils.CUSTOM_MIXINS_LOOKUP_FIELD, [])))
     return bases

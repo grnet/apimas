@@ -39,7 +39,8 @@ def generate(model, config, is_hyperlinked=True):
     dicts = [meta, nested_serializers]
     # Compose content i.e. nested serializers, Meta class and custom methods.
     class_dict = dict(sum((list(content.items()) for content in dicts), []))
-    custom_mixins = map(utils.LOAD_CLASS, config.pop('custom_mixins', []))
+    custom_mixins = map(utils.LOAD_CLASS, config.pop(
+        utils.CUSTOM_MIXINS_LOOKUP_FIELD, []))
     cls = type(model.__name__, tuple(custom_mixins) + (
         serializer_base_class,), class_dict)
     return cls
@@ -107,20 +108,20 @@ def generate_nested_serializers(model, config):
     :returns: A dictionary keyed by the api field name which corresponds to
     the nested serializer and it maps to the corresponding serializer class.
     """
-    nested_objects = config.get('nested_objects', {})
+    nested_objects = config.get(utils.NESTED_OBJECTS_LOOKUP_FIELD, {})
     if not nested_objects:
         return {}
     nested_serializers = {}
     for api_field_name, nested_object in nested_objects.iteritems():
-        model_field_name = nested_object.get('model_field', None)
+        model_field_name = nested_object.get(utils.MODEL_LOOKUP_FIELD, None)
         rel_model = get_related_model(model, model_field_name)
         serializer_class = generate(rel_model, nested_object.get(
-            'field_schema', {}))
+            utils.FIELD_SCHEMA_LOOKUP_FIELD, {}))
         many = model._meta.get_field(
             model_field_name).get_internal_type() == MANY_TO_MANY_REL
         source = None if api_field_name == model_field_name\
             else model_field_name
-        extra_kwargs = config.get('extra_kwargs', {})
+        extra_kwargs = config.get(utils.EXTRA_KWARGS_LOOKUP_FIELD, {})
         field_kwargs = extra_kwargs.get(api_field_name, {})\
             if extra_kwargs else {}
         nested_serializers[api_field_name] = serializer_class(
@@ -139,8 +140,8 @@ def generate_meta(model, config):
     :param config: Dictionary which includes all required configuration of
     serializer.
     """
-    exposed_fields = config.get('fields', [])
-    extra_kwargs = config.get('extra_kwargs', {})
+    exposed_fields = config.get(utils.FIELDS_LOOKUP_FIELD, [])
+    extra_kwargs = config.get(utils.EXTRA_KWARGS_LOOKUP_FIELD, {})
     field_properties = build_field_properties(
         exposed_fields, config, extra_kwargs)
     class_dict = {
