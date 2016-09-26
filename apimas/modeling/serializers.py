@@ -47,6 +47,7 @@ def generate(model, config, is_hyperlinked=True):
 
 
 MANY_TO_MANY_REL = 'ManyToManyField'
+CHAR_FIELD = 'CharField'
 
 
 def get_related_model(model, model_field_name):
@@ -126,7 +127,7 @@ def generate_nested_serializers(model, config):
             if extra_kwargs else {}
         nested_serializers[api_field_name] = serializer_class(
             many=many, source=source, **build_field_properties(
-                [api_field_name], config, field_kwargs).get(
+                model, [api_field_name], config, field_kwargs).get(
                     api_field_name, {}))
     return nested_serializers
 
@@ -143,7 +144,7 @@ def generate_meta(model, config):
     exposed_fields = config.get(utils.FIELDS_LOOKUP_FIELD, [])
     extra_kwargs = config.get(utils.EXTRA_KWARGS_LOOKUP_FIELD, {})
     field_properties = build_field_properties(
-        exposed_fields, config, extra_kwargs)
+        model, exposed_fields, config, extra_kwargs)
     class_dict = {
         'fields': exposed_fields,
         'extra_kwargs': field_properties,
@@ -152,13 +153,15 @@ def generate_meta(model, config):
     return {'Meta': type('Meta', (object,), class_dict)}
 
 
-def run_constraints(config):
+def run_constraints(model, config):
     """
     Run constraints for the field attributes.
 
     It is not meaningful for some attributes to placed together, e.g.
     a field cannot be set as required and read only, etc.
 
+    :param model: Model class attached to the generated class of serializer.
+    :param config: Dictionary with the configuration of serializer.
     :raises ApimasException: if there are intersections between lists of
     attributes.
     """
@@ -167,9 +170,16 @@ def run_constraints(config):
         if inter:
             raise utils.ApimasException('%s should not both %s and %s' % (
                 ','.join(inter), u, v))
+    non_char_fields = [field for field in config.get('blankable_fields', [])
+                       if model._meta.fields(
+                           field).get_internal_type() != CHAR_FIELD]
+    if non_char_fields:
+        raise utils.ApimasException(
+            '%s cannot be set as blankable as they are not CharField' % (
+                ','.join(non_char_fields)))
 
 
-def build_field_properties(exposed_fields, config, extra_kwargs):
+def build_field_properties(model, exposed_fields, config, extra_kwargs):
     """
     This functions builds a dictionary with the exposed fields to API and their
     attributes.
@@ -178,12 +188,14 @@ def build_field_properties(exposed_fields, config, extra_kwargs):
     category. For example, fields which are included in the category of
     `required_fields`, they have property `required` as `True`.
 
+    :param model: Model class attached to the generated class.
     :param exposed_fields: Iterable with the fields exposed to API.
     :param config: Dictionary with the field configuration.
+    :paran extra_kwargs: Dictionary with additional configuration of fields.
 
     :returns: A dictionary of exposed fields along with their properties.
     """
-    run_constraints(config)
+    run_constraints(model, config)
     field_properties = defaultdict(dict, extra_kwargs or {})
     for field in exposed_fields:
         for attr, prop in PROPERTIES.iteritems():
