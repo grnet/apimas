@@ -3,7 +3,7 @@ from rest_framework import serializers
 from apimas.modeling import utils
 
 
-NON_INTERSECTION_PAIRS = [
+NON_INTERSECTIONAL_PAIRS = [
     ('required_fields', 'read_only_fields'),
     ('wrte_only_fields', 'read_only_fields'),
 ]
@@ -162,7 +162,7 @@ def run_constraints(config):
     :raises ApimasException: if there are intersections between lists of
     attributes.
     """
-    for u, v in NON_INTERSECTION_PAIRS:
+    for u, v in NON_INTERSECTIONAL_PAIRS:
         inter = set(config.get(u, [])) & set(config.get(v, []))
         if inter:
             raise utils.ApimasException('%s should not both %s and %s' % (
