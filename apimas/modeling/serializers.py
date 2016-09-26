@@ -169,8 +169,6 @@ def validate(model, field_properties):
     attributes.
     """
     for field, config in field_properties.iteritems():
-        import pdb
-        pdb.set_trace()
         for u, v in NON_INTERSECTIONAL_PAIRS:
             if config.get(u, False) and config.get(v, False):
                 raise utils.ApimasException(
