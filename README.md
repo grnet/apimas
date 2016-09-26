@@ -14,7 +14,7 @@ complexity.
 First, you have to define your django model with your fields and their constraints:
 
 ```python
-class MyModel(models.Model):
+class AnotherModel(models.Model):
     id = models.AutoField(primary_key=True)
     age = models.IntegerField(blank=False)
     price = models.FloatField(blank=False)
