@@ -21,7 +21,7 @@ MIXINS = {
 }
 
 
-def generate(model, config):
+def generate(model, config, **kwargs):
     """
     A function to generate a viewset according to the model given as
     parameter.
@@ -40,10 +40,12 @@ def generate(model, config):
     def get_queryset(self):
         return model.objects.all()
 
-    authentication_classes = config.pop('authentication_classes', [])
-    permission_classes = config.pop('permission_classes', [])
+    authentication_classes = config.pop(
+        'authentication_classes', kwargs.pop('authentication_classes', []))
+    permission_classes = config.pop(
+        'permission_classes', kwargs.pop('permission_classes', []))
     field_schema = config.pop('field_schema', {})
-    is_hyperlinked = config.pop('hyperlinked', True)
+    is_hyperlinked = config.pop('hyperlinked', kwargs.pop('hyperlinked', True))
     standard_content = {
         'serializer_class': generate_serializer(
             model, field_schema, is_hyperlinked),
@@ -95,6 +97,6 @@ def get_bases_classes(config):
     operations = config.pop('allowable_operations', None)
     bases += (viewsets.ModelViewSet,) if not operations\
         else tuple([MIXINS[operation] for operation in operations]) + (
-            viewsets.GenericViewSet,) + tuple(map(LOAD_CLASS, config.pop(
+            viewsets.GenericViewSet,) + tuple(map(utils.LOAD_CLASS, config.pop(
                 'custom_mixins', [])))
     return bases

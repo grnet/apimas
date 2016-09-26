@@ -154,6 +154,22 @@ API_SCHEMA = {
             'type': 'dict',
             'schema': RESOURCE_SCHEMA
         }
+    },
+    'global': {
+        'type': 'dict',
+        'schema': {
+            'hyperlinked': {
+                'type': 'boolean'
+            },
+            'authentication_classes': {
+                'type': 'list',
+                'schema': {'type': 'string'},
+            },
+            'permission_classes': {
+                'type': 'list',
+                'schema': {'type': 'string'},
+            }
+        }
     }
 }
 

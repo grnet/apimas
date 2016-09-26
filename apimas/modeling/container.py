@@ -37,7 +37,7 @@ class Container(object):
         self.register_view(resource_name, model, config)
         return url(r'^' + self.api + '/', include(self.router.urls))
 
-    def register_view(self, resource_name, model, config):
+    def register_view(self, resource_name, model, config, **kwargs):
         """
         Creates and registers a view to the list of already created.
 
@@ -49,7 +49,7 @@ class Container(object):
         if not self._validated_schema:
             self.validate_schema(config, RESOURCE_SCHEMA_VALIDATOR)
         self.validate_model(model)
-        self.router.register(resource_name, generate(model, config),
+        self.router.register(resource_name, generate(model, config, **kwargs),
                              base_name=model._meta.model_name)
 
     def create_api_views(self, api_schema):
@@ -58,10 +58,11 @@ class Container(object):
         """
         self._validated_schema = self.validate_schema(
             api_schema, API_SCHEMA_VALIDATOR)
+        global_settings = api_schema.pop('global', {})
         for resource, config in api_schema.get(
                 RESOURCES_LOOKUP_FIELD, {}).iteritems():
             model = utils.import_object(config.pop(MODEL_LOOKUP_FIELD, ''))
-            self.register_view(resource, model, config)
+            self.register_view(resource, model, config, **global_settings)
         return url(r'^' + self.api + '/', include(self.router.urls))
 
     def validate_schema(self, schema, validator):
