@@ -118,6 +118,10 @@ RESOURCE_SCHEMA = {
         'type': 'list',
         'schema': {'type': 'string'},
     },
+    'custom_mixins': {
+        'type': 'list',
+        'schema': {'type': 'string'},
+    },
     'model': {
         'type': 'string',
         'required': True,
