@@ -46,7 +46,6 @@ def generate(model, config, is_hyperlinked=True):
     return cls
 
 
-MANY_TO_MANY_REL = 'ManyToManyField'
 CHAR_FIELD = 'CharField'
 
 
@@ -68,7 +67,7 @@ def get_related_model(model, model_field_name):
     """
 
     model_field = model._meta.get_field(model_field_name)
-    if model_field.rel is None:
+    if model_field.related_model is None:
         raise utils.ApimasException(
             'Field %s is not related with another model' % (
                 repr(model_field_name)))
@@ -119,8 +118,8 @@ def generate_nested_serializers(model, config):
         rel_model = get_related_model(model, model_field_name)
         serializer_class = generate(rel_model, nested_object.get(
             utils.FIELD_SCHEMA_LOOKUP_FIELD, {}))
-        many = model._meta.get_field(
-            model_field_name).get_internal_type() == MANY_TO_MANY_REL
+        field = model._meta.get_field(model_field_name)
+        many = field.many_to_many or field.one_to_many
         source = None if api_field_name == model_field_name\
             else model_field_name
         extra_kwargs = config.get(utils.EXTRA_KWARGS_LOOKUP_FIELD, {})
