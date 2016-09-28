@@ -126,9 +126,8 @@ def generate_nested_serializers(model, config):
         field_kwargs = extra_kwargs.get(api_field_name, {})\
             if extra_kwargs else {}
         nested_serializers[api_field_name] = serializer_class(
-            many=many, source=source, **build_field_properties(
-                [api_field_name], config, field_kwargs).get(
-                    api_field_name, {}))
+            many=many, source=source, **set_field_properties(
+                api_field_name, config, field_kwargs))
     return nested_serializers
 
 
@@ -181,6 +180,22 @@ def validate(model, field_properties):
                     repr(field)))
 
 
+def set_field_properties(field, config, extra_kwargs):
+    """
+    This functions sets properties for a specific field.
+
+    :param field: Field name.
+    :param config: Dictionary used as a pool to retrieve field configuration
+    implicitly.
+    :param extra_kwargs: Extra field properties
+    """
+    properties = dict(extra_kwargs)
+    for attr, prop in PROPERTIES.iteritems():
+        if field in config.get(attr, []):
+            properties[prop] = True
+    return properties
+
+
 def build_field_properties(exposed_fields, config, extra_kwargs):
     """
     This functions builds a dictionary with the exposed fields to API and their
@@ -197,8 +212,6 @@ def build_field_properties(exposed_fields, config, extra_kwargs):
     :returns: A dictionary of exposed fields along with their properties.
     """
     field_properties = defaultdict(dict, extra_kwargs or {})
-    for field in exposed_fields:
-        for attr, prop in PROPERTIES.iteritems():
-            if field in config.get(attr, []):
-                field_properties[field][prop] = True
-    return field_properties
+    return {field: set_field_properties(
+        field, config, field_properties.get(field, {}))
+            for field in exposed_fields}
