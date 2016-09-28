@@ -97,10 +97,10 @@ def get_bases_classes(config):
 
     :returns: A tuple of the corresponding base classes.
     """
-    bases = ()
+    custom_mixins = tuple(map(
+        utils.LOAD_CLASS, config.get(utils.CUSTOM_MIXINS_LOOKUP_FIELD, [])))
     operations = config.pop(utils.OPERATIONS_LOOKUP_FIELD, None)
-    bases += (viewsets.ModelViewSet,) if not operations\
+    bases = (viewsets.ModelViewSet,) if not operations\
         else tuple([MIXINS[operation] for operation in operations]) + (
-            viewsets.GenericViewSet,) + tuple(map(utils.LOAD_CLASS, config.pop(
-                utils.CUSTOM_MIXINS_LOOKUP_FIELD, [])))
-    return bases
+            viewsets.GenericViewSet,)
+    return custom_mixins + bases
