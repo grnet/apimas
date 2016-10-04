@@ -16,7 +16,7 @@ class CreateModelMixin(mixins.CreateModelMixin):
     Create a model instance.
     """
     def create(self, request, *args, **kwargs):
-        hook = self.get_hook(request_data=request.data)
+        hook = self.get_hook(request=request)
         hook.on_pre_create()
         serializer = self.get_serializer(data=hook.request_data)
         serializer.is_valid(raise_exception=True)
@@ -35,7 +35,7 @@ class ListModelMixin(object):
         queryset = self.filter_queryset(self.get_queryset())
 
         page = self.paginate_queryset(queryset)
-        hook = self.get_hook()
+        hook = self.get_hook(request=request)
         hook.on_pre_list()
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -53,7 +53,7 @@ class RetrieveModelMixin(object):
     """
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        hook = self.get_hook(instance=instance)
+        hook = self.get_hook(instance=instance, request=request)
         hook.on_pre_retrieve()
         serializer = self.get_serializer(hook.instance)
         hook.on_post_retrieve(serializer.data)
@@ -83,7 +83,7 @@ class DestroyModelMixin(object):
     """
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        hook = self.get_hook(instance=instance)
+        hook = self.get_hook(instance=instance, request=request)
         hook.pre_delete()
         self.perform_destroy(hook.instance)
         hook.post_delete()

@@ -7,10 +7,10 @@ class BaseHook(object):
     any CRUD operations, as well as the data's final processing after db
     commit of resource.
     """
-    def __init__(self, instance=None, request_data=None, **kwargs):
+    def __init__(self, instance=None, request=None, **kwargs):
         self.instance = instance
-        self.request_data = request_data
-        self.initial_data = request_data
+        self.request = request
+        self.request_data = request.data
         self.extra_data = {}
 
     def on_pre_list(self):
@@ -22,7 +22,7 @@ class BaseHook(object):
     def on_pre_retrieve(self):
         pass
 
-    def on_post_retrieve(self, data, *args, **kwargs):
+    def on_post_retrieve(self, instance, data):
         pass
 
     def on_pre_create(self):
