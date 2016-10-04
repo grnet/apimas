@@ -126,7 +126,7 @@ def generate_nested_serializers(model, config):
         field_kwargs = extra_kwargs.get(api_field_name, {})\
             if extra_kwargs else {}
         nested_serializers[api_field_name] = serializer_class(
-            many=many, source=source, **set_field_properties(
+            many=many, source=source, **build_field_properties(
                 api_field_name, config, field_kwargs))
     return nested_serializers
 
@@ -142,7 +142,7 @@ def generate_meta(model, config):
     """
     exposed_fields = config.get(utils.FIELDS_LOOKUP_FIELD, [])
     extra_kwargs = config.get(utils.EXTRA_KWARGS_LOOKUP_FIELD, {})
-    field_properties = build_field_properties(
+    field_properties = build_properties(
         exposed_fields, config, extra_kwargs)
     validate(model, field_properties)
     class_dict = {
@@ -180,7 +180,7 @@ def validate(model, field_properties):
                     repr(field)))
 
 
-def set_field_properties(field, config, extra_kwargs):
+def build_field_properties(field, config, extra_kwargs):
     """
     This functions sets properties for a specific field.
 
@@ -196,7 +196,7 @@ def set_field_properties(field, config, extra_kwargs):
     return properties
 
 
-def build_field_properties(exposed_fields, config, extra_kwargs):
+def build_properties(exposed_fields, config, extra_kwargs):
     """
     This functions builds a dictionary with the exposed fields to API and their
     attributes.
@@ -212,6 +212,6 @@ def build_field_properties(exposed_fields, config, extra_kwargs):
     :returns: A dictionary of exposed fields along with their properties.
     """
     field_properties = defaultdict(dict, extra_kwargs or {})
-    return {field: set_field_properties(
+    return {field: build_field_properties(
         field, config, field_properties.get(field, {}))
             for field in exposed_fields}
