@@ -31,7 +31,7 @@ FIELD_SCHEMA = {
         'type': 'list',
         'schema': {'type': 'string'}
     },
-    'extra_kwargs': {
+    'properties': {
         'type': 'dict',
         'allow_unknown': True,
         'valueschema': {

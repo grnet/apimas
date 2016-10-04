@@ -15,7 +15,7 @@ CUSTOM_MIXINS_LOOKUP_FIELD = 'custom_mixins'
 NESTED_OBJECTS_LOOKUP_FIELD = 'nested_objects'
 FIELDS_LOOKUP_FIELD = 'fields'
 MODEL_LOOKUP_FIELD = 'model_field'
-EXTRA_KWARGS_LOOKUP_FIELD = 'extra_kwargs'
+EXTRA_KWARGS_LOOKUP_FIELD = 'properties'
 
 LOAD_CLASS = lambda x: import_object(x)
 
