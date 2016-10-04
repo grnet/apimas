@@ -324,3 +324,39 @@ api_schema = {
     }
 }
 ```
+
+### Hook classes
+Hook classes are intended to provide hooks for embedding the business logic
+of resources before and after any CRUD operation.
+
+Example
+
+```
+from apimas.modeling.hooks import BaseHook
+
+
+class MyHookClass(BaseHook):
+    def on_pre_create(self):
+        """ This code is executed before the creation of a resource"""
+        # include extra data that are not specified on request
+        self.extra_data = {}
+        # View your raw request data or even modify them.
+        self.request_data = {}
+        # any other code here.
+
+    def on_post_create(self, instance, data):
+        """ This code is executed after the creation of instance. """
+        # Code and any business logic with the created instance.
+```
+
+Then define `hook_class` attribute on your resource schema.
+```
+my_resource_schema = {
+    'my_resource': {
+        'hook_class': 'myapp.MyHookClass',
+        'field_schema': {
+             # Your field schema configuration ...
+        }
+    }
+}
+```
