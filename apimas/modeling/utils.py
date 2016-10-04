@@ -16,11 +16,14 @@ NESTED_OBJECTS_LOOKUP_FIELD = 'nested_objects'
 FIELDS_LOOKUP_FIELD = 'fields'
 MODEL_LOOKUP_FIELD = 'model_field'
 EXTRA_KWARGS_LOOKUP_FIELD = 'properties'
+HOOK_CLASS_LOOKUP_FIELD = 'hook_class'
 
 LOAD_CLASS = lambda x: import_object(x)
 
 
 def import_object(obj_path):
+    if obj_path is None:
+        raise ApimasException('Cannot import NoneType object')
     try:
         module_name, obj_name = obj_path.rsplit('.', 1)
         mod = importlib.import_module(module_name)

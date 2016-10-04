@@ -125,6 +125,9 @@ RESOURCE_SCHEMA = {
         'type': 'list',
         'schema': {'type': 'string'},
     },
+    'hook_class': {
+        'type': 'string',
+    },
     'model': {
         'type': 'string',
         'required': True,

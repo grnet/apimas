@@ -1,7 +1,7 @@
-from rest_framework import viewsets, filters, mixins
-from apimas.modeling import utils
+from rest_framework import filters
+from apimas.modeling import utils, mixins, viewsets
 from apimas.modeling.serializers import generate as generate_serializer
-
+from apimas.modeling.hooks import BaseHook
 
 FILTERING_BACKENDS = {
     'filter_fields': filters.DjangoFilterBackend,
@@ -48,6 +48,7 @@ def generate(model, config, **kwargs):
         utils.HYPERLINKED_LOOKUP_FIELD,
         kwargs.pop(utils.HYPERLINKED_LOOKUP_FIELD, True))
     standard_content = {
+        'hook_class': get_hook_class(config),
         'serializer_class': generate_serializer(
             model, field_schema, is_hyperlinked),
         'queryset': model.objects.all(),
@@ -101,3 +102,14 @@ def get_bases_classes(config):
         else tuple([MIXINS[operation] for operation in operations]) + (
             viewsets.GenericViewSet,)
     return custom_mixins + bases
+
+
+def get_hook_class(config):
+    """
+    A simple function for retrieving the hook class to be set to the
+    generated ViewSet class.
+
+    If no hook class is specified, then `BaseHook` class is used.
+    """
+    hook_class = config.pop(utils.HOOK_CLASS_LOOKUP_FIELD, None)
+    return utils.import_object(hook_class) if hook_class else BaseHook
