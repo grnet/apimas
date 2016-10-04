@@ -109,8 +109,10 @@ the list of your fields which are exposed to the API along with their
 properties and validations.
 
 They are two ways of specifying these properties:
-- List fields with common properties.
-- Delineate properties of each field.
+- List fields with common properties (
+      supported keys are `read_only_fields`, `write_only_fields`,
+      `required_fields`, `nullable_fields`, `blankable_fields` keys).
+- Delineate properties of each field (via `properties` key).
 
 Example
 
@@ -121,7 +123,7 @@ Example
     'write_only_fields': ['name'],
     'required_fields': ['name'],
     'nullable_fields': ['price'],
-    'extra_kwargs': {
+    'properties': {
         'name': {
             'write_only': True,
             'allow_null': False,
