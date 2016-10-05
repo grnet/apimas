@@ -332,20 +332,20 @@ of resources before and after any CRUD operation.
 Example
 
 ```
-from apimas.modeling.hooks import BaseHook
+from apimas.modeling.mixins import HookMixin
 
 
-class MyHookClass(BaseHook):
-    def on_pre_create(self):
+class MyHookClass(HookMixin):
+    def preprocess_create(self):
         """ This code is executed before the creation of a resource"""
-        # include extra data that are not specified on request
-        self.extra_data = {}
-        # View your raw request data or even modify them.
-        self.request_data = {}
-        # any other code here.
+        # Code here
+        # Stash your changes
+        self.stash(**kwargs)
 
-    def on_post_create(self, instance, data):
+    def finalize_create(self, instance, data):
         """ This code is executed after the creation of instance. """
+        # Unstash your changes.
+        self.unstash()
         # Code and any business logic with the created instance.
 ```
 
