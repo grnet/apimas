@@ -48,7 +48,6 @@ def generate(model, config, **kwargs):
         utils.HYPERLINKED_LOOKUP_FIELD,
         kwargs.pop(utils.HYPERLINKED_LOOKUP_FIELD, True))
     standard_content = {
-        'hook_class': get_hook_class(config),
         'serializer_class': generate_serializer(
             model, field_schema, is_hyperlinked),
         'queryset': model.objects.all(),
@@ -95,13 +94,14 @@ def get_bases_classes(config):
 
     :returns: A tuple of the corresponding base classes.
     """
+    hook_class = get_hook_class(config)
     custom_mixins = tuple(map(
         utils.LOAD_CLASS, config.get(utils.CUSTOM_MIXINS_LOOKUP_FIELD, [])))
     operations = config.pop(utils.OPERATIONS_LOOKUP_FIELD, None)
     bases = (viewsets.ModelViewSet,) if not operations\
         else tuple([MIXINS[operation] for operation in operations]) + (
-            viewsets.GenericViewSet,)
-    return custom_mixins + bases
+            hook_class, viewsets.GenericViewSet,)
+    return (hook_class,) + custom_mixins + bases
 
 
 def get_hook_class(config):
@@ -112,4 +112,4 @@ def get_hook_class(config):
     If no hook class is specified, then `BaseHook` class is used.
     """
     hook_class = config.pop(utils.HOOK_CLASS_LOOKUP_FIELD, None)
-    return utils.import_object(hook_class) if hook_class else BaseHook
+    return utils.import_object(hook_class) if hook_class else mixins.HookMixin
