@@ -342,7 +342,7 @@ class MyHookClass(HookMixin):
         # Stash your changes
         self.stash(**kwargs)
 
-    def finalize_create(self, instance, data):
+    def finalize_create(self):
         """ This code is executed after the creation of instance. """
         # Unstash your changes.
         self.unstash()
