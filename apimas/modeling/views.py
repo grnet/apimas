@@ -1,7 +1,7 @@
-from rest_framework import filters
-from apimas.modeling import utils, mixins, viewsets
+from rest_framework import filters, viewsets
+from apimas.modeling import utils, mixins, viewsets as apimas_viewsets
 from apimas.modeling.serializers import generate as generate_serializer
-from apimas.modeling.hooks import BaseHook
+
 
 FILTERING_BACKENDS = {
     'filter_fields': filters.DjangoFilterBackend,
@@ -98,7 +98,7 @@ def get_bases_classes(config):
     custom_mixins = tuple(map(
         utils.LOAD_CLASS, config.get(utils.CUSTOM_MIXINS_LOOKUP_FIELD, [])))
     operations = config.pop(utils.OPERATIONS_LOOKUP_FIELD, None)
-    bases = (viewsets.ModelViewSet,) if not operations\
+    bases = (apimas_viewsets.ModelViewSet,) if not operations\
         else tuple([MIXINS[operation] for operation in operations]) + (
             hook_class, viewsets.GenericViewSet,)
     return (hook_class,) + custom_mixins + bases
