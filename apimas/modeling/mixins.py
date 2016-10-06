@@ -6,9 +6,13 @@ which allows mixin classes to be composed in interesting ways.
 """
 from __future__ import unicode_literals
 
+from collections import namedtuple
 from rest_framework import mixins
 from rest_framework import status
 from rest_framework.response import Response
+
+StashedObj = namedtuple(
+    'StashedObj', ['instance', 'data', 'extra', 'response'])
 
 
 class HookMixin(object):
@@ -31,7 +35,7 @@ class HookMixin(object):
     def wrap_response(self, action, response):
         self.stash(response=response)
         self.finalize(action)
-        _, _, _, response = self.unstash()
+        response = self.unstash().response
         return response
 
     def finalize(self, action):
@@ -49,10 +53,12 @@ class HookMixin(object):
             self.request.parser_context['response'] = response
 
     def unstash(self):
-        return (self.request.parser_context.get('instance', None),
-                self.request.parser_context.get('data', self.request.data),
-                self.request.parser_context.get('extra', {}),
-                self.request.parser_context.get('response', None))
+        instance = self.request.parser_context.get('instance', None)
+        data = self.request.parser_context.get('data', self.request.data)
+        extra = self.request.parser_context.get('extra', {})
+        response = self.request.parser_context.get('response', None)
+        return StashedObj(instance=instance, data=data, extra=extra,
+                          response=response)
 
 
 class CreateModelMixin(mixins.CreateModelMixin):
@@ -61,10 +67,10 @@ class CreateModelMixin(mixins.CreateModelMixin):
     """
     def create(self, request, *args, **kwargs):
         self.preprocess('create')
-        _, data, extra_data, _ = self.unstash()
-        serializer = self.get_serializer(data=data)
+        unstashed = self.unstash()
+        serializer = self.get_serializer(data=unstashed.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(**extra_data)
+        serializer.save(**unstashed.extra)
         self.stash(instance=serializer.instance)
         headers = self.get_success_headers(serializer.data)
         response = Response(serializer.data, status=status.HTTP_201_CREATED,
@@ -97,8 +103,8 @@ class RetrieveModelMixin(object):
         instance = self.get_object()
         self.stash(instance=instance)
         self.preprocess('retrieve')
-        instance, _, _, _ = self.unstash()
-        serializer = self.get_serializer(instance)
+        unstashed = self.unstash()
+        serializer = self.get_serializer(unstashed.instance)
         response = Response(serializer.data)
         return self.wrap_response('retrieve', response)
 
@@ -112,11 +118,11 @@ class UpdateModelMixin(mixins.UpdateModelMixin):
         instance = self.get_object()
         self.stash(instance=instance)
         self.preprocess('update')
-        instance, data, extra_data, _ = self.unstash()
+        unstashed = self.unstash()
         serializer = self.get_serializer(
-            instance, data=data, partial=partial)
+            unstashed.instance, data=unstashed.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        serializer.save(**extra_data)
+        serializer.save(**unstashed.extra)
         self.stash(instance=serializer.instance)
         response = Response(serializer.data)
         return self.wrap_response('update', response)
@@ -130,7 +136,7 @@ class DestroyModelMixin(mixins.DestroyModelMixin):
         instance = self.get_object()
         self.stash(instance=instance)
         self.preprocess('delete')
-        instance, _, _, _ = self.unstash()
-        self.perform_destroy(instance)
+        unstashed = self.unstash()
+        self.perform_destroy(unstashed.instance)
         response = Response(status=status.HTTP_204_NO_CONTENT)
         return self.wrap_response('delete', response)
