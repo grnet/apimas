@@ -1,4 +1,4 @@
-from cerberus import Validator
+from cerberus import Validator, schema_registry
 
 
 FIELD_SCHEMA = {
@@ -78,32 +78,35 @@ FIELD_SCHEMA = {
             }
         }
     },
-}
-
-
-NESTED_OBJECT_SCHEMA = {
     'nested_objects': {
         'type': 'dict',
         'allow_unknown': True,
         'valueschema': {
             'type': 'dict',
-            'schema': {
-                'model_field': {
-                    'required': True,
-                    'type': 'string',
-                },
-                'model': {
-                    'type': 'string'
-                },
-                'field_schema': {
-                    'required': True,
-                    'type': 'dict',
-                    'schema': FIELD_SCHEMA,
-                }
-            }
+            'schema': 'nested'
         }
     }
 }
+
+
+NESTED_OBJECT_SCHEMA = {
+    'model_field': {
+        'required': True,
+        'type': 'string',
+    },
+    'model': {
+        'type': 'string'
+    },
+    'field_schema': {
+        'required': True,
+        'type': 'dict',
+        'schema': 'nested_fields',
+    }
+}
+
+
+schema_registry.add('nested_fields', FIELD_SCHEMA)
+schema_registry.add('nested', NESTED_OBJECT_SCHEMA)
 
 
 RESOURCE_SCHEMA = {
@@ -144,7 +147,7 @@ RESOURCE_SCHEMA = {
     },
     'field_schema': {
         'type': 'dict',
-        'schema': dict(FIELD_SCHEMA.items() + NESTED_OBJECT_SCHEMA.items()),
+        'schema': FIELD_SCHEMA,
     }
 }
 
