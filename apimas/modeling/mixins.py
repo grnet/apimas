@@ -29,6 +29,10 @@ class HookMixin(object):
         pass
 
     def preprocess(self, action):
+        """
+        A hook method being executed before any CRUD operation performed
+        on a specific resource.
+        """
         func = getattr(self, 'preprocess_' + action, self.mock)
         func()
 
@@ -39,10 +43,23 @@ class HookMixin(object):
         return response
 
     def finalize(self, action):
+        """
+        A hook method being executed after any CRUD operation performed
+        on a specific resource.
+        """
         func = getattr(self, 'finalize_' + action, self.mock)
         func()
 
     def stash(self, instance=None, data=None, extra=None, response=None):
+        """
+        Method to stash data for later use.
+
+        :param instance: Model instance of the resource.
+        :param data: Request data; data exposed to the API.
+        :param extra: Extra data being used for the business logic of the
+        resource.
+        :param response: Response object of the corresponding endpoint.
+        """
         if instance:
             self.request.parser_context['instance'] = instance
         if data:
@@ -53,6 +70,12 @@ class HookMixin(object):
             self.request.parser_context['response'] = response
 
     def unstash(self):
+        """
+        Method to unstash data.
+
+        :returns: A namedtuple object which contains all required
+        information to proceed with the business logic of the resource.
+        """
         instance = self.request.parser_context.get('instance', None)
         data = self.request.parser_context.get('data', self.request.data)
         extra = self.request.parser_context.get('extra', {})
