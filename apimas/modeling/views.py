@@ -37,9 +37,6 @@ def generate(model, config, **kwargs):
     class.
     :return: A `ViewSet` class.
     """
-    def get_queryset(self):
-        return model.objects.all()
-
     authentication_classes = config.pop(
         utils.AUTH_CLASSES_LOOKUP_FIELD,
         kwargs.pop(utils.AUTH_CLASSES_LOOKUP_FIELD, []))
@@ -53,7 +50,7 @@ def generate(model, config, **kwargs):
     standard_content = {
         'serializer_class': generate_serializer(
             model, field_schema, is_hyperlinked),
-        'get_queryset': get_queryset,
+        'queryset': model.objects.all(),
         'authentication_classes': map(
             utils.LOAD_CLASS, authentication_classes),
         'permission_classes': map(utils.LOAD_CLASS, permission_classes)
