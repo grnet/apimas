@@ -103,6 +103,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+AUTH_USER_MODEL = 'eshop.UserProfile'
+
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/
 

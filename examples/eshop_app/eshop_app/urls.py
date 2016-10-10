@@ -16,7 +16,12 @@ Including another URLconf
 """
 from django.conf.urls import url
 from django.contrib import admin
+from apimas.modeling.container import Container
+from eshop.api_schema import API_SCHEMA
+
+container = Container('api')
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+    container.create_api_views(API_SCHEMA)
 ]
