@@ -1,4 +1,3 @@
-from collections import defaultdict
 from rest_framework import serializers
 from apimas.modeling.adapters.drf import utils
 
@@ -7,15 +6,6 @@ NON_INTERSECTIONAL_PAIRS = [
     ('required', 'read_only'),
     ('wrte_only', 'read_only'),
 ]
-
-
-PROPERTIES = {
-    'read_only_fields': 'read_only',
-    'write_only_fields': 'write_only',
-    'required_fields': 'required',
-    'nullable_fields': 'allow_null',
-    'blankable_fields': 'allow_blank',
-}
 
 
 def generate(model, config, is_hyperlinked=True):
@@ -126,7 +116,7 @@ def generate_nested_serializers(model, config):
         field_kwargs = extra_kwargs.get(api_field_name, {})\
             if extra_kwargs else {}
         nested_serializers[api_field_name] = serializer_class(
-            many=many, source=source, **build_field_properties(
+            many=many, source=source, **utils.build_field_properties(
                 api_field_name, config, field_kwargs))
     return nested_serializers
 
@@ -141,9 +131,7 @@ def generate_meta(model, config):
     serializer.
     """
     exposed_fields = config.get(utils.FIELDS_LOOKUP_FIELD, [])
-    extra_kwargs = config.get(utils.EXTRA_KWARGS_LOOKUP_FIELD, {})
-    field_properties = build_properties(
-        exposed_fields, config, extra_kwargs)
+    field_properties = utils.build_properties(exposed_fields, config)
     validate(model, field_properties)
     class_dict = {
         'fields': exposed_fields,
@@ -178,40 +166,3 @@ def validate(model, field_properties):
             raise utils.ApimasException(
                 'Field % can be set as blankable as it is not CharField' % (
                     repr(field)))
-
-
-def build_field_properties(field, config, extra_kwargs):
-    """
-    This functions sets properties for a specific field.
-
-    :param field: Field name.
-    :param config: Dictionary used as a pool to retrieve field configuration
-    implicitly.
-    :param extra_kwargs: Extra field properties
-    """
-    properties = dict(extra_kwargs)
-    for attr, prop in PROPERTIES.iteritems():
-        if field in config.get(attr, []):
-            properties[prop] = True
-    return properties
-
-
-def build_properties(exposed_fields, config, extra_kwargs):
-    """
-    This functions builds a dictionary with the exposed fields to API and their
-    attributes.
-
-    It actually maps each field to a property according to its specified
-    category. For example, fields which are included in the category of
-    `required_fields`, they have property `required` as `True`.
-
-    :param exposed_fields: Iterable with the fields exposed to API.
-    :param config: Dictionary with the field configuration.
-    :paran extra_kwargs: Dictionary with additional configuration of fields.
-
-    :returns: A dictionary of exposed fields along with their properties.
-    """
-    field_properties = defaultdict(dict, extra_kwargs or {})
-    return {field: build_field_properties(
-        field, config, field_properties.get(field, {}))
-            for field in exposed_fields}

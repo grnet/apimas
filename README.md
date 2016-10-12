@@ -360,3 +360,64 @@ my_resource_schema = {
     }
 }
 ```
+
+## Client Generation
+
+After building your API fulfilling the given specification, you can also
+easily create client objects to interact with it.
+
+
+### Create clients for all API resources
+
+`ApimasClientAdapter` supports the creation of client objects for all your
+resources of your `APIMAS` specification.
+
+```
+from apimas.modeling.clients import ApimasClientAdapter
+adapter = ApimasClientAdapter('http://localhost:8000/')
+# Prepare adapter for creating clients according to given spec.
+adapter.construct(spec)
+adapter.apply()
+```
+
+The above code will generate a dictionary keyed by the resource name which
+contains a partially created client object, corresponding to this resource
+and its schema. However, afterwards, you have to explicitly pass credentials
+to consume each resource.
+
+```
+client = adapter.get_client('myresource')
+client.set_credentials('basic', username='username', password='password')
+client.list()
+```
+
+Therefore, you are able to perform any CRUD operations. Data can be passed
+as dictionary for UPDATE and CREATE operations. Moreover, LIST and
+RETRIEVE operations support query parameters (defined as dictionary too).
+Finally, your can also define your request headers.
+
+```
+# Create a new resource with name='test' and number=10 passed in the HTTP request body.
+# Request: POST myresource/
+response = client.create(data={'name': 'test', 'number': 10})
+
+# Update resource with id `1` and replace its data as name='test' and number=10
+# Request: PUT myresource/1/
+response = client.update(1, data={'name': 'test', 'number': 10})
+
+# Update only a subset of fields of resource with id `1`.
+# Request: PATCH myresource/1/
+response = client.partial_update(1, data={'name'='new name'})
+
+# Get all resources with name='test'
+# Request: GET myresource/?name=test&number=10
+response = client.list(params={'name': 'test', 'number': 10})
+
+# Get resource with id `1`
+# Request: GET myresource/1/
+response = client.retrieve(1)
+
+# Delete resource with id `1`.
+# Request: DELETE myresource/1/
+response = client.delete(1)
+```

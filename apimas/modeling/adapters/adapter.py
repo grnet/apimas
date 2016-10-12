@@ -1,8 +1,4 @@
-def mock_constructor(predicate):
-    def construct_predicate(instance, spec, loc, top_spec):
-        raise NotImplementedError('construct_%s() must be implemented' % (
-            predicate[1:]))
-    return construct_predicate
+from apimas.modeling.adapters import utils
 
 
 class Adapter(object):
@@ -45,5 +41,5 @@ class Adapter(object):
     def get_constructors(self):
         return {predicate: getattr(
             self, self.CONSTRUCTOR_PREFIX + '_' + predicate[1:],
-            mock_constructor(predicate))
+            utils.default_constructor(predicate))
                 for predicate in self.PREDICATES}
