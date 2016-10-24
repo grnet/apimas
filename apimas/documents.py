@@ -21,6 +21,9 @@ class Context(object):
     pass
 
 
+bytes = str
+
+
 def doc_find(doc, path):
     """Walk the given path down the given document.
 
@@ -189,8 +192,11 @@ def doc_construct(doc, spec, loc=(),
     constructor_names = []
     doc_is_basic = type(doc) is not dict
     constructed_data_keys = set()
-    if type(spec) is not dict:
-        m = "{loc!r}: 'spec' must be a dict, not {spec!r}"
+    spec_type = type(spec)
+    if spec_type is bytes:
+        spec = {spec: {}}
+    elif spec_type is not dict:
+        m = "{loc!r}: 'spec' must be a dict or byte string, not {spec!r}"
         m = m.format(loc=loc, spec=spec)
         raise InvalidInput(m)
 
@@ -255,8 +261,8 @@ def doc_construct(doc, spec, loc=(),
             m = m.format(loc=subloc, constructor_name=constructor_name)
             raise InvalidInput(m)
 
-        instance = constructor(instance=instance, spec=spec[constructor_name],
-                               loc=subloc)
+        subspec = spec[constructor_name]
+        instance = constructor(instance=instance, spec=subspec, loc=subloc)
 
     return instance
 

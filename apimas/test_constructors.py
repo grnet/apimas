@@ -88,12 +88,40 @@ spec = {
     'hello*': {
         'boo': {},
     },
-    'hell*': {
-        'goo': {},
-    },
+    'hell*': 'goo',
     '*': {
         'zoo': {},
     },
 }
 
-instance = doc_construct({'hel': {}}, spec, autoconstruct='.autoconstruct')
+
+test_keys = ['hel', 'hell', 'hella', 'hello_world']
+for key in test_keys:
+    instance = doc_construct({key: {}}, spec, autoconstruct='.autoconstruct')
+    print json.dumps({'key': instance[key]}, indent=2)
+
+print json.dumps(instance, indent=2)
+
+
+example_spec = {
+    'products': {
+        '.collection': {},
+        'id-*': {
+            '.resource': {},
+            'data-*': {
+                'stock': {
+                    '.integer': {},
+                    '.blankable': {},
+                    '.readonly': {}
+                },
+                'name': {
+                    '.field': {'field_type': 'string'},
+                    '.blankable': {}
+                }
+            }
+        }
+    }
+}
+
+instance = doc_construct({}, example_spec, autoconstruct='.autoconstruct')
+print json.dumps(instance, indent=2)
