@@ -245,7 +245,7 @@ def doc_construct(doc, spec, loc=(),
                 allow_constructor_input=allow_constructor_input)
 
     for constructor_name in constructor_names:
-        subloc = loc + (key,)
+        subloc = loc + (constructor_name,)
         if constructor_name in constructors:
             constructor = constructors[constructor_name]
         elif autoconstruct in constructors:
