@@ -47,7 +47,7 @@ def construct_text(instance, spec, loc):
     text = doc_value(instance)
 
     if isinstance(text, str):
-        text = instance.decode(encoding)
+        text = text.decode(encoding)
 
     elif isinstance(text, unicode):
         m = "{loc}: text {text!r} is neither str nor unicode"
