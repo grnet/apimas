@@ -5,7 +5,7 @@ from documents import (
 
 
 @register_constructor
-def construct_integer(instance, spec, loc):
+def construct_integer(instance, spec, loc, top_spec):
 
     val = doc_value(instance)
 
@@ -38,7 +38,7 @@ def construct_integer(instance, spec, loc):
 
 
 @register_constructor
-def construct_text(instance, spec, loc):
+def construct_text(instance, spec, loc, top_spec):
 
     blankable = spec.get('blankable', True)
     regex = spec.get('regex', None)
