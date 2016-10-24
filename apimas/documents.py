@@ -24,6 +24,9 @@ class Context(object):
 bytes = str
 
 
+DEFER_CONSTRUCTOR = object()
+
+
 def doc_find(doc, path):
     """Walk the given path down the given document.
 
@@ -124,6 +127,12 @@ def doc_pop(doc, path):
             break
     
 
+def doc_value(doc):
+    if type(doc) is dict:
+        return doc.get('', '')
+    return doc
+
+
 def doc_merge(doca, docb, merge=lambda a, b: (a, b)):
     docout = {}
 
@@ -151,7 +160,7 @@ _constructors = {}
 
 def register_constructor(constructor, name=None):
     if name is None:
-        name = constructor.__name__.replace('construct_', '', 1)
+        name = '.' + constructor.__name__.replace('construct_', '', 1)
 
     if name in _constructors:
         m = ("Cannot set constructor {name!r} to {constructor!r}: "
@@ -250,19 +259,39 @@ def doc_construct(doc, spec, loc=(),
                 autoconstruct=autoconstruct,
                 allow_constructor_input=allow_constructor_input)
 
-    for constructor_name in constructor_names:
-        subloc = loc + (constructor_name,)
-        if constructor_name in constructors:
-            constructor = constructors[constructor_name]
-        elif autoconstruct in constructors:
-            constructor = constructors[autoconstruct]
-        else:
-            m = "{loc!r}: cannot find constructor {constructor_name!r}"
-            m = m.format(loc=subloc, constructor_name=constructor_name)
+    old_deferred_constructor_names = None
+
+    while True:
+        deferred_constructor_names = []
+        for constructor_name in constructor_names:
+            subloc = loc + (constructor_name,)
+            if constructor_name in constructors:
+                constructor = constructors[constructor_name]
+            elif autoconstruct in constructors:
+                constructor = constructors[autoconstruct]
+            elif autoconstruct is True:
+                constructor = autoconstructor
+            else:
+                m = "{loc!r}: cannot find constructor {constructor_name!r}"
+                m = m.format(loc=subloc, constructor_name=constructor_name)
+                raise InvalidInput(m)
+
+            subspec = spec[constructor_name]
+            ret = constructor(instance=instance, spec=subspec, loc=subloc)
+            if ret is DEFER_CONSTRUCTOR:
+                deferred_constructor_names.append(constructor_name)
+            else:
+                instance = ret
+
+        if not deferred_constructor_names:
+            break
+
+        if deferred_constructor_names == old_deferred_constructor_names:
+            m = "{loc!r}: constructor deadlock {deferred!r}"
+            m = m.format(loc=loc, deferred=deferred_constructor_names)
             raise InvalidInput(m)
 
-        subspec = spec[constructor_name]
-        instance = constructor(instance=instance, spec=subspec, loc=subloc)
+        old_deferred_constructor_names = deferred_constructor_names
 
     return instance
 

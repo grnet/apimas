@@ -85,6 +85,10 @@ spec = {
             'actions': negotiation_actions_spec,
         },
     },
+}
+
+
+match_spec = {
     'hello*': {
         'boo': {},
     },
@@ -97,7 +101,7 @@ spec = {
 
 test_keys = ['hel', 'hell', 'hella', 'hello_world']
 for key in test_keys:
-    instance = doc_construct({key: {}}, spec, autoconstruct='.autoconstruct')
+    instance = doc_construct({key: {}}, match_spec, autoconstruct=True)
     print json.dumps({'key': instance[key]}, indent=2)
 
 print json.dumps(instance, indent=2)
@@ -123,5 +127,52 @@ example_spec = {
     }
 }
 
-instance = doc_construct({}, example_spec, autoconstruct='.autoconstruct')
+instance = doc_construct({}, example_spec,
+                         autoconstruct=True, constructors={})
 print json.dumps(instance, indent=2)
+
+
+@register_constructor
+def construct_alpha(instance, spec, loc):
+    instance['alpha'] = spec['val']
+    if 'beta' not in instance:
+        return DEFER_CONSTRUCTOR
+    instance['gamma'] = instance['alpha'], instance['beta']
+    return instance
+
+@register_constructor
+def construct_beta(instance, spec, loc):
+    instance['beta'] = spec['val']
+    if 'beta' not in instance:
+        return DEFER_CONSTRUCTOR
+    instance['gamma'] = instance['alpha'], instance['beta']
+    return instance
+
+
+defer_spec = {
+    '.alpha': {'val': 'hello'},
+    '.beta': {'val': '!'},
+}
+
+instance = doc_construct({}, defer_spec, autoconstruct=True)
+print json.dumps(instance, indent=2)
+
+
+@register_constructor
+def construct_deadlock1(instance, spec, loc):
+    instance['deadlock'] = 0
+    return DEFER_CONSTRUCTOR
+
+
+@register_constructor
+def construct_deadlock2(instance, spec, loc):
+    instance['deadlock'] = 1
+    return DEFER_CONSTRUCTOR
+
+
+deadlock_spec = {
+    '.deadlock1': {},
+    '.deadlock2': {},
+}
+
+instance = doc_construct({}, deadlock_spec, autoconstruct=True)
