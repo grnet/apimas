@@ -87,6 +87,9 @@ spec = {
     },
 }
 
+instance = doc_construct({}, spec, autoconstruct=True, constructors={})
+print json.dumps(instance, indent=2)
+
 
 match_spec = {
     'hello*': {
@@ -113,11 +116,7 @@ example_spec = {
         'id-*': {
             '.resource': {},
             'data-*': {
-                'stock': {
-                    '.integer': {},
-                    '.blankable': {},
-                    '.readonly': {}
-                },
+                'stock': { '.integer', '.blankable', '.readonly' },
                 'name': {
                     '.field': {'field_type': 'string'},
                     '.blankable': {}

@@ -204,6 +204,8 @@ def doc_construct(doc, spec, loc=(),
     spec_type = type(spec)
     if spec_type is bytes:
         spec = {spec: {}}
+    elif spec_type is set:
+        spec = {key: {} for key in spec}
     elif spec_type is not dict:
         m = "{loc!r}: 'spec' must be a dict or byte string, not {spec!r}"
         m = m.format(loc=loc, spec=spec)
