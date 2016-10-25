@@ -129,7 +129,7 @@ def doc_pop(doc, path):
 
 def doc_value(doc):
     if type(doc) is dict:
-        return doc.get('', '')
+        return doc.get('', None)
     return doc
 
 

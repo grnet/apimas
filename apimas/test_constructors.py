@@ -178,4 +178,41 @@ deadlock_spec = {
     '.deadlock2': {},
 }
 
-instance = doc_construct({}, deadlock_spec, autoconstruct=True)
+try:
+    instance = doc_construct({}, deadlock_spec, autoconstruct=True)
+except InvalidInput as e:
+    print e
+
+
+simple_spec = {
+    'name': {
+        '.text': {
+            'minlen': 6,
+            'maxlen': 32,
+        },
+    },
+    'age': {
+        '.integer': {
+            '.min': 18,
+            '.max': 65,
+        },
+    },
+}
+
+
+def randomizer(instance, spec, loc, top_spec):
+    key = loc[-1]
+    instance[key] = spec
+    if loc[-1].startswith('.') and type(spec) is dict:
+        instance[key]['.randomize'] = {}
+    return instance
+
+
+randomized_spec = doc_construct({}, simple_spec,
+                                autoconstruct='randomizer',
+                                constructors={'randomizer': randomizer})
+print json.dumps(randomized_spec, indent=2)
+
+
+randomized_instance = doc_construct({}, simple_spec)
+print json.dumps(randomized_instance, indent=2)
