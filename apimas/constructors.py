@@ -4,6 +4,7 @@ from documents import (
 )
 
 from random import choice, randint
+import re
 
 
 @register_constructor
@@ -50,8 +51,8 @@ def construct_text(instance, spec, loc, top_spec):
     blankable = spec.get('blankable', True)
     regex = spec.get('regex', None)
     encoding = spec.get('encoding', 'utf-8')
-    minlen = spec.get('minlen', 0)
-    maxlen = spec.get('maxlen', None)
+    minlen = int(spec.get('minlen', 0))
+    maxlen = int(spec.get('maxlen', 2**63))
 
     text = doc_value(instance)
     if text is None and '.randomize' in spec:
@@ -90,6 +91,7 @@ def construct_text(instance, spec, loc, top_spec):
 
     text_len = len(text)
     if text_len < minlen:
+        import pdb; pdb.set_trace()
         m = "{loc}: {text!r}: minimum length {minlen!r} breached" 
         m = m.format(loc=loc, text=text, minlen=minlen)
         raise ValidationError(m)

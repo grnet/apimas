@@ -217,7 +217,7 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
     prefixes = []
 
     for key in spec.iterkeys():
-        if doc_is_basic:
+        if doc_is_basic and not key.startswith('.'):
             subloc = loc + (key,)
             m = ("{loc!r}: document {doc!r} is basic "
                  "but spec requires key {key!r}")
@@ -244,7 +244,12 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
 
     prefixes.sort()
 
-    if not doc_is_basic:
+    if doc_is_basic:
+        if instance:
+            instance[''] = doc
+        else:
+            instance = doc
+    else:
         for key in doc:
             if key in constructed_data_keys:
                 continue
