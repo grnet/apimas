@@ -329,12 +329,14 @@ def doc_from_ns(ns, sep='/'):
     for key, value in ns.iteritems():
         path = key.strip('/').split('/')
         doc_set(docout, path, value)
+    return docout
 
 
 def doc_to_ns(doc, sep='/'):
     ns = {}
     for path, val in doc_iter(doc):
-        ns[sep.join(path)] = val
+        if not val or type(val) is not dict:
+            ns[sep.join(path)] = val
     return ns
 
 
