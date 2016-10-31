@@ -158,19 +158,21 @@ class DjangoRestAdapter(Adapter):
         self.validate_model_field(top_spec, loc, field_type, **spec)
         return instance
 
-    def construct_struct(self, instance, spec, loc, top_spec):
-        self.validate_model_field(top_spec, loc, 'struct')
+    def construct_nested_field(self, instance, spec, loc, top_spec,
+                               field_type=None):
+        self.validate_model_field(top_spec, loc, field_type)
         nested_schema = self.construct_nested_objects(instance)
         instance[self.DRF_CONF_KEY][self.NESTED_CONF_KEY] = dict(
             nested_schema, **spec)
         return instance
 
+    def construct_struct(self, instance, spec, loc, top_spec):
+        return self.construct_nested_field(instance, spec, loc, top_spec,
+                                           'struct')
+
     def construct_structarray(self, instance, spec, loc, top_spec):
-        self.validate_model_field(top_spec, loc, 'structarray')
-        nested_schema = self.construct_nested_objects(instance)
-        instance[self.DRF_CONF_KEY][self.NESTED_CONF_KEY] = dict(
-            nested_schema, **spec)
-        return instance
+        return self.construct_nested_field(instance, spec, loc, top_spec,
+                                           'structarray')
 
     def construct_ref(self, instance, spec, loc, top_spec):
         return self.construct_field(instance, spec, loc, top_spec, 'ref')
