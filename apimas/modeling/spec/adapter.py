@@ -29,9 +29,6 @@ class Adapter(object):
         '.indexable',
     ])
 
-    def __init__(self, **kwargs):
-        pass
-
     def construct(self, spec):
         raise NotImplementedError('`gen_adapter_spec()` must be implemented')
 
