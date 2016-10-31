@@ -82,7 +82,8 @@ class DjangoRestAdapter(Adapter):
 
     def apply(self):
         if not self.adapter_spec:
-            raise ApimasException()
+            raise ApimasException(
+                'Cannot apply an empty adapter specification')
         structural_elements = self.get_structural_elements(self.adapter_spec)
         container = Container(structural_elements[0])
         self.urls = container.create_api_views(
