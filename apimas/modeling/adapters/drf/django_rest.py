@@ -100,10 +100,11 @@ class DjangoRestAdapter(Adapter):
         return instance
 
     def construct_CRUD_action(self, instance, spec, loc, top_spec, action):
+        adapter_key = 'allowable_operations'
         self.init_adapter_conf(instance)
-        if 'allowable_operations' not in instance[self.DRF_CONF_KEY]:
-            instance[self.DRF_CONF_KEY]['allowable_operations'] = []
-        instance[self.DRF_CONF_KEY]['allowable_operations'].append(action)
+        if adapter_key not in instance[self.DRF_CONF_KEY]:
+            instance[self.DRF_CONF_KEY][adapter_key] = []
+        instance[self.DRF_CONF_KEY][adapter_key].append(action)
         return instance
 
     def construct_list(self, instance, spec, loc, top_spec):
@@ -127,13 +128,14 @@ class DjangoRestAdapter(Adapter):
                                           'delete')
 
     def construct_endpoint(self, instance, spec, loc, top_spec):
+        adapter_key = 'resources'
         structural_elements = self.get_structural_elements(instance)
         assert len(structural_elements) == 1
         self.init_adapter_conf(instance)
         api_schema = {resource: schema[self.DRF_CONF_KEY]
                       for resource, schema in doc.doc_get(
                           instance, (structural_elements[0],)).iteritems()}
-        instance[self.DRF_CONF_KEY]['resources'] = api_schema
+        instance[self.DRF_CONF_KEY][adapter_key] = api_schema
         return instance
 
     def construct_collection(self, instance, spec, loc, top_spec):
@@ -250,6 +252,7 @@ class DjangoRestAdapter(Adapter):
                             field_name, u, v))
 
     def construct_field_schema(self, instance):
+        adapter_key = 'field_schema'
         self.init_adapter_conf(instance)
         field_properties = doc.doc_get(instance, ('*',))
         attrs = {self.PROPERTIES_CONF_KEY: {}, self.NESTED_CONF_KEY: {}}
@@ -259,12 +262,12 @@ class DjangoRestAdapter(Adapter):
                     v[field_name] = field_spec[self.DRF_CONF_KEY][k]
         self.validate_intersectional_pairs(attrs[self.PROPERTIES_CONF_KEY])
         fields = [field_name for field_name, _ in field_properties.iteritems()]
-        field_schema = {'field_schema': {
+        field_schema = {adapter_key: {
             'fields': fields,
         }}
         for k, v in attrs.iteritems():
             if v:
-                field_schema['field_schema'].update({k: v})
+                field_schema[adapter_key].update({k: v})
         return field_schema
 
     def get_constructor_params(self, spec, loc, params):
@@ -294,11 +297,12 @@ class DjangoRestAdapter(Adapter):
         return related_field.related_model
 
     def construct_resource_schema(self, instance):
+        adapter_key = 'filter_fields'
         field_properties = doc.doc_get(instance, ('*',))
         filter_fields = [
             field_name for field_name, spec in field_properties.iteritems()
             if spec.get('.indexable', None) is not None]
-        return {'filter_fields': filter_fields}
+        return {adapter_key: filter_fields}
 
     def construct_nested_objects(self, instance, many=True):
         nested_schema = self.construct_field_schema(instance)
