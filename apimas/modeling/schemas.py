@@ -90,7 +90,7 @@ FIELD_SCHEMA = {
 
 
 NESTED_OBJECT_SCHEMA = {
-    'model_field': {
+    'source': {
         'required': True,
         'type': 'string',
     },

@@ -14,7 +14,7 @@ FIELD_SCHEMA_LOOKUP_FIELD = 'field_schema'
 CUSTOM_MIXINS_LOOKUP_FIELD = 'custom_mixins'
 NESTED_OBJECTS_LOOKUP_FIELD = 'nested_objects'
 FIELDS_LOOKUP_FIELD = 'fields'
-MODEL_LOOKUP_FIELD = 'model_field'
+MODEL_LOOKUP_FIELD = 'source'
 EXTRA_KWARGS_LOOKUP_FIELD = 'properties'
 HOOK_CLASS_LOOKUP_FIELD = 'hook_class'
 
