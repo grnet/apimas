@@ -108,3 +108,77 @@ API_SCHEMA = {
        'orders': order,
    }
 }
+
+
+API_SPEC = {
+    '.endpoint': {},
+    'api': {
+        'productz': {
+            '.collection': {'model': 'eshop.models.Product'},
+            '*': {
+                '.resource': {},
+                '*': {
+                    'stock': {
+                        '.integer': {},
+                        '.readonly': {}
+                    },
+                    'name': {
+                        '.string': {},
+                        '.indexable': {},
+                        '.blankable': {}
+                    }
+                }
+            }
+        },
+        'carts': {
+            '.collection': {'model': 'eshop.models.Cart'},
+            '*': {
+                '.resource': {},
+                '*': {
+                    'products': {
+                        '.structarray': {'source': 'products'},
+                        '*': {
+                            'stock': {
+                                '.integer': {},
+                                '.required': {},
+                            },
+                            'name': {
+                                '.string': {},
+                                '.blankable': {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        'orders': {
+            '.collection': {
+                'model': 'eshop.models.Order',
+            },
+            '*': {
+                '.resource': {},
+                '*': {
+                    'id': {
+                        '.serial': {}
+                    },
+                    'cart': {
+                        '.struct': {'source': 'cart'},
+                        '*': {
+                            'products': {
+                                '.structarray': {'source': 'products'},
+                                '*': {
+                                    'name': {
+                                        '.string': {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+            },
+            'actions': {
+                '.list': {}
+            }
+        }
+    }
+}
