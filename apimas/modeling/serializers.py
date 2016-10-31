@@ -176,7 +176,7 @@ def validate(model, field_properties):
         if config.get('allow_blank', False) and (model._meta.get_field(
                 field).get_internal_type() != CHAR_FIELD):
             raise utils.ApimasException(
-                'Field can be set as blankable as it is not CharField' % (
+                'Field % can be set as blankable as it is not CharField' % (
                     repr(field)))
 
 
