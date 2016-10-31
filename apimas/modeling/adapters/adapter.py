@@ -1,3 +1,10 @@
+def mock_constructor(predicate):
+    def construct_predicate(instance, spec, loc, top_spec):
+        raise NotImplementedError('construct_%s() must be implemented' % (
+            predicate[1:]))
+    return construct_predicate
+
+
 class Adapter(object):
     CONSTRUCTOR_PREFIX = 'construct'
 
@@ -37,5 +44,6 @@ class Adapter(object):
 
     def get_constructors(self):
         return {predicate: getattr(
-            self, self.CONSTRUCTOR_PREFIX + '_' + predicate[1:])
+            self, self.CONSTRUCTOR_PREFIX + '_' + predicate[1:],
+            mock_constructor(predicate))
                 for predicate in self.PREDICATES}
