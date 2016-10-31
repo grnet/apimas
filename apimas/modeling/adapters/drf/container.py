@@ -1,10 +1,10 @@
 from django.apps import apps
 from django.conf.urls import url, include
 from rest_framework import routers
-from apimas.modeling import utils
-from apimas.modeling.schemas import (
+from apimas.modeling.adapters.drf import utils
+from apimas.modeling.adapters.drf.schemas import (
     RESOURCE_SCHEMA_VALIDATOR, API_SCHEMA_VALIDATOR)
-from apimas.modeling.views import generate
+from apimas.modeling.adapters.drf.views import generate
 
 
 APP_MODELS = apps.get_models()

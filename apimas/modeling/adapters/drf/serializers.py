@@ -1,6 +1,6 @@
 from collections import defaultdict
 from rest_framework import serializers
-from apimas.modeling import utils
+from apimas.modeling.adapters.drf import utils
 
 
 NON_INTERSECTIONAL_PAIRS = [

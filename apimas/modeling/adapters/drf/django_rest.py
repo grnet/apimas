@@ -1,10 +1,11 @@
 from collections import Iterable
 from django.db import models
 from django.core.exceptions import FieldDoesNotExist
-from apimas import documents as doc
-from apimas.modeling.container import Container
-from apimas.modeling.utils import ApimasException, import_object
-from apimas.modeling.spec.adapter import Adapter
+from apimas.modeling.core import documents as doc
+from apimas.modeling.adapters.adapter import Adapter
+from apimas.modeling.adapters.drf.container import Container
+from apimas.modeling.adapters.drf.utils import (
+    ApimasException, import_object)
 
 
 def handle_exception(func):
