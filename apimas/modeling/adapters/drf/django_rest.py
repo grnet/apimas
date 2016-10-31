@@ -27,6 +27,8 @@ class DjangoRestAdapter(Adapter):
     }
 
     DRF_CONF_KEY = 'drf_conf'
+    PROPERTIES_CONF_KEY = 'properties'
+    NESTED_CONF_KEY = 'nested_objects'
 
     NON_INTERSECTIONAL_PAIRS = [
         ('read_only', 'write_only'),
@@ -135,12 +137,11 @@ class DjangoRestAdapter(Adapter):
         return instance
 
     def construct_collection(self, instance, spec, loc, top_spec):
-        self.get_structural_elements(instance)
+        structural_elements = self.get_structural_elements(instance)
         self.init_adapter_conf(instance)
-        instance[self.DRF_CONF_KEY] = doc.doc_get(
-            instance, ('*', self.DRF_CONF_KEY))
-        instance[self.DRF_CONF_KEY].update(doc.doc_get(
-            instance, ('actions', self.DRF_CONF_KEY)) or {})
+        for element in structural_elements:
+            instance[self.DRF_CONF_KEY].update(doc.doc_get(
+                instance, (element, self.DRF_CONF_KEY)) or {})
         instance[self.DRF_CONF_KEY].update(**spec)
         return instance
 
@@ -158,14 +159,14 @@ class DjangoRestAdapter(Adapter):
     def construct_struct(self, instance, spec, loc, top_spec):
         self.validate_model_field(top_spec, loc, 'struct')
         nested_schema = self.construct_nested_objects(instance)
-        instance[self.DRF_CONF_KEY]['nested_objects'] = dict(
+        instance[self.DRF_CONF_KEY][self.NESTED_CONF_KEY] = dict(
             nested_schema, **spec)
         return instance
 
     def construct_structarray(self, instance, spec, loc, top_spec):
         self.validate_model_field(top_spec, loc, 'structarray')
         nested_schema = self.construct_nested_objects(instance)
-        instance[self.DRF_CONF_KEY]['nested_objects'] = dict(
+        instance[self.DRF_CONF_KEY][self.NESTED_CONF_KEY] = dict(
             nested_schema, **spec)
         return instance
 
@@ -217,9 +218,9 @@ class DjangoRestAdapter(Adapter):
 
     def construct_property(self, instance, loc, key):
         self.init_adapter_conf(instance)
-        if 'properties' not in instance[self.DRF_CONF_KEY]:
-            instance[self.DRF_CONF_KEY]['properties'] = {}
-        instance[self.DRF_CONF_KEY]['properties'][key] = True
+        if self.PROPERTIES_CONF_KEY not in instance[self.DRF_CONF_KEY]:
+            instance[self.DRF_CONF_KEY][self.PROPERTIES_CONF_KEY] = {}
+        instance[self.DRF_CONF_KEY][self.PROPERTIES_CONF_KEY][key] = True
         return instance
 
     @handle_exception
@@ -251,12 +252,12 @@ class DjangoRestAdapter(Adapter):
     def construct_field_schema(self, instance):
         self.init_adapter_conf(instance)
         field_properties = doc.doc_get(instance, ('*',))
-        attrs = {'properties': {}, 'nested_objects': {}}
+        attrs = {self.PROPERTIES_CONF_KEY: {}, self.NESTED_CONF_KEY: {}}
         for field_name, field_spec in field_properties.iteritems():
             for k, v in attrs.iteritems():
                 if k in field_spec[self.DRF_CONF_KEY]:
                     v[field_name] = field_spec[self.DRF_CONF_KEY][k]
-        self.validate_intersectional_pairs(attrs['properties'])
+        self.validate_intersectional_pairs(attrs[self.PROPERTIES_CONF_KEY])
         fields = [field_name for field_name, _ in field_properties.iteritems()]
         field_schema = {'field_schema': {
             'fields': fields,
