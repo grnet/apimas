@@ -78,13 +78,20 @@ class DjangoRestAdapter(Adapter):
     def construct(self, spec):
         self.adapter_spec = doc.doc_construct(
             {}, spec, constructors=self.get_constructors(),
-            allow_constructor_input=True).get(self.DRF_CONF_KEY, {})
+            allow_constructor_input=True)
 
     def apply(self):
         if not self.adapter_spec:
             raise ApimasException()
-        container = Container('api')
-        self.urls = container.create_api_views(self.adapter_spec)
+        structural_elements = self.get_structural_elements(self.adapter_spec)
+        container = Container(structural_elements[0])
+        self.urls = container.create_api_views(
+            self.adapter_spec.get(self.DRF_CONF_KEY, {}))
+
+    def get_structural_elements(self, instance):
+        filter_func = lambda x: not x.startswith('.')\
+            and not x == self.DRF_CONF_KEY
+        return filter(filter_func, instance.keys())
 
     def construct_action(self, instance, spec, loc, top_spec):
         return instance
@@ -117,14 +124,17 @@ class DjangoRestAdapter(Adapter):
                                           'delete')
 
     def construct_endpoint(self, instance, spec, loc, top_spec):
+        structural_elements = self.get_structural_elements(instance)
+        assert len(structural_elements) == 1
         self.init_adapter_conf(instance)
         api_schema = {resource: schema[self.DRF_CONF_KEY]
                       for resource, schema in doc.doc_get(
-                          instance, ('api',)).iteritems()}
+                          instance, (structural_elements[0],)).iteritems()}
         instance[self.DRF_CONF_KEY]['resources'] = api_schema
         return instance
 
     def construct_collection(self, instance, spec, loc, top_spec):
+        self.get_structural_elements(instance)
         self.init_adapter_conf(instance)
         instance[self.DRF_CONF_KEY] = doc.doc_get(
             instance, ('*', self.DRF_CONF_KEY))
