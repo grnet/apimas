@@ -89,10 +89,10 @@ class CreateModelMixin(mixins.CreateModelMixin):
     Create a model instance.
     """
     def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=self.request.data)
+        serializer.is_valid(raise_exception=True)
         self.preprocess('create')
         unstashed = self.unstash()
-        serializer = self.get_serializer(data=unstashed.data)
-        serializer.is_valid(raise_exception=True)
         serializer.save(**unstashed.extra)
         self.stash(instance=serializer.instance)
         headers = self.get_success_headers(serializer.data)
@@ -140,11 +140,11 @@ class UpdateModelMixin(mixins.UpdateModelMixin):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         self.stash(instance=instance)
+        serializer = self.get_serializer(
+            instance, data=self.request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
         self.preprocess('update')
         unstashed = self.unstash()
-        serializer = self.get_serializer(
-            unstashed.instance, data=unstashed.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
         serializer.save(**unstashed.extra)
         self.stash(instance=serializer.instance)
         response = Response(serializer.data)
