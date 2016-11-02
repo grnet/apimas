@@ -9,19 +9,30 @@ bytes = str
 DEFER_CONSTRUCTOR = object()
 
 
-def doc_find(doc, path):
+def doc_locate(doc, path):
     """Walk the given path down the given document.
-
-    The function maintains and finally returns a context of variables:
-        feed:     The list of path segments left that have not yet been accessed
-        trail:    The list of path segments already accessed
-        nodes:    The list of nodes already accessed
 
     There are two outcomes:
         1. feed is empty, meaning that the given path was found
-        2. feed is non-empty, meaning that the first segment in the feed was not
-           found in the document at the path formed by trail.
+        2. feed is non-empty, meaning that the first segment in the feed was
+           not found in the document at the path formed by trail.
 
+    Parameters
+    ----------
+    doc : dict
+        A recursive object-document
+
+    path : tuple
+        A sequence of path segments as in ('path', 'to', 'somewhere')
+
+    Returns
+    -------
+        feed : list
+            List of path segments left that have not yet been accessed
+        trail : list
+            List of path segments already accessed
+        nodes : list
+            List of nodes already accessed
     """
     feed = list(reversed(path))
     trail = []
@@ -47,7 +58,7 @@ def doc_set(doc, path, value):
         m = "Cannot set root document at empty path."
         raise InvalidInput(m)
 
-    feed, trail, nodes = doc_find(doc, path)
+    feed, trail, nodes = doc_locate(doc, path)
 
     doc = nodes[-1]
     if feed and isinstance(doc, dict):
@@ -73,7 +84,7 @@ def doc_set(doc, path, value):
 
 
 def doc_get(doc, path):
-    feed, trail, nodes = doc_find(doc, path)
+    feed, trail, nodes = doc_locate(doc, path)
     return None if feed else nodes[-1]
 
 
@@ -95,7 +106,7 @@ def doc_iter(doc, preorder=False, postorder=True, path=()):
 
 
 def doc_pop(doc, path):
-    feed, trail, nodes = doc_find(doc, path)
+    feed, trail, nodes = doc_locate(doc, path)
     if feed:
         return
 
@@ -290,7 +301,7 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
 
 
 def doc_inherit(doc, path, inherit_path):
-    feed, trail, nodes = doc_find(doc, path)
+    feed, trail, nodes = doc_locate(doc, path)
     if feed:
         return None
 
