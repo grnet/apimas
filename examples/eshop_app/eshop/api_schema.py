@@ -1,5 +1,5 @@
 import pdb
-from apimas.modeling.mixins import HookMixin
+from apimas.modeling.adapters.drf.mixins import HookMixin
 
 
 class Hooks(HookMixin):
@@ -69,7 +69,7 @@ cart = {
         'fields': ['id', 'url', 'products', 'customer'],
         'nested_objects': {
             'products': {
-                'model_field': 'products',
+                'source': 'products',
                 'field_schema': {
                     'fields': ['id', 'url', 'name', 'key',
                                'description', 'stock',
@@ -89,7 +89,7 @@ order = {
         'fields': ['id', 'url', 'city', 'street_addres', 'cart'],
         'nested_objects': {
             'cart': {
-                'model_field': 'cart',
+                'source': 'cart',
                 'field_schema': cart['field_schema'],
             }
         }
