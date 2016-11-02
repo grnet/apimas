@@ -1,24 +1,6 @@
 from inspect import getargspec
 from bisect import bisect_right
-
-class ValidationError(Exception):
-    pass
-
-
-class NotFound(Exception):
-    pass
-
-
-class InvalidInput(Exception):
-    pass
-
-
-class ConflictError(Exception):
-    pass
-
-
-class Context(object):
-    pass
+from errors import ValidationError, NotFound, InvalidInput, ConflictError
 
 
 bytes = str
