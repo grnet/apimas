@@ -53,6 +53,7 @@ def construct_text(instance, spec, loc, top_spec):
     encoding = spec.get('encoding', 'utf-8')
     minlen = int(spec.get('minlen', 0))
     maxlen = int(spec.get('maxlen', 2**63))
+    exclude_chars = spec.get('exclude_chars', '')
 
     text = doc_value(instance)
     if text is None and '.randomize' in spec:
@@ -91,7 +92,6 @@ def construct_text(instance, spec, loc, top_spec):
 
     text_len = len(text)
     if text_len < minlen:
-        import pdb; pdb.set_trace()
         m = "{loc}: {text!r}: minimum length {minlen!r} breached" 
         m = m.format(loc=loc, text=text, minlen=minlen)
         raise ValidationError(m)
@@ -100,5 +100,12 @@ def construct_text(instance, spec, loc, top_spec):
         m = "{loc}: {text!r}: maximum length {maxlen!r} exceeded" 
         m = m.format(loc=loc, text=text, maxlen=maxlen)
         raise ValidationError(m)
+
+    if exclude_chars:
+        for c in exclude_chars:
+            if c in text:
+                m = "{loc!r}: {text!r}: forbidden char {c!r} found"
+                m = m.format(loc=loc, text=text, c=c)
+                raise ValidationError(m)
 
     return text
