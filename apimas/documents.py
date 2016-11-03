@@ -1,3 +1,5 @@
+"""A generic recursive object-document manipulation toolkit.
+"""
 from inspect import getargspec
 from bisect import bisect_right
 from errors import ValidationError, NotFound, InvalidInput, ConflictError
@@ -6,33 +8,37 @@ from errors import ValidationError, NotFound, InvalidInput, ConflictError
 bytes = str
 
 
-DEFER_CONSTRUCTOR = object()
+class DEFER_CONSTRUCTOR(object):
+    """A unique object be returned by constructors to defer their execution."""
+    def __init__(self):
+        m = ("{cls!r} is intended to be used as a unique object only, "
+             "without any instantiation ever.")
+        m = m.format(type(self))
+        raise AssertionError(m)
 
 
 def doc_locate(doc, path):
-    """Walk the given path down the given document.
+    """Walk a path down a document.
 
     There are two outcomes:
         1. feed is empty, meaning that the given path was found
         2. feed is non-empty, meaning that the first segment in the feed was
            not found in the document at the path formed by trail.
 
-    Parameters
-    ----------
-    doc : dict
-        A recursive object-document
+    Args:
+        doc (dict):
+            A recursive object-document
+        path (tuple):
+            A sequence of path segments as in ('path', 'to', 'somewhere')
 
-    path : tuple
-        A sequence of path segments as in ('path', 'to', 'somewhere')
-
-    Returns
-    -------
-        feed : list
-            List of path segments left that have not yet been accessed
-        trail : list
-            List of path segments already accessed
-        nodes : list
-            List of nodes already accessed
+    Returns:
+        tuple of lists:
+            feed (list):
+                List of path segments left that have not yet been accessed
+            trail (list):
+                List of path segments already accessed
+            nodes (list):
+                List of nodes already accessed
     """
     feed = list(reversed(path))
     trail = []
