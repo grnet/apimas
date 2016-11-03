@@ -1,3 +1,10 @@
+"""Standard validating constructor library
+
+Constructors in this module validate value constraints, normalize values.
+
+Optionally, constructors can create random conforming values.
+
+"""
 from documents import (
     register_constructor, doc_construct, doc_value,
     ValidationError, InvalidInput,
@@ -7,9 +14,35 @@ from random import choice, randint
 import re
 
 
-@register_constructor
 def construct_integer(instance, spec, loc, top_spec):
+    """Construct and validate a python int/long.
 
+    Args:
+        instance (dict or int):
+            Current input instance
+        spec (dict):
+            Specification for the current input instance
+        spec/min:
+            minimum permitted value
+        spec/max:
+            maximum permitted value
+        spec/.randomize:
+            create a random conforming value if instance provides no value
+        loc (tuple of str):
+            Path location of the current instance within the
+            top-level instance being constructed.
+        top_spec:
+            The specification for the top-level instance. This can be used by
+            the constructor to gain access to arbitrary parts of the
+            specification to fulfill any dependencies.
+            Note that outside its own node, a constructor may only have spec
+            access. It may never have access to instance nodes outside its own.
+
+    Returns:
+        integer:
+            The constructed integer/long instance.
+
+    """
     min = spec.get('min', None)
     max = spec.get('max', None)
     val = doc_value(instance)
@@ -45,9 +78,39 @@ def construct_integer(instance, spec, loc, top_spec):
     return val
 
 
-@register_constructor
 def construct_text(instance, spec, loc, top_spec):
+    """Construct and validate a python int/long.
 
+    Args:
+        instance (dict or int):
+            Current input instance
+        spec (dict):
+            Specification for the current input instance
+        spec/minlen:
+            minimum permitted character length
+        spec/max:
+            maximum permitted character length
+        spec/regex:
+            a regular expression to be matched against the value
+        spec/exclude_chars:
+            a string of individually forbidden chars
+        spec/.randomize:
+            create a random conforming value if instance provides no value
+        loc (tuple of str):
+            Path location of the current instance within the
+            top-level instance being constructed.
+        top_spec:
+            The specification for the top-level instance. This can be used by
+            the constructor to gain access to arbitrary parts of the
+            specification to fulfill any dependencies.
+            Note that outside its own node, a constructor may only have spec
+            access. It may never have access to instance nodes outside its own.
+
+    Returns:
+        text:
+            The constructed text instance.
+
+    """
     blankable = spec.get('blankable', True)
     regex = spec.get('regex', None)
     encoding = spec.get('encoding', 'utf-8')
@@ -67,7 +130,8 @@ def construct_text(instance, spec, loc, top_spec):
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             "0123456789_-")
 
-        text = ''.join(choice(alphabet) for _ in xrange(randint(minlen, maxlen)))
+        text = ''.join(choice(alphabet)
+                       for _ in xrange(randint(minlen, maxlen)))
 
     if isinstance(text, str):
         text = text.decode(encoding)
@@ -109,3 +173,7 @@ def construct_text(instance, spec, loc, top_spec):
                 raise ValidationError(m)
 
     return text
+
+
+register_constructor(construct_integer, '.integer')
+register_constructor(construct_text, '.text')
