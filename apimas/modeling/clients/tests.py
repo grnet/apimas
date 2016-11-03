@@ -4,7 +4,7 @@ from requests.exceptions import HTTPError
 from apimas.modeling.clients import (
     ApimasClient, requests)
 from apimas.modeling.clients.auth import HTTPTokenAuth, ApimasClientAuth
-from apimas.modeling.clients.utils import ApimasClientException
+from apimas.modeling.core.exceptions import ApimasClientException
 
 
 class TestClients(unittest.TestCase):

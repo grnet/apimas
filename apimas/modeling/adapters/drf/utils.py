@@ -1,9 +1,6 @@
 import importlib
 from collections import defaultdict
-
-
-class ApimasException(Exception):
-    pass
+from apimas.modeling.core.exceptions import ApimasException
 
 
 AUTH_CLASSES_LOOKUP_FIELD = 'authentication_classes'
@@ -27,20 +24,25 @@ PROPERTIES = {
     'blankable_fields': 'allow_blank',
 }
 
+
+class DRFAdapterException(ApimasException):
+    pass
+
+
 LOAD_CLASS = lambda x: import_object(x)
 
 
 def import_object(obj_path):
     if obj_path is None:
-        raise ApimasException('Cannot import NoneType object')
+        raise DRFAdapterException('Cannot import NoneType object')
     try:
         module_name, obj_name = obj_path.rsplit('.', 1)
         mod = importlib.import_module(module_name)
     except (ValueError, ImportError) as e:
-        raise ApimasException(e)
+        raise DRFAdapterException(e)
     obj = getattr(mod, obj_name, None)
     if not obj:
-        raise ApimasException('Cannot import object %s from %s' % (
+        raise DRFAdapterException('Cannot import object %s from %s' % (
             obj_name, module_name))
     return obj
 

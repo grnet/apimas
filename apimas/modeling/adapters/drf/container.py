@@ -68,7 +68,7 @@ class Container(object):
     def validate_schema(self, schema, validator):
         """ Validates a configuration object against a validation schema. """
         if not validator.validate(schema):
-            raise utils.ApimasException(API_SCHEMA_VALIDATOR.errors)
+            raise utils.DRFAdapterException(API_SCHEMA_VALIDATOR.errors)
         return schema
 
     def validate_model(self, model):
@@ -77,6 +77,6 @@ class Container(object):
         current app.
         """
         if model not in APP_MODELS:
-            raise utils.ApimasException(
+            raise utils.DRFAdapterException(
                 'Model %s is not a registered model of this app' % (
                     model._meta.model_name))

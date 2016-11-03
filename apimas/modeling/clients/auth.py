@@ -1,5 +1,5 @@
 from requests.auth import AuthBase, HTTPBasicAuth
-from apimas.modeling.clients.utils import ApimasClientException
+from apimas.modeling.core.exceptions import ApimasClientException
 
 
 class HTTPTokenAuth(AuthBase):

@@ -5,7 +5,7 @@ from apimas.modeling.core import documents as doc
 from apimas.modeling.adapters.cookbooks import NaiveAdapter
 from apimas.modeling.adapters.drf.container import Container
 from apimas.modeling.adapters.drf.utils import (
-    ApimasException, import_object)
+    DRFAdapterException, import_object)
 
 
 def handle_exception(func):
@@ -13,7 +13,7 @@ def handle_exception(func):
         try:
             return func(*args, **kwargs)
         except FieldDoesNotExist as e:
-            raise ApimasException(e)
+            raise DRFAdapterException(e)
     return wrapper
 
 
@@ -72,7 +72,7 @@ class DjangoRestAdapter(NaiveAdapter):
         Create django rest views based on the constructed adapter spec.
         """
         if not self.adapter_spec:
-            raise ApimasException(
+            raise DRFAdapterException(
                 'Cannot apply an empty adapter specification')
         structural_elements = self.get_structural_elements(self.adapter_spec)
         container = Container(structural_elements[0])
@@ -228,7 +228,8 @@ class DjangoRestAdapter(NaiveAdapter):
         django_conf = self.get_constructor_params(spec, loc[:-1], [])
         model = self.extract_model(source or loc[-2], django_conf)
         if model is None:
-            raise ApimasException('Invalid argument, model cannot be `None`')
+            raise DRFAdapterException(
+                'Invalid argument, model cannot be `None`')
         model_field = model._meta.get_field(source or loc[-2])
         if isinstance(django_field_type, Iterable):
             matches = any(isinstance(model_field, d_field)
@@ -236,7 +237,7 @@ class DjangoRestAdapter(NaiveAdapter):
         else:
             matches = isinstance(model_field, django_field_type)
         if not matches:
-            raise ApimasException(
+            raise DRFAdapterException(
                 'Field %s is not %s type in your django model' % (
                     repr(loc[-2]), repr(django_field_type)))
 
@@ -251,7 +252,7 @@ class DjangoRestAdapter(NaiveAdapter):
         for field_name, prop in properties.iteritems():
             for u, v in self.NON_INTERSECTIONAL_PAIRS:
                 if prop.get(u, False) and prop.get(v, False):
-                    raise ApimasException(
+                    raise DRFAdapterException(
                         'Field `%s` cannot be both %s and %s' % (
                             field_name, u, v))
 
@@ -312,7 +313,7 @@ class DjangoRestAdapter(NaiveAdapter):
         model = self.extract_model(related_field, django_conf)
         related_field = model._meta.get_field(related_field)
         if related_field.related_model is None:
-            raise ApimasException(
+            raise DRFAdapterException(
                 'Field %s is not related with another model' % (
                     repr(related_field)))
         return related_field.related_model

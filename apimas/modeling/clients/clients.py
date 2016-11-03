@@ -2,11 +2,10 @@ from cerberus import Validator
 import requests
 from requests.exceptions import HTTPError
 from requests.compat import urljoin, quote
-from apimas.modeling.core import documents as doc
+from apimas.modeling.core import documents as doc, exceptions as ex
 from apimas.modeling.adapters import Adapter
 from apimas.modeling.adapters.cookbooks import NaiveAdapter
 from apimas.modeling.clients.auth import ApimasClientAuth
-from apimas.modeling.clients.utils import ApimasClientException
 
 
 TRAILING_SLASH = '/'
@@ -24,7 +23,7 @@ def handle_exception(func):
                 r.raise_for_status()
             return r
         except HTTPError as e:
-            raise ApimasClientException(e)
+            raise ex.ApimasClientException(e)
     return wrapper
 
 
@@ -166,7 +165,7 @@ class ApimasClient(object):
         validator = Validator(partial_schema)
         is_valid = validator.validate(data)
         if raise_exception and not is_valid:
-            raise ApimasClientException(validator.errors)
+            raise ex.ApimasClientException(validator.errors)
 
     def validate(self, data, raise_exception=True):
         """
@@ -178,7 +177,7 @@ class ApimasClient(object):
         """
         is_valid = self.api_validator.validate(data)
         if raise_exception and not is_valid:
-            raise ApimasClientException(self.api_validator.errors)
+            raise ex.ApimasClientException(self.api_validator.errors)
 
     def set_credentials(self, auth_type, **credentials):
         """
@@ -240,7 +239,8 @@ class ApimasClientAdapter(NaiveAdapter):
         objects for every resource defined in the specification.
         """
         if not self.adapter_spec:
-            raise ApimasClient('Cannot create clients from an empty spec')
+            raise ex.ApimasException(
+                'Cannot create clients from an empty spec')
 
         structural_elements = self.get_structural_elements(self.adapter_spec)
         assert len(structural_elements) == 1

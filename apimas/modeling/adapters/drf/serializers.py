@@ -52,13 +52,13 @@ def get_related_model(model, model_field_name):
     with another model.
     :returns: Related model class.
 
-    :raises: ApimasException If the given field is not related to another
+    :raises: DRFAdapterException If the given field is not related to another
     model.
     """
 
     model_field = model._meta.get_field(model_field_name)
     if model_field.related_model is None:
-        raise utils.ApimasException(
+        raise utils.DRFAdapterException(
             'Field %s is not related with another model' % (
                 repr(model_field_name)))
     return model_field.related_model
@@ -76,14 +76,14 @@ def get_base_or_proxy(base_model_class, proxy_model_class):
     :param proxy_model_class: Specified proxy model class.
     :returns: Either the base model class or proxy model class.
 
-    :raises: ApimasException if the given proxy model is not an actual
+    :raises: DRFAdapterException if the given proxy model is not an actual
     proxy model of the defined base model.
     """
     if not proxy_model_class:
         return base_model_class
     if not (proxy_model_class._meta.proxy and
             proxy_model_class._meta.concrete_model is base_model_class):
-        raise utils.ApimasException('Given proxy model %s is invalid' % (
+        raise utils.DRFAdapterException('Given proxy model %s is invalid' % (
             proxy_model_class.__class__.__name__))
     return proxy_model_class
 
@@ -152,17 +152,17 @@ def validate(model, field_properties):
     :param model: Model class attached to the generated class of serializer.
     :param field_properties: A dictionary of fields along with their
     properties.
-    :raises ApimasException: if there are intersections between lists of
+    :raises DRFAdapterException: if there are intersections between lists of
     attributes.
     """
     for field, config in field_properties.iteritems():
         for u, v in NON_INTERSECTIONAL_PAIRS:
             if config.get(u, False) and config.get(v, False):
-                raise utils.ApimasException(
+                raise utils.DRFAdapterException(
                     'Field %s cannot be both %s and %s' % (
                         repr(field), u, v))
         if config.get('allow_blank', False) and (model._meta.get_field(
                 field).get_internal_type() != CHAR_FIELD):
-            raise utils.ApimasException(
+            raise utils.DRFAdapterException(
                 'Field % can be set as blankable as it is not CharField' % (
                     repr(field)))
