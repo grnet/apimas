@@ -70,12 +70,15 @@ def doc_set(doc, path, value):
     if feed and isinstance(doc, dict):
         # path was not found and parent points to a sub-doc
         doc = nodes[-1]
-        for segment in feed[:-1]:
+        while True:
+            segment = feed.pop()
+            if not feed:
+                break
             new_doc = {}
             doc[segment] = new_doc
             doc = new_doc
 
-        doc[feed[-1]] = value
+        doc[segment] = value
         old_value = None
 
     else:
