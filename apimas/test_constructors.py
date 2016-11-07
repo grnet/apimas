@@ -131,23 +131,36 @@ instance = doc_construct({}, example_spec,
 print json.dumps(instance, indent=2)
 
 
-@register_constructor
-def construct_alpha(instance, spec, loc, top_spec):
-    assert doc_get(top_spec, loc) == spec
+def construct_alpha(instance, spec, loc, context):
+    assert doc_get(context['top_spec'], loc) == spec
     instance['alpha'] = spec['val']
     if 'beta' not in instance:
+        assert context['round'] == 0
+        assert '.beta' not in context['constructed']
         raise DeferConstructor
+    assert context['round'] <= 1
+    return instance
+
+
+register_constructor(construct_alpha, name='alpha')
+
+
+def construct_beta(instance, spec, loc, context):
+    assert doc_get(context['top_spec'], loc) == spec
+    instance['beta'] = spec['val']
+    if 'alpha' not in instance:
+        assert context['round'] == 0
+        assert '.alpha' not in context['constructed']
+        raise DeferConstructor
+    if context['round'] == 0:
+        raise DeferConstructor
+    assert context['round'] == 1
+    assert '.alpha' in context['constructed']
     instance['gamma'] = instance['alpha'], instance['beta']
     return instance
 
-@register_constructor
-def construct_beta(instance, spec, loc, top_spec):
-    assert doc_get(top_spec, loc) == spec
-    instance['beta'] = spec['val']
-    if 'beta' not in instance:
-        raise DeferConstructor
-    instance['gamma'] = instance['alpha'], instance['beta']
-    return instance
+
+register_constructor(construct_beta, name='beta')
 
 
 defer_spec = {
@@ -160,15 +173,15 @@ print json.dumps(instance, indent=2)
 
 
 @register_constructor
-def construct_deadlock1(instance, spec, loc, top_spec):
-    assert doc_get(top_spec, loc) == spec
+def construct_deadlock1(instance, spec, loc, context):
+    assert doc_get(context['top_spec'], loc) == spec
     instance['deadlock'] = 0
     raise DeferConstructor
 
 
 @register_constructor
-def construct_deadlock2(instance, spec, loc, top_spec):
-    assert doc_get(top_spec, loc) == spec
+def construct_deadlock2(instance, spec, loc, context):
+    assert doc_get(context['top_spec'], loc) == spec
     instance['deadlock'] = 1
     raise DeferConstructor
 
@@ -200,7 +213,7 @@ simple_spec = {
 }
 
 
-def randomizer(instance, spec, loc, top_spec):
+def randomizer(instance, spec, loc, context):
     key = loc[-1]
     instance[key] = spec
     if loc[-1].startswith('.') and type(spec) is dict:

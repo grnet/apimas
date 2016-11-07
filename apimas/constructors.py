@@ -14,7 +14,7 @@ from random import choice, randint
 import re
 
 
-def construct_integer(instance, spec, loc, top_spec):
+def construct_integer(instance, spec, loc, context):
     """Construct and validate a python int/long.
 
     Args:
@@ -31,12 +31,26 @@ def construct_integer(instance, spec, loc, top_spec):
         loc (tuple of str):
             Path location of the current instance within the
             top-level instance being constructed.
-        top_spec:
-            The specification for the top-level instance. This can be used by
-            the constructor to gain access to arbitrary parts of the
-            specification to fulfill any dependencies.
-            Note that outside its own node, a constructor may only have spec
-            access. It may never have access to instance nodes outside its own.
+        context (dict):
+            The context of the construction. Contains keys:
+            - top_spec
+              The specification for the top-level instance. This can be used by
+              the constructor to gain access to arbitrary parts of the
+              specification to fulfill any dependencies.  Note that outside its
+              own node, a constructor may only have spec access. It may never
+              have access to instance nodes outside its own.
+            - round
+              The number of the construction round resulting from constructors
+              raising DeferConstructor. Construction starts at round 0.
+              Constructors can use this to place themselves in a specific round
+              to wait for dependencies without having to explicitly state their
+              dependencies.
+            - constructors 
+              A set containing the full name paths for the constructors already
+              completed for this node. Constructors can check this to defer for
+              their dependencies.
+            - sep
+              The separator used for constructor names, '.' by default.
 
     Returns:
         integer:
@@ -78,7 +92,7 @@ def construct_integer(instance, spec, loc, top_spec):
     return val
 
 
-def construct_text(instance, spec, loc, top_spec):
+def construct_text(instance, spec, loc, context):
     """Construct and validate a python int/long.
 
     Args:
@@ -99,12 +113,26 @@ def construct_text(instance, spec, loc, top_spec):
         loc (tuple of str):
             Path location of the current instance within the
             top-level instance being constructed.
-        top_spec:
-            The specification for the top-level instance. This can be used by
-            the constructor to gain access to arbitrary parts of the
-            specification to fulfill any dependencies.
-            Note that outside its own node, a constructor may only have spec
-            access. It may never have access to instance nodes outside its own.
+        context:
+            The context of the construction. Contains keys:
+            - top_spec
+              The specification for the top-level instance. This can be used by
+              the constructor to gain access to arbitrary parts of the
+              specification to fulfill any dependencies.  Note that outside its
+              own node, a constructor may only have spec access. It may never
+              have access to instance nodes outside its own.
+            - round
+              The number of the construction round resulting from constructors
+              raising DeferConstructor. Construction starts at round 0.
+              Constructors can use this to place themselves in a specific round
+              to wait for dependencies without having to explicitly state their
+              dependencies.
+            - constructors 
+              A set containing the full name paths for the constructors already
+              completed for this node. Constructors can check this to defer for
+              their dependencies.
+            - sep
+              The separator used for constructor names, '.' by default.
 
     Returns:
         text:

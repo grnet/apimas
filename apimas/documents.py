@@ -175,7 +175,7 @@ def register_constructor(constructor, name=None, sep='.'):
         raise ConflictError(m)
 
     argspec = getargspec(constructor)
-    req_args = ['instance', 'spec', 'loc', 'top_spec']
+    req_args = ['instance', 'spec', 'loc', 'context']
     if argspec.args != req_args:
         m = "{name!r}: a constructor arguments must be {req_args!r}"
         m = m.format(name=name, req_args=req_args)
@@ -188,7 +188,7 @@ def unregister_constructor(name, sep='.'):
     return doc_pop(_constructors, name.split(sep))
 
 
-def autoconstructor(instance, spec, loc, top_spec):
+def autoconstructor(instance, spec, loc, context):
     if type(instance) is dict:
         instance[loc[-1]] = spec
 
@@ -198,7 +198,7 @@ def autoconstructor(instance, spec, loc, top_spec):
 register_constructor(autoconstructor, name='autoconstruct')
 
 
-def doc_construct(doc, spec, loc=(), top_spec=None,
+def doc_construct(doc, spec, loc=(), context=None,
                   constructors=_constructors,
                   autoconstruct=False,
                   allow_constructor_input=False,
@@ -218,8 +218,10 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
         m = m.format(loc=loc, spec=spec)
         raise InvalidInput(m)
 
-    if top_spec is None:
-        top_spec = spec
+    if context is None:
+        context = {'top_spec': spec}
+    elif 'top_spec' not in context:
+        context['top_spec'] = spec
 
     prefixes = []
 
@@ -243,7 +245,7 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
         subdoc = doc[key] if key in doc else {}
         subloc = loc + (key,)
         instance[key] = doc_construct(
-            doc=subdoc, spec=subspec, loc=subloc, top_spec=top_spec,
+            doc=subdoc, spec=subspec, loc=subloc, context=context,
             constructors=constructors,
             autoconstruct=autoconstruct,
             allow_constructor_input=allow_constructor_input)
@@ -271,14 +273,20 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
             subloc = loc + (key,)
             subdoc = doc[key]
             instance[key] = doc_construct(
-                doc=subdoc, spec=subspec, loc=subloc, top_spec=top_spec,
+                doc=subdoc, spec=subspec, loc=subloc, context=context,
                 constructors=constructors,
                 autoconstruct=autoconstruct,
                 allow_constructor_input=allow_constructor_input)
 
     old_deferred_constructor_names = None
+    round = 0
+    constructed = set()
 
     while True:
+        context['sep'] = sep
+        context['constructed'] = constructed
+        context['round'] = round
+
         deferred_constructor_names = []
         for constructor_name in constructor_names:
             subloc = loc + (constructor_name,)
@@ -297,7 +305,8 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
             subspec = spec[constructor_name]
             try:
                 instance = constructor(instance=instance, spec=subspec,
-                                       loc=subloc, top_spec=top_spec)
+                                       loc=subloc, context=context)
+                constructed.add(constructor_name)
             except DeferConstructor as e:
                 deferred_constructor_names.append(constructor_name)
 
@@ -310,6 +319,7 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
             raise InvalidInput(m)
 
         old_deferred_constructor_names = deferred_constructor_names
+        round += 1
 
     return instance
 
