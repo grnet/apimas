@@ -156,12 +156,12 @@ def construct_text(instance, spec, loc, top_spec):
 
     text_len = len(text)
     if text_len < minlen:
-        m = "{loc}: {text!r}: minimum length {minlen!r} breached" 
+        m = "{loc}: {text!r}: minimum length {minlen!r} breached"
         m = m.format(loc=loc, text=text, minlen=minlen)
         raise ValidationError(m)
 
     if maxlen is not None and text_len > maxlen:
-        m = "{loc}: {text!r}: maximum length {maxlen!r} exceeded" 
+        m = "{loc}: {text!r}: maximum length {maxlen!r} exceeded"
         m = m.format(loc=loc, text=text, maxlen=maxlen)
         raise ValidationError(m)
 
@@ -175,5 +175,5 @@ def construct_text(instance, spec, loc, top_spec):
     return text
 
 
-register_constructor(construct_integer, '.integer')
-register_constructor(construct_text, '.text')
+register_constructor(construct_integer, 'integer')
+register_constructor(construct_text, 'text')

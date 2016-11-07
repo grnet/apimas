@@ -117,9 +117,9 @@ def doc_iter(doc, preorder=False, postorder=True, path=()):
 def doc_pop(doc, path):
     feed, trail, nodes = doc_locate(doc, path)
     if feed:
-        return
+        return None
 
-    trail.pop()
+    ret = trail.pop()
 
     while nodes:
         parent = nodes.pop()
@@ -127,7 +127,9 @@ def doc_pop(doc, path):
         del parent[segment]
         if parent:
             break
-    
+
+    return ret
+
 
 def doc_value(doc):
     if type(doc) is dict:
@@ -160,11 +162,12 @@ def doc_merge(doca, docb, merge=lambda a, b: (a, b)):
 _constructors = {}
 
 
-def register_constructor(constructor, name=None):
+def register_constructor(constructor, name=None, sep='.'):
     if name is None:
-        name = '.' + constructor.__name__.replace('construct_', '', 1)
+        name = constructor.__module__
+        name += sep + constructor.__name__.replace('construct_', '', 1)
 
-    if name in _constructors:
+    if doc_get(_constructors, name.split(sep)) is not None:
         m = ("Cannot set constructor {name!r} to {constructor!r}: "
              "constructor already exists.")
         m = m.format(name=name, constructor=constructor)
@@ -180,8 +183,8 @@ def register_constructor(constructor, name=None):
     _constructors[name] = constructor
 
 
-def unregister_constructor(name):
-    return _constructors.pop(name, None)
+def unregister_constructor(name, sep='.'):
+    return doc_pop(_constructors, name.split(sep))
 
 
 def autoconstructor(instance, spec, loc, top_spec):
@@ -191,13 +194,14 @@ def autoconstructor(instance, spec, loc, top_spec):
     return instance
 
 
-register_constructor(autoconstructor, name='.autoconstruct')
+register_constructor(autoconstructor, name='autoconstruct')
 
 
 def doc_construct(doc, spec, loc=(), top_spec=None,
                   constructors=_constructors,
                   autoconstruct=False,
-                  allow_constructor_input=False):
+                  allow_constructor_input=False,
+                  sep='.'):
 
     instance = {}
     constructor_names = []
@@ -219,7 +223,7 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
     prefixes = []
 
     for key in spec.iterkeys():
-        if doc_is_basic and not key.startswith('.'):
+        if doc_is_basic and not key.startswith(sep):
             subloc = loc + (key,)
             m = ("{loc!r}: document {doc!r} is basic "
                  "but spec requires key {key!r}")
@@ -229,7 +233,7 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
         if key.endswith('*'):
             prefixes.append(key[:-1])
 
-        if key.startswith('.'):
+        if key.startswith(sep):
             constructor_names.append(key)
             if not allow_constructor_input:
                 continue
@@ -277,16 +281,17 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
         deferred_constructor_names = []
         for constructor_name in constructor_names:
             subloc = loc + (constructor_name,)
-            if constructor_name in constructors:
-                constructor = constructors[constructor_name]
-            elif autoconstruct in constructors:
-                constructor = constructors[autoconstruct]
-            elif autoconstruct is True:
-                constructor = autoconstructor
-            else:
-                m = "{loc!r}: cannot find constructor {constructor_name!r}"
-                m = m.format(loc=subloc, constructor_name=constructor_name)
-                raise InvalidInput(m)
+            constructor = doc_get(constructors, constructor_name.split(sep))
+            if constructor is None:
+                if autoconstruct is True:
+                    constructor = autoconstructor
+                else:
+                    constructor = doc_get(constructors,
+                                          autoconstruct.split(sep))
+                if constructor is None:
+                    m = "{loc!r}: cannot find constructor {constructor_name!r}"
+                    m = m.format(loc=subloc, constructor_name=constructor_name)
+                    raise InvalidInput(m)
 
             subspec = spec[constructor_name]
             ret = constructor(instance=instance, spec=subspec,
