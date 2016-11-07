@@ -154,6 +154,12 @@ def doc_merge(doca, docb, merge=lambda a, b: (a, b)):
     return docout
 
 
+def doc_update(doc, doc_update):
+    for path, val in doc_iter(doc_update):
+        if type(val) is not dict:
+            doc_set(doc, path, val)
+
+
 _constructors = {}
 
 
