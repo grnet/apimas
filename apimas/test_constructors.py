@@ -136,7 +136,7 @@ def construct_alpha(instance, spec, loc, top_spec):
     assert doc_get(top_spec, loc) == spec
     instance['alpha'] = spec['val']
     if 'beta' not in instance:
-        return DEFER_CONSTRUCTOR
+        raise DeferConstructor
     instance['gamma'] = instance['alpha'], instance['beta']
     return instance
 
@@ -145,7 +145,7 @@ def construct_beta(instance, spec, loc, top_spec):
     assert doc_get(top_spec, loc) == spec
     instance['beta'] = spec['val']
     if 'beta' not in instance:
-        return DEFER_CONSTRUCTOR
+        raise DeferConstructor
     instance['gamma'] = instance['alpha'], instance['beta']
     return instance
 
@@ -163,14 +163,14 @@ print json.dumps(instance, indent=2)
 def construct_deadlock1(instance, spec, loc, top_spec):
     assert doc_get(top_spec, loc) == spec
     instance['deadlock'] = 0
-    return DEFER_CONSTRUCTOR
+    raise DeferConstructor
 
 
 @register_constructor
 def construct_deadlock2(instance, spec, loc, top_spec):
     assert doc_get(top_spec, loc) == spec
     instance['deadlock'] = 1
-    return DEFER_CONSTRUCTOR
+    raise DeferConstructor
 
 
 deadlock_spec = {

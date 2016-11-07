@@ -8,13 +8,8 @@ from errors import ValidationError, NotFound, InvalidInput, ConflictError
 bytes = str
 
 
-class DEFER_CONSTRUCTOR(object):
-    """A unique object be returned by constructors to defer their execution."""
-    def __init__(self):
-        m = ("{cls!r} is intended to be used as a unique object only, "
-             "without any instantiation ever.")
-        m = m.format(type(self))
-        raise AssertionError(m)
+class DeferConstructor(Exception):
+    """An exception raised by constructors to defer their executeion."""
 
 
 def doc_locate(doc, path):
@@ -294,12 +289,11 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
                     raise InvalidInput(m)
 
             subspec = spec[constructor_name]
-            ret = constructor(instance=instance, spec=subspec,
-                              loc=subloc, top_spec=top_spec)
-            if ret is DEFER_CONSTRUCTOR:
+            try:
+                instance = constructor(instance=instance, spec=subspec,
+                                       loc=subloc, top_spec=top_spec)
+            except DeferConstructor as e:
                 deferred_constructor_names.append(constructor_name)
-            else:
-                instance = ret
 
         if not deferred_constructor_names:
             break
