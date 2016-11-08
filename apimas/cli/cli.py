@@ -485,7 +485,7 @@ class ApimasCliAdapter(NaiveAdapter):
         adapter_conf = doc.doc_get(instance, (
             self.ADAPTER_CONF,))
         if adapter_conf is None:
-            return doc.DEFER_CONSTRUCTOR
+            raise doc.DeferConstructor
         for k, v in adapter_conf.iteritems():
             v.update({property_name: True})
         return instance
