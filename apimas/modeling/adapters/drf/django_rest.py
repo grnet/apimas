@@ -2,7 +2,7 @@ from collections import Iterable
 from django.db import models
 from django.core.exceptions import FieldDoesNotExist
 from apimas.modeling.core import documents as doc
-from apimas.modeling.adapters.adapter import Adapter
+from apimas.modeling.adapters.cookbooks import NaiveAdapter
 from apimas.modeling.adapters.drf.container import Container
 from apimas.modeling.adapters.drf.utils import (
     ApimasException, import_object)
@@ -17,16 +17,15 @@ def handle_exception(func):
     return wrapper
 
 
-class DjangoRestAdapter(Adapter):
+class DjangoRestAdapter(NaiveAdapter):
     STRUCTURES = {
-        '.ref',
-        '.struct',
-        '.structarray',
-        '.resource',
-        '.collection',
+        '.ref': '.drf_field',
+        '.struct': '.drf_field',
+        '.structarray': '.drf_field',
+        '.collection': '.collection',
     }
 
-    DRF_CONF_KEY = 'drf_conf'
+    ADAPTER_CONF = 'drf_conf'
     PROPERTIES_CONF_KEY = 'properties'
     NESTED_CONF_KEY = 'nested_objects'
 
@@ -35,15 +34,15 @@ class DjangoRestAdapter(Adapter):
         ('required', 'read_only')
     ]
 
-    PROPERTIES = {
-        '.readonly': 'read_only',
-        '.writeonly': 'write_only',
-        '.blankable': 'allow_blank',
-        '.nullable': 'allow_null',
-        '.required': 'required',
+    PROPERTY_MAPPING = {
+        'readonly': 'read_only',
+        'writeonly': 'write_only',
+        'blankable': 'allow_blank',
+        'nullable': 'allow_null',
+        'required': 'required',
     }
 
-    FIELD_MAPPING = {
+    TYPE_MAPPING = {
         'serial': models.AutoField,
         'integer': models.IntegerField,
         'big-integer': models.BigIntegerField,
@@ -61,191 +60,194 @@ class DjangoRestAdapter(Adapter):
                    models.OneToOneRel),
     }
 
-    FIELD_CONSTRUCTORS = {
-        '.serial': 'serial',
-        '.integer': 'integer',
-        '.big-integer': 'big-integer',
-        '.float': 'float',
-        '.string': 'string',
-        '.boolean': 'boolean',
-        '.date': 'date',
-        '.datetime': 'datetime',
-        '.ref': 'ref',
-    }
+    PREDICATES = list(NaiveAdapter.PREDICATES) + ['.drf_field']
 
     def __init__(self):
         self.gen_adapter_spec = {}
+        self.fields_type = {}
         self.urls = None
 
-    def construct(self, spec):
-        self.adapter_spec = doc.doc_construct(
-            {}, spec, constructors=self.get_constructors(),
-            allow_constructor_input=True)
-
     def apply(self):
+        """
+        Create django rest views based on the constructed adapter spec.
+        """
         if not self.adapter_spec:
             raise ApimasException(
                 'Cannot apply an empty adapter specification')
         structural_elements = self.get_structural_elements(self.adapter_spec)
         container = Container(structural_elements[0])
         self.urls = container.create_api_views(
-            self.adapter_spec.get(self.DRF_CONF_KEY, {}))
+            self.adapter_spec.get(self.ADAPTER_CONF, {}))
 
-    def get_structural_elements(self, instance):
-        filter_func = lambda x: not x.startswith('.')\
-            and not x == self.DRF_CONF_KEY
-        return filter(filter_func, instance.keys())
-
-    def construct_action(self, instance, spec, loc, top_spec):
-        return instance
-
-    def construct_CRUD_action(self, instance, spec, loc, top_spec, action):
+    def construct_CRUD_action(self, instance, spec, loc, context, action):
+        """ Adds an action to the list of allowable. """
         adapter_key = 'allowable_operations'
         self.init_adapter_conf(instance)
-        if adapter_key not in instance[self.DRF_CONF_KEY]:
-            instance[self.DRF_CONF_KEY][adapter_key] = []
-        instance[self.DRF_CONF_KEY][adapter_key].append(action)
+        if adapter_key not in instance[self.ADAPTER_CONF]:
+            instance[self.ADAPTER_CONF][adapter_key] = []
+        instance[self.ADAPTER_CONF][adapter_key].append(action)
         return instance
 
-    def construct_list(self, instance, spec, loc, top_spec):
-        return self.construct_CRUD_action(instance, spec, loc, top_spec,
+    def construct_list(self, instance, spec, loc, context):
+        """
+        Constuctor for `.list` predicate.
+
+        Allows list operation to be performed on a resource.
+        """
+        return self.construct_CRUD_action(instance, spec, loc, context,
                                           'list')
 
-    def construct_retrieve(self, instance, spec, loc, top_spec):
-        return self.construct_CRUD_action(instance, spec, loc, top_spec,
+    def construct_retrieve(self, instance, spec, loc, context):
+        """
+        Constuctor for `.retrieve` predicate.
+
+        Allows retrieval of specific resource.
+        """
+        return self.construct_CRUD_action(instance, spec, loc, context,
                                           'retrieve')
 
-    def construct_create(self, instance, spec, loc, top_spec):
-        return self.construct_CRUD_action(instance, spec, loc, top_spec,
+    def construct_create(self, instance, spec, loc, context):
+        """
+        Constuctor for `.retrieve` predicate.
+
+        Allows creation of a new resource.
+        """
+        return self.construct_CRUD_action(instance, spec, loc, context,
                                           'create')
 
-    def construct_update(self, instance, spec, loc, top_spec):
-        return self.construct_CRUD_action(instance, spec, loc, top_spec,
+    def construct_update(self, instance, spec, loc, context):
+        """
+        Constuctor for `.retrieve` predicate.
+
+        Allows update of a specific resource.
+        """
+        return self.construct_CRUD_action(instance, spec, loc, context,
                                           'update')
 
-    def construct_delete(self, instance, spec, loc, top_spec):
-        return self.construct_CRUD_action(instance, spec, loc, top_spec,
+    def construct_delete(self, instance, spec, loc, context):
+        """
+        Constuctor for `.retrieve` predicate.
+
+        Allows deletion of specific resource.
+        """
+        return self.construct_CRUD_action(instance, spec, loc, context,
                                           'delete')
 
-    def construct_endpoint(self, instance, spec, loc, top_spec):
+    def construct_endpoint(self, instance, spec, loc, context):
+        """
+        Constuctor for `.endpoint` predicate.
+
+        Aggregates all constructed resources in order to form a complete
+        API SCHEMA to create all required views.
+        """
         adapter_key = 'resources'
         structural_elements = self.get_structural_elements(instance)
         assert len(structural_elements) == 1
         self.init_adapter_conf(instance)
-        api_schema = {resource: schema[self.DRF_CONF_KEY]
+        api_schema = {resource: schema[self.ADAPTER_CONF]
                       for resource, schema in doc.doc_get(
                           instance, (structural_elements[0],)).iteritems()}
-        instance[self.DRF_CONF_KEY][adapter_key] = api_schema
+        instance[self.ADAPTER_CONF][adapter_key] = api_schema
         return instance
 
-    def construct_collection(self, instance, spec, loc, top_spec):
-        structural_elements = self.get_structural_elements(instance)
+    def construct_collection(self, instance, spec, loc, context):
+        """
+        Constructor for `.collection` predicate.
+
+        Aggregates constructed field schema and actions in order to form
+        schema of a specific resource.
+        """
         self.init_adapter_conf(instance)
-        for element in structural_elements:
-            instance[self.DRF_CONF_KEY].update(doc.doc_get(
-                instance, (element, self.DRF_CONF_KEY)) or {})
-        instance[self.DRF_CONF_KEY].update(**spec)
-        return instance
-
-    def construct_resource(self, instance, spec, loc, top_spec):
         resource_schema = self.construct_field_schema(instance)
         resource_schema.update(self.construct_resource_schema(instance))
-        instance[self.DRF_CONF_KEY].update(resource_schema)
+        instance[self.ADAPTER_CONF].update(dict(
+            resource_schema, **spec))
+        instance[self.ADAPTER_CONF].update(doc.doc_get(
+            instance, ('actions', self.ADAPTER_CONF)) or {})
         return instance
 
-    def construct_field(self, instance, spec, loc, top_spec, field_type=None):
+    def construct_drf_field(self, instance, spec, loc, context):
+        """
+        Constructor of `.drf_field` predicate.
+
+        This constructor validates the existence of a django model field to
+        the extracted model class.
+
+        In case of nested fields, e.g. `.struct`, `.structarray`, the field
+        should be related to another model.
+        """
+        nested_fields = {'.struct', '.structarray'}
+        if self.ADAPTER_CONF not in instance:
+            raise doc.DeferConstructor
+        field_type = self.fields_type[loc[-2]]
+        context = context.get('top_spec', {})
+        self.validate_model_field(context, loc, field_type, **spec)
+        for k in nested_fields:
+            if k in instance:
+                nested = {self.NESTED_CONF_KEY: dict(
+                    self.construct_field_schema(instance), **spec)}
+                instance[self.ADAPTER_CONF].update(nested)
+        return instance
+
+    def construct_type(self, instance, spec, loc, context, field_type=None):
+        """
+        Contructor for predicates that indicate the type of a field.
+
+        This constructor produces the corresponding cerberus syntax for
+        specifying the type of a field.
+        """
+        self.fields_type[loc[-2]] = self.TYPE_MAPPING[field_type]
         self.init_adapter_conf(instance)
-        self.validate_model_field(top_spec, loc, field_type, **spec)
         return instance
 
-    def construct_nested_field(self, instance, spec, loc, top_spec,
-                               field_type=None):
-        self.validate_model_field(top_spec, loc, field_type)
-        nested_schema = self.construct_nested_objects(instance)
-        instance[self.DRF_CONF_KEY][self.NESTED_CONF_KEY] = dict(
-            nested_schema, **spec)
-        return instance
+    def construct_property(self, instance, spec, loc, context, key):
+        """
+        Constuctor for predicates that indicate a property of a field,
+        e.g. nullable, readonly, required, etc.
 
-    def construct_struct(self, instance, spec, loc, top_spec):
-        return self.construct_nested_field(instance, spec, loc, top_spec,
-                                           'struct')
-
-    def construct_structarray(self, instance, spec, loc, top_spec):
-        return self.construct_nested_field(instance, spec, loc, top_spec,
-                                           'structarray')
-
-    def construct_ref(self, instance, spec, loc, top_spec):
-        return self.construct_field(instance, spec, loc, top_spec, 'ref')
-
-    def construct_serial(self, instance, spec, loc, top_spec):
-        return self.construct_field(instance, spec, loc, top_spec, 'serial')
-
-    def construct_integer(self, instance, spec, loc, top_spec):
-        return self.construct_field(instance, spec, loc, top_spec, 'integer')
-
-    def construct_big_integer(self, instance, spec, loc, top_spec):
-        return self.construct_field(instance, spec, loc, top_spec,
-                                    'big-integer')
-
-    def construct_string(self, instance, spec, loc, top_spec):
-        return self.construct_field(instance, spec, loc, top_spec, 'string')
-
-    def construct_boolean(self, instance, spec, loc, top_spec):
-        return self.construct_field(instance, spec, loc, top_spec, 'boolean')
-
-    def construct_datetime(self, instance, spec, loc, top_spec):
-        return self.construct_field(instance, spec, loc, top_spec, 'datetime')
-
-    def construct_date(self, instance, spec, loc, top_spec):
-        return self.construct_field(instance, spec, loc, top_spec, 'date')
-
-    def construct_blankable(self, instance, spec, loc, top_spec):
-        return self.construct_property(instance, loc, 'allow_blank')
-
-    def construct_required(self, instance, spec, loc, top_spec):
-        return self.construct_property(instance, loc, 'required')
-
-    def construct_nullable(self, instance, spec, loc, top_spec):
-        return self.construct_property(instance, loc, 'allow_null')
-
-    def construct_readonly(self, instance, spec, loc, top_spec):
-        return self.construct_property(instance, loc, 'read_only')
-
-    def construct_writeonly(self, instance, spec, loc, top_spec):
-        return self.construct_property(instance, loc, 'write_only')
-
-    def construct_indexable(self, instance, spec, loc, top_spec):
-        return instance
-
-    def construct_aggregate(self, instance, spec, loc, top_spec):
-        return instance
-
-    def construct_property(self, instance, loc, key):
-        self.init_adapter_conf(instance)
-        if self.PROPERTIES_CONF_KEY not in instance[self.DRF_CONF_KEY]:
-            instance[self.DRF_CONF_KEY][self.PROPERTIES_CONF_KEY] = {}
-        instance[self.DRF_CONF_KEY][self.PROPERTIES_CONF_KEY][key] = True
+        This constructor generates the corresponding cerberus syntax. However,
+        it requires field to be initialized, otherwise, construction is
+        defered.
+        """
+        property_path = (self.ADAPTER_CONF, self.PROPERTIES_CONF_KEY)
+        field_schema = doc.doc_get(instance, property_path)
+        if field_schema is None:
+            doc.doc_set(instance, property_path, {})
+        self.init_adapter_conf(
+            instance, initial={self.PROPERTIES_CONF_KEY: {}})
+        instance[self.ADAPTER_CONF][self.PROPERTIES_CONF_KEY].update(
+            {self.PROPERTY_MAPPING[key]: True})
         return instance
 
     @handle_exception
-    def validate_model_field(self, spec, loc, field_type, source=None):
+    def validate_model_field(self, spec, loc, django_field_type, source=None):
+        """
+        Validate that a field specified in spec is field of the model
+        given as input.
+        """
         django_conf = self.get_constructor_params(spec, loc[:-1], [])
         model = self.extract_model(source or loc[-2], django_conf)
         if model is None:
             raise ApimasException('Invalid argument, model cannot be `None`')
         model_field = model._meta.get_field(source or loc[-2])
-        django_field_type = self.FIELD_MAPPING[field_type]
         if isinstance(django_field_type, Iterable):
-            matches = any(type(model_field) is d_field
+            matches = any(isinstance(model_field, d_field)
                           for d_field in django_field_type)
         else:
-            matches = type(model_field) is django_field_type
+            matches = isinstance(model_field, django_field_type)
         if not matches:
             raise ApimasException(
                 'Field %s is not %s type in your django model' % (
-                    repr(loc[-2]), repr(field_type)))
+                    repr(loc[-2]), repr(django_field_type)))
 
     def validate_intersectional_pairs(self, properties):
+        """
+        Validate properties of fields.
+
+        There are some properties that cannot be set together, such as
+        `required` and `readonly`. This method checks for such violations and
+        raises an exception in this case.
+        """
         for field_name, prop in properties.iteritems():
             for u, v in self.NON_INTERSECTIONAL_PAIRS:
                 if prop.get(u, False) and prop.get(v, False):
@@ -254,14 +256,15 @@ class DjangoRestAdapter(Adapter):
                             field_name, u, v))
 
     def construct_field_schema(self, instance):
+        """ Aggregates propeties of all fields to form a field schema. """
         adapter_key = 'field_schema'
         self.init_adapter_conf(instance)
         field_properties = doc.doc_get(instance, ('*',))
         attrs = {self.PROPERTIES_CONF_KEY: {}, self.NESTED_CONF_KEY: {}}
         for field_name, field_spec in field_properties.iteritems():
             for k, v in attrs.iteritems():
-                if k in field_spec[self.DRF_CONF_KEY]:
-                    v[field_name] = field_spec[self.DRF_CONF_KEY][k]
+                if k in field_spec[self.ADAPTER_CONF]:
+                    v[field_name] = field_spec[self.ADAPTER_CONF][k]
         self.validate_intersectional_pairs(attrs[self.PROPERTIES_CONF_KEY])
         fields = [field_name for field_name, _ in field_properties.iteritems()]
         field_schema = {adapter_key: {
@@ -273,16 +276,28 @@ class DjangoRestAdapter(Adapter):
         return field_schema
 
     def get_constructor_params(self, spec, loc, params):
-        for structure in self.STRUCTURES:
-            struct_doc = doc.doc_get(spec, loc[:-1] + (structure,))
-            if struct_doc:
-                params.append((structure, struct_doc))
+        """
+        Get constructor params for all the constructors that represent a
+        structure, e.g. `.struct`, `.collection`, etc.
+        """
+        for structure in self.STRUCTURES.keys():
+            struct_doc = doc.doc_get(spec, loc[:-1])
+            structure_params = doc.doc_get(
+                spec, loc[:-1] + (self.STRUCTURES[structure],))
+            if structure in struct_doc and structure_params:
+                params.append((structure, structure_params))
         if loc[:-1]:
             return self.get_constructor_params(spec, loc[:-1], params)
         return params
 
     def extract_model(self, related_field, django_conf):
-        structure, params = django_conf[0]
+        """
+        Exctact model according to the django configuration.
+
+        However, if a field is related to another model, then the related model
+        is extracted.
+        """
+        _, params = django_conf[0]
         if len(django_conf) > 1:
             return self.extract_related_model(
                 params.get('source', related_field), django_conf[1:])
@@ -290,6 +305,10 @@ class DjangoRestAdapter(Adapter):
 
     @handle_exception
     def extract_related_model(self, related_field, django_conf):
+        """
+        Extracts related model based on given field. It also checks that
+        given field is related to another model.
+        """
         model = self.extract_model(related_field, django_conf)
         related_field = model._meta.get_field(related_field)
         if related_field.related_model is None:
@@ -305,11 +324,3 @@ class DjangoRestAdapter(Adapter):
             field_name for field_name, spec in field_properties.iteritems()
             if spec.get('.indexable', None) is not None]
         return {adapter_key: filter_fields}
-
-    def construct_nested_objects(self, instance, many=True):
-        nested_schema = self.construct_field_schema(instance)
-        return nested_schema
-
-    def init_adapter_conf(self, instance):
-        if self.DRF_CONF_KEY not in instance:
-            instance[self.DRF_CONF_KEY] = {}
