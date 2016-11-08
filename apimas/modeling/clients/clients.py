@@ -3,7 +3,6 @@ import requests
 from requests.exceptions import HTTPError
 from requests.compat import urljoin, quote
 from apimas.modeling.core import documents as doc, exceptions as ex
-from apimas.modeling.adapters import Adapter
 from apimas.modeling.adapters.cookbooks import NaiveAdapter
 from apimas.modeling.clients.auth import ApimasClientAuth
 
