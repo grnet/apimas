@@ -39,7 +39,7 @@ def generate(model, config, is_hyperlinked=True):
     dicts = [meta, nested_serializers]
     # Compose content i.e. nested serializers, Meta class and custom methods.
     class_dict = dict(sum((list(content.items()) for content in dicts), []))
-    custom_mixins = map(utils.LOAD_CLASS, config.pop(
+    custom_mixins = map(utils.LOAD_CLASS, config.get(
         utils.CUSTOM_MIXINS_LOOKUP_FIELD, []))
     cls = type(model.__name__, tuple(custom_mixins) + (
         serializer_base_class,), class_dict)

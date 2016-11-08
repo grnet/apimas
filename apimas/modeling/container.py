@@ -58,10 +58,10 @@ class Container(object):
         """
         self._validated_schema = self.validate_schema(
             api_schema, API_SCHEMA_VALIDATOR)
-        global_settings = api_schema.pop('global', {})
+        global_settings = api_schema.get('global', {})
         for resource, config in api_schema.get(
                 RESOURCES_LOOKUP_FIELD, {}).iteritems():
-            model = utils.import_object(config.pop(MODEL_LOOKUP_FIELD, ''))
+            model = utils.import_object(config.get(MODEL_LOOKUP_FIELD, ''))
             self.register_view(resource, model, config, **global_settings)
         return url(r'^' + self.api + '/', include(self.router.urls))
 

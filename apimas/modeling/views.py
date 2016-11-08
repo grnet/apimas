@@ -37,16 +37,16 @@ def generate(model, config, **kwargs):
     class.
     :return: A `ViewSet` class.
     """
-    authentication_classes = config.pop(
+    authentication_classes = config.get(
         utils.AUTH_CLASSES_LOOKUP_FIELD,
-        kwargs.pop(utils.AUTH_CLASSES_LOOKUP_FIELD, []))
-    permission_classes = config.pop(
+        kwargs.get(utils.AUTH_CLASSES_LOOKUP_FIELD, []))
+    permission_classes = config.get(
         utils.PERM_CLASSES_LOOKUP_FIELD,
-        kwargs.pop(utils.PERM_CLASSES_LOOKUP_FIELD, []))
-    field_schema = config.pop(utils.FIELD_SCHEMA_LOOKUP_FIELD, {})
-    is_hyperlinked = config.pop(
+        kwargs.get(utils.PERM_CLASSES_LOOKUP_FIELD, []))
+    field_schema = config.get(utils.FIELD_SCHEMA_LOOKUP_FIELD, {})
+    is_hyperlinked = config.get(
         utils.HYPERLINKED_LOOKUP_FIELD,
-        kwargs.pop(utils.HYPERLINKED_LOOKUP_FIELD, True))
+        kwargs.get(utils.HYPERLINKED_LOOKUP_FIELD, True))
     standard_content = {
         'serializer_class': generate_serializer(
             model, field_schema, is_hyperlinked),
@@ -72,7 +72,7 @@ def get_filter_backends(config):
     """
     filter_backends = ()
     for filter_option, filter_backend in FILTERING_BACKENDS.iteritems():
-        value = config.pop(filter_option, None)
+        value = config.get(filter_option, None)
         if value:
             filter_backends += (filter_backend,)
     return {'filter_backends': filter_backends}
@@ -97,7 +97,7 @@ def get_bases_classes(config):
     hook_class = get_hook_class(config)
     custom_mixins = tuple(map(
         utils.LOAD_CLASS, config.get(utils.CUSTOM_MIXINS_LOOKUP_FIELD, [])))
-    operations = config.pop(utils.OPERATIONS_LOOKUP_FIELD, None)
+    operations = config.get(utils.OPERATIONS_LOOKUP_FIELD, None)
     bases = (apimas_viewsets.ModelViewSet,) if not operations\
         else tuple([MIXINS[operation] for operation in operations]) + (
             viewsets.GenericViewSet,)
@@ -111,5 +111,5 @@ def get_hook_class(config):
 
     If no hook class is specified, then `BaseHook` class is used.
     """
-    hook_class = config.pop(utils.HOOK_CLASS_LOOKUP_FIELD, None)
+    hook_class = config.get(utils.HOOK_CLASS_LOOKUP_FIELD, None)
     return utils.import_object(hook_class) if hook_class else mixins.HookMixin
