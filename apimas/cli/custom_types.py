@@ -63,7 +63,7 @@ class Credentials(click.File):
             auth_type, auth_schema = default, credentials.get(default, None)
         if auth_type not in self.schema:
             self.fail('%s is not part of supported authentication schemas' % (
-                default))
+                auth_type))
         if not auth_schema:
             self.fail('Cannot find %s as authentication schema' % (auth_type))
 
