@@ -5,6 +5,7 @@ from requests.compat import urljoin, quote
 from apimas.modeling.core import documents as doc, exceptions as ex
 from apimas.modeling.adapters.cookbooks import NaiveAdapter
 from apimas.modeling.clients.auth import ApimasClientAuth
+from apimas.modeling.clients.normalizers import RefNormalizer
 
 
 TRAILING_SLASH = '/'
@@ -51,7 +52,7 @@ class ApimasClient(object):
 
         Example: POST endpoint/
         """
-        self.validate(data or {}, raise_exception)
+        data = self.validate(data or {}, raise_exception)
         r = requests.post(self.endpoint, headers=headers, data=data,
                           auth=self.auth)
         return r
@@ -64,7 +65,7 @@ class ApimasClient(object):
 
         Example: PUT endpoint/<pk>/
         """
-        self.validate(data or {}, raise_exception)
+        data = self.validate(data or {}, raise_exception)
         r = requests.put(self.format_endpoint(resource_id), headers=headers,
                          data=data, auth=self.auth)
         return r
@@ -78,7 +79,7 @@ class ApimasClient(object):
 
         Example: PATCH endpoint/<pk>/
         """
-        self.partial_validate(data or {}, raise_exception)
+        data = self.partial_validate(data or {}, raise_exception)
         r = requests.patch(self.format_endpoint(resource_id), headers=headers,
                            data=data, auth=self.auth)
         return r
@@ -165,6 +166,7 @@ class ApimasClient(object):
         is_valid = validator.validate(data)
         if raise_exception and not is_valid:
             raise ex.ApimasClientException(validator.errors)
+        return validator.document
 
     def validate(self, data, raise_exception=True):
         """
@@ -177,6 +179,7 @@ class ApimasClient(object):
         is_valid = self.api_validator.validate(data)
         if raise_exception and not is_valid:
             raise ex.ApimasClientException(self.api_validator.errors)
+        return self.api_validator.document
 
     def set_credentials(self, auth_type, **credentials):
         """
@@ -208,6 +211,7 @@ class ApimasClientAdapter(NaiveAdapter):
         'datetime': 'datetime',
         'struct': 'dict',
         'structarray': 'list',
+        'ref': 'string',
     }
 
     PREDICATES = list(NaiveAdapter.PREDICATES) + ['.field']
@@ -275,10 +279,34 @@ class ApimasClientAdapter(NaiveAdapter):
         """
         nested_structures = {'.struct', '.structarray'}
         self.init_adapter_conf(instance)
+        if '.ref' in instance:
+            return self.construct_ref_field(instance, spec, loc, context)
         for k in nested_structures:
             if k in instance:
                 return self.construct_nested_field(
                     instance, spec, loc, context, k)
+        return instance
+
+    def construct_ref_field(self, instance, spec, loc, context):
+        """
+        Construct a field that refes to another collection.
+
+        It sets a normalization rule so that it converts an value to the
+        corresponding url location of the referenced collection. Actually,
+        this value indicates the id of the referenced collection.
+
+        Example:
+        value: my_value --> normalized: http://<root_url>/<loc>/my_value/
+
+        where loc is the location where referenced collection is placed at,
+        joined by trailing slash `/`.
+
+        This normalization is triggered before every cerberus validation.
+        """
+        ref = doc.doc_get(instance, ('.ref', 'to')).keys()[0]
+        instance[self.ADAPTER_CONF].update(
+            {'coerce': RefNormalizer(TRAILING_SLASH.join(
+                (self.root_url, loc[0], ref, '')))})
         return instance
 
     def construct_nested_field(self, instance, spec, loc, context,
