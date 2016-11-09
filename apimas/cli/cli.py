@@ -180,6 +180,7 @@ class ApimasCliAdapter(NaiveAdapter):
         'float': float,
         'date': str,
         'datetime': str,
+        'ref': str,
         'structarray': Json(),
     }
 
