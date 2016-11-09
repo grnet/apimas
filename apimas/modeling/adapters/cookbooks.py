@@ -1,4 +1,4 @@
-from apimas.modeling.core import documents as doc
+from apimas.modeling.core import documents as doc, exceptions as ex
 from apimas.modeling.adapters import Adapter
 
 
@@ -77,7 +77,16 @@ class NaiveAdapter(Adapter):
         Constuctor for `.ref` predicate.
 
         This maps predicate to the specified type according to mapping.
+        Apart from this, it validates that it refers to an existing collection.
         """
+        ref = spec.get('to', None)
+        if not ref:
+            raise ex.ApimasException('You have to specify `to` parameter')
+        root_loc = loc[0]
+        top_spec = context.get('top_spec', {})
+        if ref not in doc.doc_get(top_spec, (root_loc,)):
+            raise ex.ApimasException(
+                'Reference collection `%s` does not exist' % (ref))
         return self.construct_type(instance, spec, loc, context, 'ref')
 
     def construct_serial(self, instance, spec, loc, context):

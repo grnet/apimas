@@ -180,14 +180,37 @@ class DjangoRestAdapter(NaiveAdapter):
         if self.ADAPTER_CONF not in instance:
             raise doc.DeferConstructor
         field_type = self.fields_type[loc[-2]]
-        context = context.get('top_spec', {})
-        self.validate_model_field(context, loc, field_type, **spec)
+        top_spec = context.get('top_spec', {})
+        source = spec.get('source', None)
+        if '.ref' in instance:
+            self.validate_ref(instance, spec, loc, top_spec, source)
+            return instance
+        self.validate_model_field(top_spec, loc, field_type, source)
         for k in nested_fields:
             if k in instance:
                 nested = {self.NESTED_CONF_KEY: dict(
                     self.construct_field_schema(instance), **spec)}
                 instance[self.ADAPTER_CONF].update(nested)
         return instance
+
+    def validate_ref(self, instance, spec, loc, top_spec, source):
+        """
+        Validates that the referenced field is a foreign key to the same
+        django model table as the model defined in the referenced collection
+        of spec. Otherwise, an exception with explanatory message is raised.
+        """
+        root_loc = loc[0:1]
+        ref = doc.doc_get(instance, ('.ref', 'to')).keys()[0]
+        django_conf = self.get_constructor_params(top_spec, loc, [])
+        model = self.extract_model(source or loc[-2], django_conf)
+        model_field = model._meta.get_field(source or loc[-2])
+        _, ref_params = self.get_constructor_params(
+            top_spec, root_loc + (ref, '*'), [])[0]
+        ref_model = ref_params.get('model', None)
+        if model_field.related_model is not import_object(ref_model):
+            raise DRFAdapterException(
+                'Model field of %s is not related to %s. Loc: %s' % (
+                    source or loc[-2], ref_model, str(loc)))
 
     def construct_type(self, instance, spec, loc, context, field_type=None):
         """
