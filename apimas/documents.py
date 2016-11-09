@@ -390,8 +390,22 @@ def doc_construct(doc, spec, loc=(), context=None,
                   allow_constructor_input=False,
                   sep='.'):
 
-    instance = {}
     doc_is_basic = type(doc) is not dict
+    spec_is_basic = type(spec) is not dict
+    if spec_is_basic:
+        if doc == spec:
+            return doc
+
+        if doc == {} and autoconstruct:
+            return spec
+
+        m = ("{loc!r}: spec is basic ({spec!r}), "
+             "therefore doc must either be empty or equal to spec, "
+             "not {doc!r}.")
+        m = m.format(loc=loc, spec=spec, doc=doc)
+        raise ValidationError(m)
+
+    instance = {}
     spec = _doc_construct_normalize_spec(loc, spec)
 
     if context is None:
