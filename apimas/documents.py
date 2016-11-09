@@ -148,20 +148,35 @@ def doc_iter(doc, preorder=False, postorder=True, path=()):
 
 
 def doc_pop(doc, path):
+    """Remove and return the node that exists at the given path.
+
+    Args:
+        doc (dict):
+            a hierarchical object-document.
+        path (tuple):
+            a list of str segments forming a path in doc.
+
+    Returns:
+        None or dict:
+            If there exists a node at the given path, it is removed and
+            returned. Any resulting empty nodes are removed. If there is no
+            node at the path, None is returned.
+
+    """
     feed, trail, nodes = doc_locate(doc, path)
     if feed:
         return None
 
-    ret = trail.pop()
+    popped_node = nodes.pop()
 
     while nodes:
-        parent = nodes.pop()
         segment = trail.pop()
+        parent = nodes.pop()
         del parent[segment]
         if parent:
             break
 
-    return ret
+    return popped_node
 
 
 def doc_value(doc):
@@ -504,6 +519,11 @@ def test():
     from pprint import pprint
     doc = random_doc()
     pprint(doc)
+    a = {'hello': {'there': 9}, 'hella': {'off': 11, 'true': 12}}
+    print doc_pop(a, 'hello.there'.split('.'))
+    pprint(a)
+    print doc_pop(a, 'hella'.split('.'))
+    pprint(a)
 
     def constructor(instance, spec, loc, context):
         assert '.one' in instance
