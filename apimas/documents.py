@@ -9,11 +9,21 @@ bytes = str
 
 
 class DeferConstructor(Exception):
-    """An exception raised by constructors to defer their executeion."""
+    """An exception raised by constructors to defer their execution."""
 
 
 def doc_locate(doc, path):
     """Walk a path down a document.
+
+    The path is a list of str segments. Starting from the root node, a cursor
+    points at the first segment. At each node, the segment under the cursor is
+    used to access the node to go deeper. As the cursor moves from the begining
+    towards the end of the path segment list, the list is logically split into
+    two parts. The first part, the trail, is the prefix of segments that have
+    already been used in descending through the document hierarchy and
+    corresponds to the current path. The second part of the path, the feed, is
+    the suffix of segments that have not yet been accessed to descend to the
+    full path.
 
     There are two outcomes:
         1. feed is empty, meaning that the given path was found
@@ -31,9 +41,11 @@ def doc_locate(doc, path):
             feed (list):
                 List of path segments left that have not yet been accessed
             trail (list):
-                List of path segments already accessed
+                List of path segments already accessed. It corresponds to the
+                current path of the node where no further descent was possible
+                and thus doc_locate() was terminated.
             nodes (list):
-                List of nodes already accessed
+                List of nodes already accessed, in order.
     """
     feed = list(reversed(path))
     trail = []
@@ -93,6 +105,32 @@ def doc_get(doc, path):
 
 
 def doc_iter(doc, preorder=False, postorder=True, path=()):
+    """Iterate the document hierarchy yielding each path and node.
+
+    Args:
+        doc (dict):
+            A hierarchical object-document
+        preorder (bool):
+            If true, yield path and node at the first node visit.
+            False by default.
+        postorder (bool):
+            If true, yield path and node at the second node visit.
+            True by default.
+
+            Note that postorder is an independent from preorder.
+            If both are true, nodes will be yielded two times.
+            If none is true, doc is iterated for any possible side-effects,
+            but nothing is yielded.
+        path (tuple):
+            A prefix path to append in yielded paths
+
+    Yields:
+        tuple of (path, node):
+            path (tuple):
+                The segments of the current path
+            node (dict):
+                The node at the current path.
+    """
     if preorder:
         yield path, doc
 
@@ -154,10 +192,10 @@ def doc_merge(doca, docb, merge=lambda a, b: (a, b)):
     return docout
 
 
-def doc_update(doc, doc_update):
-    for path, val in doc_iter(doc_update):
+def doc_update(target, source):
+    for path, val in doc_iter(source):
         if type(val) is not dict:
-            doc_set(doc, path, val)
+            doc_set(target, path, val)
 
 
 _constructors = {}

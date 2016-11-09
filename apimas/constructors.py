@@ -99,7 +99,7 @@ def construct_integer(instance, spec, loc, context):
 
 
 def construct_text(instance, spec, loc, context):
-    """Construct and validate a python int/long.
+    """Construct and validate a python str/unicode.
 
     Args:
         instance (dict or int):
