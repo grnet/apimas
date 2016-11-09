@@ -170,7 +170,7 @@ def construct_text(instance, spec, loc, context):
     if isinstance(text, str):
         text = text.decode(encoding)
 
-    elif isinstance(text, unicode):
+    elif not isinstance(text, unicode):
         m = "{loc}: text {text!r} is neither str nor unicode"
         m = m.format(loc=loc, text=text)
         raise ValidationError(m)
