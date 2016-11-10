@@ -1,3 +1,5 @@
+# XXX: temporary test file until we have proper unit testing
+
 from documents import *
 from constructors import *
 import json
@@ -135,10 +137,10 @@ def construct_alpha(instance, spec, loc, context):
     assert doc_get(context['top_spec'], loc) == spec
     instance['alpha'] = spec['val']
     if 'beta' not in instance:
-        assert context['round'] == 0
+        assert context['cons_round'] == 0
         assert '.beta' not in context['constructed']
         raise DeferConstructor
-    assert context['round'] <= 1
+    assert context['cons_round'] <= 1
     return instance
 
 
@@ -149,12 +151,12 @@ def construct_beta(instance, spec, loc, context):
     assert doc_get(context['top_spec'], loc) == spec
     instance['beta'] = spec['val']
     if 'alpha' not in instance:
-        assert context['round'] == 0
+        assert context['cons_round'] == 0
         assert '.alpha' not in context['constructed']
         raise DeferConstructor
-    if context['round'] == 0:
+    if context['cons_round'] == 0:
         raise DeferConstructor
-    assert context['round'] == 1
+    assert context['cons_round'] == 1
     assert '.alpha' in context['constructed']
     instance['gamma'] = instance['alpha'], instance['beta']
     return instance

@@ -5,13 +5,18 @@ Constructors in this module validate value constraints, normalize values.
 Optionally, constructors can create random conforming values.
 
 """
+import sys
+from random import choice, randint
+import re
+
 from documents import (
     register_constructor, doc_construct, doc_value,
     ValidationError, InvalidInput,
 )
 
-from random import choice, randint
-import re
+
+MAXINT = sys.maxint
+MININT = -sys.maxint - 1
 
 
 def construct_integer(instance, spec, loc, context):
@@ -39,13 +44,14 @@ def construct_integer(instance, spec, loc, context):
               specification to fulfill any dependencies.  Note that outside its
               own node, a constructor may only have spec access. It may never
               have access to instance nodes outside its own.
-            - round
+            - cons_round
               The number of the construction round resulting from constructors
-              raising DeferConstructor. Construction starts at round 0.
+              raising DeferConstructor. Construction at each node starts at
+              round 0.
               Constructors can use this to place themselves in a specific round
               to wait for dependencies without having to explicitly state their
               dependencies.
-            - constructors 
+            - constructors
               A set containing the full name paths for the constructors already
               completed for this node. Constructors can check this to defer for
               their dependencies.
@@ -62,8 +68,8 @@ def construct_integer(instance, spec, loc, context):
     val = doc_value(instance)
 
     if val is None and '.randomize' in spec:
-        _min = -2**32 if min is None else min
-        _max = 2**32 if max is None else max
+        _min = MININT if min is None else min
+        _max = MAXINT if max is None else max
         val = randint(_min, _max)
 
     if isinstance(instance, basestring):
@@ -121,13 +127,13 @@ def construct_text(instance, spec, loc, context):
               specification to fulfill any dependencies.  Note that outside its
               own node, a constructor may only have spec access. It may never
               have access to instance nodes outside its own.
-            - round
+            - cons_round
               The number of the construction round resulting from constructors
               raising DeferConstructor. Construction starts at round 0.
               Constructors can use this to place themselves in a specific round
               to wait for dependencies without having to explicitly state their
               dependencies.
-            - constructors 
+            - constructors
               A set containing the full name paths for the constructors already
               completed for this node. Constructors can check this to defer for
               their dependencies.
@@ -143,7 +149,7 @@ def construct_text(instance, spec, loc, context):
     regex = spec.get('regex', None)
     encoding = spec.get('encoding', 'utf-8')
     minlen = int(spec.get('minlen', 0))
-    maxlen = int(spec.get('maxlen', 2**63))
+    maxlen = int(spec.get('maxlen', MAXINT))
     exclude_chars = spec.get('exclude_chars', '')
 
     text = doc_value(instance)

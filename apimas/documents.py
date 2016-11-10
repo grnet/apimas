@@ -279,13 +279,13 @@ def doc_construct(doc, spec, loc=(), context=None,
                 allow_constructor_input=allow_constructor_input)
 
     old_deferred_constructor_names = None
-    round = 0
+    cons_round = 0
     constructed = set()
 
     while True:
         context['sep'] = sep
         context['constructed'] = constructed
-        context['round'] = round
+        context['cons_round'] = cons_round
 
         deferred_constructor_names = []
         for constructor_name in constructor_names:
@@ -349,7 +349,7 @@ def doc_search(doc, name):
 def doc_from_ns(ns, sep='/'):
     docout = {}
     for key, value in ns.iteritems():
-        path = key.strip('/').split('/')
+        path = key.strip(sep).split(sep)
         doc_set(docout, path, value)
     return docout
 
