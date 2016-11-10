@@ -4,7 +4,7 @@ from apimas.modeling.adapters.drf import utils
 
 NON_INTERSECTIONAL_PAIRS = [
     ('required', 'read_only'),
-    ('wrte_only', 'read_only'),
+    ('write_only', 'read_only'),
 ]
 
 
