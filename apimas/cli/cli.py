@@ -1,6 +1,8 @@
 import json
 import click
-from apimas.cli.custom_types import Json, Credentials
+from click import types
+from apimas.cli.custom_types import (
+    Json, Credentials, Date, DateTime)
 from apimas.modeling.clients import ApimasClientAdapter
 from apimas.modeling.clients import api_schema
 from apimas.modeling.core import documents as doc, exceptions as ex
@@ -33,7 +35,7 @@ class BaseCommand(object):
 
     def register_option_mapping(self, option_name, path):
         """
-        egister a new mapping rule.
+        Register a new mapping rule.
 
         Typically, a mapping rule is consisted of a key corresponding to
         the option name and its path to the data document.
@@ -172,16 +174,16 @@ class ApimasCliAdapter(NaiveAdapter):
 
     # Map specification predications to click-known types.
     TYPE_MAPPING = {
-        'integer': int,
-        'serial': int,
-        'string': str,
-        'boolean': bool,
-        'biginteger': long,
-        'float': float,
-        'date': str,
-        'datetime': str,
-        'ref': str,
-        'structarray': Json(),
+        'integer': types.IntParamType,
+        'serial': types.IntParamType,
+        'string': types.StringParamType,
+        'boolean': types.BoolParamType,
+        'biginteger': types.IntParamType,
+        'float': types.FloatParamType,
+        'date': Date,
+        'datetime': DateTime,
+        'ref': types.StringParamType,
+        'structarray': Json,
     }
 
     # Map actions to commands.
@@ -349,7 +351,7 @@ class ApimasCliAdapter(NaiveAdapter):
         instance[self.ADAPTER_CONF][action] = command
         return instance
 
-    def construct_command(self, instance, spec, loc,  action, command):
+    def construct_command(self, instance, spec, loc, action, command):
         """
         Construct command's options for a specific collection according to the
         `APIMAS` specification.
@@ -461,18 +463,31 @@ class ApimasCliAdapter(NaiveAdapter):
         instance[self.ADAPTER_CONF][option_name] = {}
         return instance
 
+    def _add_date_params(self, spec):
+        return {'date_format': spec.get('format', None)}
+
+    def _add_datetime_params(self, spec):
+        return {'date_format': spec.get('format', None)}
+
+    def construct_struct(self, instance, spec, loc, context):
+        return instance
+
     def construct_type(self, instance, spec, loc, context, field_type=None):
         """
         Contructor for predicates that indicate the type of a field.
         """
-        if field_type == 'struct':
-            return instance
+        def default(spec):
+            return {}
+
         if self.ADAPTER_CONF not in instance:
             self.init_adapter_conf(instance)
         adapter_conf = doc.doc_get(instance, (
             self.ADAPTER_CONF,))
         for k, v in adapter_conf.iteritems():
-            v.update({'type': self.TYPE_MAPPING[field_type]})
+            method_name = '_add_' + field_type + '_params'
+            method = getattr(self, method_name, default)
+            v.update({'type': self.TYPE_MAPPING[field_type](
+                **method(spec))})
         return instance
 
     def construct_property(self, instance, spec, loc, context, property_name):
