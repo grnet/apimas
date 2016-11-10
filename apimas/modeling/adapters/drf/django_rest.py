@@ -200,7 +200,7 @@ class DjangoRestAdapter(NaiveAdapter):
         of spec. Otherwise, an exception with explanatory message is raised.
         """
         root_loc = loc[0:1]
-        ref = doc.doc_get(instance, ('.ref', 'to')).keys()[0]
+        ref = doc.doc_get(instance, ('.ref', 'to'))
         django_conf = self.get_constructor_params(top_spec, loc, [])
         model = self.extract_model(source or loc[-2], django_conf)
         model_field = model._meta.get_field(source or loc[-2])
@@ -233,7 +233,7 @@ class DjangoRestAdapter(NaiveAdapter):
         defered.
         """
         property_path = (self.ADAPTER_CONF, self.PROPERTIES_CONF_KEY)
-        field_schema = doc.doc_get(instance, property_path)
+        field_schema = doc.doc_get(instance, self.ADAPTER_CONF)
         if field_schema is None:
             doc.doc_set(instance, property_path, {})
         self.init_adapter_conf(
