@@ -304,7 +304,7 @@ class ApimasClientAdapter(NaiveAdapter):
         Actually, it normalizes a date object to a string which follows the
         given date format.
         """
-        date_format = kwargs.pop('date_format', None)
+        date_format = kwargs.pop('format', None)
         instance[self.ADAPTER_CONF].update(
             {'coerce': DateNormalizer(date_format)})
         return instance
@@ -316,7 +316,7 @@ class ApimasClientAdapter(NaiveAdapter):
         Actually, it normalizes a date object to a string which follows the
         given datetime format.
         """
-        date_format = kwargs.pop('date_format', None)
+        date_format = kwargs.pop('format', None)
         instance[self.ADAPTER_CONF].update(
             {'coerce': DateTimeNormalizer(date_format)})
         return instance
