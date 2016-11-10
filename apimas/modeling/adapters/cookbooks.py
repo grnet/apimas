@@ -199,6 +199,20 @@ class NaiveAdapter(Adapter):
             property_name, property_name): True})
         return instance
 
+    def extract_type(self, instance):
+        """
+        Method for extracting a predicate whose semantic refers to a type of
+        a field from the given instance.
+        """
+        types = []
+        for predicate in self.TYPES:
+            if predicate in instance:
+                types.append(predicate)
+        if len(types) > 1:
+            raise ex.ApimasException('Type is ambiguous. % found: %' % (
+                len(types), str(types)))
+        return None if not types else types[0]
+
     def init_adapter_conf(self, instance, initial=None):
         """
         Initialize adapter confication node if it does not already exist.
