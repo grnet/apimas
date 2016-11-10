@@ -341,6 +341,7 @@ def _construct_doc_call_constructors(
     old_deferred_constructor_names = None
     cons_round = 0
     constructed = set()
+    working_constructor_names = constructor_names
 
     while True:
         context['sep'] = sep
@@ -348,7 +349,7 @@ def _construct_doc_call_constructors(
         context['cons_round'] = cons_round
 
         deferred_constructor_names = []
-        for constructor_name in constructor_names:
+        for constructor_name in working_constructor_names:
             subloc = loc + (constructor_name,)
             constructor = doc_get(constructors, constructor_name.split(sep))
             if constructor is None:
@@ -379,6 +380,7 @@ def _construct_doc_call_constructors(
             raise InvalidInput(m)
 
         old_deferred_constructor_names = deferred_constructor_names
+        working_constructor_names = deferred_constructor_names
         cons_round += 1
 
     return instance
