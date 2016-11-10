@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 import click
 import yaml
 
@@ -11,6 +12,33 @@ class Json(click.ParamType):
             return json.loads(value)
         except ValueError as e:
             self.fail(e)
+
+
+class DateTime(click.ParamType):
+    name = 'datetime'
+
+    DEFAULT_FORMAT = '%Y-%m-%dT%H:%M:%S'
+
+    def __init__(self, date_format=None, **kwargs):
+        self.date_format = date_format or self.DEFAULT_FORMAT
+
+    def convert(self, value, param, ctx):
+        try:
+            return datetime.strptime(value, self.date_format)
+        except ValueError as e:
+            self.fail(e.message)
+
+
+class Date(DateTime):
+    name = 'date'
+
+    DEFAULT_FORMAT = '%Y-%m-%d'
+
+    def __init__(self, date_format=None, **kwargs):
+        self.date_format = date_format or self.DEFAULT_FORMAT
+
+    def convert(self, value, param, ctx):
+        return super(self.__class__, self).convert(value, param, ctx).date()
 
 
 class Credentials(click.File):
