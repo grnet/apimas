@@ -3,9 +3,11 @@ import requests
 from requests.exceptions import HTTPError
 from requests.compat import urljoin, quote
 from apimas.modeling.core import documents as doc, exceptions as ex
-from apimas.modeling.adapters.cookbooks import NaiveAdapter
+from apimas.modeling.adapters.cookbooks import (
+    NaiveAdapter, default_constructor)
 from apimas.modeling.clients.auth import ApimasClientAuth
-from apimas.modeling.clients.normalizers import RefNormalizer
+from apimas.modeling.clients.normalizers import (
+    RefNormalizer, DateNormalizer, DateTimeNormalizer)
 
 
 TRAILING_SLASH = '/'
@@ -207,8 +209,8 @@ class ApimasClientAdapter(NaiveAdapter):
         'float': 'float',
         'string': 'string',
         'boolean': 'boolean',
-        'date': 'date',
-        'datetime': 'datetime',
+        'date': 'string',
+        'datetime': 'string',
         'struct': 'dict',
         'structarray': 'list',
         'ref': 'string',
@@ -277,17 +279,49 @@ class ApimasClientAdapter(NaiveAdapter):
         It constructs a dictionary corresponding to a cerberus validation
         schema along with all rules based on spec.
         """
+        def default(instance, spec, loc, context, **kwargs):
+            return instance
+
         nested_structures = {'.struct', '.structarray'}
+        field_type = self.extract_type(instance)
+        if not field_type:
+            raise ex.ApimasException(
+                'You have to specify field type for field' % (loc[-2]))
         self.init_adapter_conf(instance)
-        if '.ref' in instance:
-            return self.construct_ref_field(instance, spec, loc, context)
         for k in nested_structures:
             if k in instance:
                 return self.construct_nested_field(
                     instance, spec, loc, context, k)
+        method_name = '_add_' + field_type[1:] + '_params'
+        params = doc.doc_get(instance, (field_type,))
+        return getattr(self, method_name, default)(
+            instance, spec, loc, context, **params)
+
+    def _add_date_params(self, instance, spec, loc, context, **kwargs):
+        """
+        Adds extra configuration based on the parameters of constructor.
+
+        Actually, it normalizes a date object to a string which follows the
+        given date format.
+        """
+        date_format = kwargs.pop('date_format', None)
+        instance[self.ADAPTER_CONF].update(
+            {'coerce': DateNormalizer(date_format)})
         return instance
 
-    def construct_ref_field(self, instance, spec, loc, context):
+    def _add_datetime_params(self, instance, spec, loc, context, **kwargs):
+        """
+        Adds extra configuration based on the parameters of constructor.
+
+        Actually, it normalizes a date object to a string which follows the
+        given datetime format.
+        """
+        date_format = kwargs.pop('date_format', None)
+        instance[self.ADAPTER_CONF].update(
+            {'coerce': DateTimeNormalizer(date_format)})
+        return instance
+
+    def _add_ref_params(self, instance, spec, loc, context, **kwargs):
         """
         Construct a field that refes to another collection.
 
@@ -303,7 +337,7 @@ class ApimasClientAdapter(NaiveAdapter):
 
         This normalization is triggered before every cerberus validation.
         """
-        ref = doc.doc_get(instance, ('.ref', 'to')).keys()[0]
+        ref = kwargs.pop('to')
         instance[self.ADAPTER_CONF].update(
             {'coerce': RefNormalizer(TRAILING_SLASH.join(
                 (self.root_url, loc[0], ref, '')))})
