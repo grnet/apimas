@@ -32,6 +32,28 @@ class Adapter(object):
         '.indexable',
     ])
 
+    TYPES = frozenset([
+        '.struct',
+        '.structarray',
+        '.ref',
+        '.serial',
+        '.integer',
+        '.big_integer',
+        '.string',
+        '.boolean',
+        '.datetime',
+        '.date',
+    ])
+
+    PROPERTIES = frozenset([
+        '.blankable',
+        '.required',
+        '.nullable',
+        '.readonly',
+        '.writeonly',
+        '.indexable',
+    ])
+
     def construct(self, spec):
         raise NotImplementedError('`gen_adapter_spec()` must be implemented')
 
