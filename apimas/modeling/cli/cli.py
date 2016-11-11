@@ -8,7 +8,6 @@ from click import types
 from apimas.modeling.cli.custom_types import (
     Json, Credentials, Date, DateTime)
 from apimas.modeling.clients import ApimasClientAdapter
-from apimas.modeling.clients import api_schema
 from apimas.modeling.core import documents as doc, exceptions as ex
 from apimas.modeling.adapters.cookbooks import NaiveAdapter
 
