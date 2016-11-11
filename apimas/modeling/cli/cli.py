@@ -1,7 +1,7 @@
 import json
 import click
 from click import types
-from apimas.cli.custom_types import (
+from apimas.modeling.cli.custom_types import (
     Json, Credentials, Date, DateTime)
 from apimas.modeling.clients import ApimasClientAdapter
 from apimas.modeling.clients import api_schema
