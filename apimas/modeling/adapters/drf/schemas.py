@@ -121,6 +121,8 @@ RESOURCE_SCHEMA = {
         'type': 'list',
         'schema': {'type': 'string'},
     },
+    'permissions': {
+    },
     'mixins': {
         'type': 'list',
         'schema': {'type': 'string'},

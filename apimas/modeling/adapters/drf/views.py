@@ -3,6 +3,7 @@ from apimas.modeling.adapters.drf import (
     utils, mixins, viewsets as apimas_viewsets)
 from apimas.modeling.adapters.drf.serializers import (
     generate as generate_serializer)
+from apimas.modeling.adapters.drf.permissions import ApimasPermissions
 
 
 FILTERING_BACKENDS = {
@@ -49,13 +50,16 @@ def generate(model, config, **kwargs):
     is_hyperlinked = config.get(
         utils.HYPERLINKED_LOOKUP_FIELD,
         kwargs.get(utils.HYPERLINKED_LOOKUP_FIELD, True))
+    permission_classes = map(utils.LOAD_CLASS, permission_classes)
+    apimas_perm_cls = gen_apimas_permission_cls(model, config)
+    permission_classes += [apimas_perm_cls] if apimas_perm_cls else []
     standard_content = {
         'serializer_class': generate_serializer(
             model, field_schema, is_hyperlinked),
         'queryset': model.objects.all(),
         'authentication_classes': map(
             utils.LOAD_CLASS, authentication_classes),
-        'permission_classes': map(utils.LOAD_CLASS, permission_classes)
+        'permission_classes': permission_classes
     }
     attrs = {field: config.get(field, default)
              for field, default in VIEWSET_ATTRS}
@@ -65,6 +69,17 @@ def generate(model, config, **kwargs):
     class_dict = dict(sum((list(content.items()) for content in dicts), []))
     bases = get_bases_classes(config)
     return type(model.__name__, bases, class_dict)
+
+
+def gen_apimas_permission_cls(model, config):
+    """
+    Generate an `ApimasPermission` classes that conforms to the permission
+    rules specified on the `APIMAS` specfication (if given).
+    """
+    permissions = config.get('permissions', None)
+    if not permissions:
+        return None
+    return ApimasPermissions(permissions, model)
 
 
 def get_filter_backends(config):

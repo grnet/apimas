@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apimas.modeling.core.documents import doc_to_ns, ANY
 from apimas.modeling.adapters.drf import utils
 
 
@@ -8,7 +9,37 @@ NON_INTERSECTIONAL_PAIRS = [
 ]
 
 
-def generate(model, config, is_hyperlinked=True):
+class ApimasSerializer(serializers.HyperlinkedModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super(serializers.HyperlinkedModelSerializer, self).__init__(
+            *args, **kwargs)
+        readonly_fields = self.context['request'].parser_context.get(
+            'non_writable_fields', [])
+        permitted_fields = self.context['request'].parser_context.get(
+            'permitted_fields', [])
+        serializer_fields = self.fields
+        for field in readonly_fields:
+            self.set_field_property(
+                field.split('/'), serializer_fields, 'read_only')
+        if permitted_fields == ANY:
+            return
+        non_permitted_fields = set(
+            doc_to_ns(dict(serializer_fields)).keys()) - set(permitted_fields)
+        for field in non_permitted_fields:
+            self.set_field_property(field.split('/'), serializer_fields,
+                                    'write_only')
+
+    def set_field_property(self, segments, fields, property_key):
+        if len(segments) == 1:
+            field = fields.get(segments[0])
+            if field:
+                setattr(field, property_key, True)
+            return
+        return self.set_field_property(
+            segments[1:], fields.get(segments[0], {}).fields, property_key)
+
+
+def generate(model, config, is_collection=True):
     """
     A function to generate a serializer according to the model given
     as parameter.
@@ -17,13 +48,13 @@ def generate(model, config, is_hyperlinked=True):
     treated) is defined by the dict given as parameter.
 
     :param model: The model class required to generate a
-    `ModelSerializer` or `HyperlinkedModelSerializer` based on it.
+    `HyperlinkedModelSerializer` based on it.
     :param config: A dictionary which includes all required configuration of
     serializer.
-    :return: A `ModelSerializer` or `HyperLinkedModelSerializer` class.
+    :return: A `HyperLinkedModelSerializer` class.
     """
-    serializer_base_class = serializers.HyperlinkedModelSerializer\
-        if is_hyperlinked else serializers.ModelSerializer
+    serializer_class = ApimasSerializer if is_collection\
+        else serializers.HyperlinkedModelSerializer
     meta = generate_meta(model, config)
     nested_serializers = generate_nested_serializers(model, config)
     dicts = [meta, nested_serializers]
@@ -32,7 +63,7 @@ def generate(model, config, is_hyperlinked=True):
     custom_mixins = map(utils.LOAD_CLASS, config.get(
         utils.SERIALIZERS_LOOKUP_FIELD, []))
     cls = type(model.__name__, tuple(custom_mixins) + (
-        serializer_base_class,), class_dict)
+        serializer_class,), class_dict)
     return cls
 
 
@@ -107,7 +138,7 @@ def generate_nested_serializers(model, config):
         model_field_name = nested_object.get(utils.MODEL_LOOKUP_FIELD, None)
         rel_model = get_related_model(model, model_field_name)
         serializer_class = generate(rel_model, nested_object.get(
-            utils.FIELD_SCHEMA_LOOKUP_FIELD, {}))
+            utils.FIELD_SCHEMA_LOOKUP_FIELD, {}), is_collection=False)
         field = model._meta.get_field(model_field_name)
         many = field.many_to_many or field.one_to_many
         source = None if api_field_name == model_field_name\
