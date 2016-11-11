@@ -1,0 +1,114 @@
+root: http://localhost:8000
+spec:
+    .endpoint: {}
+    api:
+        products:
+            .collection:
+                model: eshop.models.Product
+            .cli_commands: {}
+            '*':
+                stock:
+                    .cli_option: {}
+                    .field: {}
+                    .drf_field: {}
+                    .integer: {}
+                    .readonly: {}
+                name:
+                    .cli_option:
+                        option_name: myname
+                    .field: {}
+                    .drf_field: {}
+                    .string: {}
+                    .indexable: {}
+                    .required: {}
+                    .blankable: {}
+            actions:
+                .list: {}
+                .create: {}
+                .update: {}
+                .delete: {}
+                .retrieve: {}
+        carts:
+            .collection:
+                model: eshop.models.Cart
+            '*':
+               products:
+                   .structarray:
+                       source: products
+                   '*':
+                       stock:
+                           .integer: {}
+                           .required: {}
+                       name:
+                           .string: {}
+                           .blankable: {}
+            actions:
+                .list: {}
+        cities:
+            .collection:
+                model: eshop.models.City
+            '*':
+                name:
+                    .drf_field: {}
+                    .string: {}
+        orders:
+            .collection:
+                model: eshop.models.Order
+            .cli_commands: {}
+            .cli_auth:
+               .auth_format:
+                   format: yaml
+               basic:
+                   username:
+                       .string: {}
+                   password:
+                       .string: {}
+            '*':
+                id:
+                    .cli_option: {}
+                    .drf_field: {}
+                    .field: {}
+                    .serial: {}
+                city:
+                    .ref:
+                        to: cities
+                    .field: {}
+                    .cli_option: {}
+                    .drf_field: {}
+                timea:
+                    .datetime:
+                        format: '%Y-%m-%d %H:%M'
+                    .field: {}
+                    .cli_option: {}
+                    .drf_field:
+                        source: date
+                cart:
+                    .struct: {}
+                    .cli_option: {}
+                    .drf_field:
+                        source: cart
+                    .field: {}
+                    '*':
+                        products:
+                            .structarray: {}
+                            .cli_option: {}
+                            .field: {}
+                            .drf_field:
+                                source: products
+                            '*':
+                                name:
+                                    .cli_option: {}
+                                    .field: {}
+                                    .drf_field: {}
+                                    .string: {}
+                        id:
+                            .field: {}
+                            .cli_option: {}
+                            .drf_field: {}
+                            .serial: {}
+            actions:
+                .list: {}
+                .create: {}
+                .update: {}
+                .delete: {}
+                .retrieve: {}
