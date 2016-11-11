@@ -9,7 +9,7 @@ setup(
     install_requires=[],
     entry_points={
         'console_scripts': {
-            'apimas=apimas.cli.apimas:main'
+            'apimas=apimas.modeling.cli.cli:main'
         }
     }
 )
