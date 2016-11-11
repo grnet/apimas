@@ -2,6 +2,8 @@
 """
 from inspect import getargspec
 from bisect import bisect_right
+import re
+
 from errors import ValidationError, NotFound, InvalidInput, ConflictError
 
 
@@ -66,7 +68,7 @@ def doc_locate(doc, path):
     return feed, trail, nodes
 
 
-def doc_set(doc, path, value):
+def doc_set(doc, path, value, multival=True):
     if not path:
         m = "Cannot set root document at empty path."
         raise InvalidInput(m)
@@ -94,7 +96,12 @@ def doc_set(doc, path, value):
         parent = nodes[-2]
         segment = trail[-1]
         old_value = parent[segment]
-        parent[segment] = value
+        if multival:
+            parent[segment] = value
+        elif type(old_value) is list:
+            old_value.append(value)
+        else:
+            parent[segment] = [old_value, value]
 
     return old_value
 
@@ -104,7 +111,8 @@ def doc_get(doc, path):
     return None if feed else nodes[-1]
 
 
-def doc_iter(doc, preorder=False, postorder=True, path=()):
+def doc_iter(doc, preorder=False, postorder=True, path=(),
+             ordered=False, multival=False):
     """Iterate the document hierarchy yielding each path and node.
 
     Args:
@@ -130,18 +138,41 @@ def doc_iter(doc, preorder=False, postorder=True, path=()):
                 The segments of the current path
             node (dict):
                 The node at the current path.
+
+    Receives:
+        None or True:
+            If None is received, iteration continues normally.
+            If True is received, iteration skips current node.
+            Note that skip only works if preorder=True, otherwise
+            there will be no chance to send True before the nod
+            children are visited.
     """
     if preorder:
-        yield path, doc
+        skip = (yield path, doc)
+        if skip:
+            return
 
-    for key, val in doc.iteritems():
-        subpath = path + (key,)
-        if isinstance(val, dict):
-            for t in doc_iter(val, preorder=preorder, postorder=postorder,
-                              path=subpath):
+    doc_type = type(doc)
+    if multival and doc_type in (list, tuple, set):
+        for val in doc:
+            val_type = type(val)
+            if val_type in (dict, list, tuple, set):
+                subpath = path + (val,)
+                for t in doc_iter(val,
+                                  preorder=preorder, postorder=postorder,
+                                  path=subpath, multival=multival):
+                    yield t
+            else:
+                yield path, val
+
+    elif doc_type is dict:
+        iteritems = sorted(doc.iteritems()) if ordered else doc.iteritems()
+        for key, val in iteritems:
+            subpath = path + (key,)
+            for t in doc_iter(val,
+                              preorder=preorder, postorder=postorder,
+                              path=subpath, multival=multival):
                 yield t
-        else:
-            yield subpath, val
 
     if postorder:
         yield path, doc
@@ -207,10 +238,107 @@ def doc_merge(doca, docb, merge=lambda a, b: (a, b)):
     return docout
 
 
-def doc_update(target, source):
+def doc_update(target, source, multival=True):
     for path, val in doc_iter(source):
         if type(val) is not dict:
-            doc_set(target, path, val)
+            doc_set(target, path, val, multival=multival)
+    return target
+
+
+class SegmentPattern(object):
+    def match(self, segment):
+        raise NotImplementedError
+
+    def __eq__(self, other):
+        return self.match(other)
+
+
+class AnyPattern(SegmentPattern):
+    def match(self, segment):
+        return True
+
+    def __repr__(self):
+        return "<ANY>"
+
+    __str__ = __repr__
+
+
+ANY = AnyPattern()
+
+
+class Prefix(SegmentPattern):
+    def __init__(self, prefix):
+        self.prefix = prefix
+
+    def __repr__(self):
+        return "Prefix({prefix!r})".format(prefix=self.prefix)
+
+    __str__ = __repr__
+
+    def match(self, segment):
+        startswith = getattr(segment, 'startswith', None)
+        if startswith is not None:
+            return startswith(self.prefix)
+        elif isinstance(segment, AnyPattern):
+            return True
+        elif isinstance(segment, Regex):
+            m = "Comparison between Prefix and Regex not supported"
+            raise NotImplementedError(m)
+        else:
+            return False
+
+    def startswith(self, prefix):
+        return self.prefix.startswith(prefix)
+
+
+class Regex(SegmentPattern):
+    def __init__(self, pattern):
+        self.pattern = pattern
+        self.matcher = re.compile(pattern)
+
+    def __repr__(self):
+        return "Regex({pattern!r})".format(pattern=self.pattern)
+
+    __str__ = __repr__
+
+    def match(self, segment):
+        segment_type = type(segment)
+        if isinstance(segment_type, basestring):
+            return self.matcher.match(segment) is not None
+        elif isinstance(segment, AnyPattern):
+            return True
+        elif isinstance(segment, Prefix):
+            m = "Comparison between Regex and Prefix not supported"
+            raise NotImplementedError(m)
+        else:
+            return False
+
+
+def doc_match_levels(rules_doc, pattern_sets, expand_pattern_levels,
+                     level=0, path=()):
+
+    reported_paths = set()
+    expand_pattern = level in expand_pattern_levels
+
+    for rule, subdoc in rules_doc.iteritems():
+        for pattern in pattern_sets[level]:
+            if not rule == pattern and not pattern == rule:
+                continue
+
+            reportable_segment = rule if expand_pattern else pattern
+            subpath = path + (reportable_segment,)
+            if type(subdoc) is not dict:
+                reportable_paths = [subpath + (subdoc,)]
+            else:
+                reportable_paths = doc_match_levels(
+                    rules_doc=subdoc, pattern_sets=pattern_sets,
+                    expand_pattern_levels=expand_pattern_levels,
+                    level=level + 1, path=subpath)
+
+            for reportable_path in reportable_paths:
+                if reportable_path not in reported_paths:
+                    reported_paths.add(reportable_path)
+                    yield reportable_path
 
 
 _constructors = {}
@@ -483,6 +611,19 @@ def doc_to_ns(doc, sep='/'):
     return ns
 
 
+def doc_to_level_patterns(doc):
+    pattern_sets = []
+    for p, v in doc_iter(doc):
+	max_level = len(p)
+	nr_sets = len(pattern_sets)
+	level_diff = max_level - nr_sets + 1
+	if max_level >= nr_sets:
+	    pattern_sets += [set() for _ in xrange(level_diff)]
+	for level, segment in enumerate(p):
+	    pattern_sets[level].add(p[level])
+    return pattern_sets
+
+
 def random_doc(nr_nodes=32, max_depth=7):
     words = (
         'alpha',
@@ -529,30 +670,3 @@ def random_doc(nr_nodes=32, max_depth=7):
         doc_set(doc, path, random.choice(words))
 
     return doc
-
-
-def test():
-    from pprint import pprint
-    doc = random_doc()
-    pprint(doc)
-    a = {'hello': {'there': 9}, 'hella': {'off': 11, 'true': 12}}
-    print doc_pop(a, 'hello.there'.split('.'))
-    pprint(a)
-    print doc_pop(a, 'hella'.split('.'))
-    pprint(a)
-
-    def constructor(instance, spec, loc, context):
-        assert '.one' in instance
-        assert '.three' in instance
-        return instance
-
-    spec = {'.one': 'two', '.three': 'four'}
-    instance = doc_construct({}, spec,
-                             allow_constructor_input=True,
-                             constructors = {'one': constructor,
-                                             'three': constructor,},
-                             autoconstruct=True)
-
-
-if __name__ == '__main__':
-    test()
