@@ -341,6 +341,113 @@ def doc_match_levels(rules_doc, pattern_sets, expand_pattern_levels,
                     yield reportable_path
 
 
+def conventional_strategy(x, y):
+    if x is None:
+        return y
+    if y is None:
+        return x
+    if x == y:
+        return x
+    else:
+        raise ConflictError(
+            'Cannot merge documents: distinct values (%s %s)' % (
+                repr(x), repr(y)))
+
+
+class Aggregator(object):
+    def __call__(patterns, rules):
+        raise NotImplementedError('__call__ must be implemented')
+
+
+class AllOfAggregator(Aggregator):
+    def __call__(self, patterns, rules, stop=True, expanded=False):
+        matches = {}
+        if expanded:
+            stop = False
+        for pattern in patterns:
+            matching_rules = [rule for rule in rules if pattern == rule]
+            if not len(matching_rules) and stop:
+                return []
+            if matching_rules:
+                matches[pattern] = matching_rules
+        if expanded and stop and len(rules) > len(
+                set(sum((x for x in matches.values()), []))):
+            return {}
+        elif stop and len(matches) < len(patterns):
+            return {}
+        return matches
+
+
+class AnyOfAggregator(AllOfAggregator):
+    def __call__(self, patterns, rules, expanded=False):
+        return super(self.__class__, self).__call__(
+            patterns, rules, stop=False, expanded=expanded)
+
+
+def multimerge(doc, merged_keys, merged_node=None):
+    merged_doc = {}
+    merged_node = merged_node or 'merged_' + '_'.join(merged_keys)
+    for k in merged_keys:
+        if k not in doc:
+            raise NotFound('Key %s not found in document' % (repr(k)))
+        doc_k = doc[k]
+        merged_doc = doc_merge(doc_k, merged_doc, conventional_strategy)
+    merged_doc = {merged_node: merged_doc}
+    for k, v in doc.iteritems():
+        if k not in merged_keys:
+            merged_doc.update({k: v})
+    return merged_doc, merged_node
+
+
+def _doc_match_update_doc(doc, matched_doc, updated_keys):
+    for k in updated_keys:
+        if k in doc:
+            doc = doc_merge(
+                doc, {k: matched_doc}, conventional_strategy)
+        else:
+            doc[k] = matched_doc
+    return doc
+
+
+def doc_match(patterns, rules, aggregators, level=0, expand_levels=None,
+              automerge=False):
+    if rules == {}:
+        return {}, True
+
+    matches_doc = {}
+    pattern_keys = patterns.keys()
+    rule_keys = rules.keys()
+    expand_levels = expand_levels or []
+    expanded = bool(level in expand_levels)
+    matches = aggregators[level](pattern_keys, rule_keys, expanded=expanded)
+    if not matches:
+        return {}, False
+    missed = []
+    for match, matching_rules in matches.iteritems():
+        inspected_rules = matching_rules
+        if automerge and len(matching_rules) > 1:
+            rules, node = multimerge(rules, matching_rules)
+            inspected_rules = [node]
+
+        for rule in inspected_rules:
+            subrules = rules.get(rule, {})
+            subpatterns = patterns.get(match, {})
+            updated_keys = matching_rules if expanded else [match]
+            matched_doc, ismatched = doc_match(
+                subpatterns, subrules, aggregators, level=level+1,
+                expand_levels=expand_levels)
+            matches_doc = _doc_match_update_doc(
+                matches_doc, matched_doc, updated_keys)
+            if not ismatched:
+                missed.append(match)
+    if any(type(x) is AllOfAggregator for x in aggregators[:level])\
+            and len(missed) == len(matches):
+        return {x: {} for x in missed}, False
+    if missed and type(aggregators[level]) is AllOfAggregator:
+        return {x: {} for x in missed}, False
+    return matches_doc, True
+
+
 _constructors = {}
 
 
