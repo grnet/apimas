@@ -1,6 +1,6 @@
 from collections import namedtuple
 from apimas.modeling.core.documents import (
-    doc_set, doc_match, doc_iter, ANY, Prefix, Regex)
+    doc_set, doc_match_levels, doc_iter, ANY, Prefix, Regex)
 
 
 class Tabmatch(object):

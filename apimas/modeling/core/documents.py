@@ -2,6 +2,7 @@
 """
 from inspect import getargspec
 from bisect import bisect_right
+from itertools import chain
 import re
 
 from errors import ValidationError, NotFound, InvalidInput, ConflictError
@@ -320,11 +321,23 @@ def doc_match_levels(rules_doc, pattern_sets, expand_pattern_levels,
     reported_paths = set()
     expand_pattern = level in expand_pattern_levels
 
-    for rule, subdoc in rules_doc.iteritems():
-        for pattern in pattern_sets[level]:
-            if not rule == pattern and not pattern == rule:
-                continue
+    if level >= len(pattern_sets):
+        yield path
+        return
 
+    for pattern in pattern_sets[level]:
+        if isinstance(pattern, SegmentPattern):
+            rules_doc_iter = ((rule, subdoc)
+                              for rule, subdoc in rules_doc.iteritems()
+                              if rule == pattern or pattern == rule)
+
+        elif pattern in rules_doc:
+            rules_doc_iter = [(pattern, rules_doc[pattern])]
+
+        else:
+            continue
+
+        for rule, subdoc in rules_doc_iter:
             reportable_segment = rule if expand_pattern else pattern
             subpath = path + (reportable_segment,)
             if type(subdoc) is not dict:
@@ -411,8 +424,13 @@ def _doc_match_update_doc(doc, matched_doc, updated_keys):
 
 def doc_match(patterns, rules, aggregators, level=0, expand_levels=None,
               automerge=False):
-    if rules == {}:
-        return {}, True
+    if type(rules) is dict:
+        if not rules:
+            return {}, True
+    elif rules == patterns:
+        return patterns, True
+    else:
+        return {}, False
 
     matches_doc = {}
     pattern_keys = patterns.keys()

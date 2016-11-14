@@ -2,7 +2,7 @@
 
 from documents import *
 from constructors import *
-import json
+from pprint import pprint
 
 
 collection_id_spec = {
@@ -90,7 +90,7 @@ spec = {
 }
 
 instance = doc_construct({}, spec, autoconstruct=True, constructors={})
-print json.dumps(instance, indent=2)
+pprint(instance, indent=2)
 
 
 match_spec = {
@@ -107,9 +107,9 @@ match_spec = {
 test_keys = ['hel', 'hell', 'hella', 'hello_world']
 for key in test_keys:
     instance = doc_construct({key: {}}, match_spec, autoconstruct=True)
-    print json.dumps({'key': instance[key]}, indent=2)
+    pprint({'key': instance[key]}, indent=2)
 
-print json.dumps(instance, indent=2)
+pprint(instance, indent=2)
 
 
 example_spec = {
@@ -130,7 +130,7 @@ example_spec = {
 
 instance = doc_construct({}, example_spec,
                          autoconstruct=True, constructors={})
-print json.dumps(instance, indent=2)
+pprint(instance, indent=2)
 
 
 def construct_alpha(instance, spec, loc, context):
@@ -171,7 +171,7 @@ defer_spec = {
 }
 
 instance = doc_construct({}, defer_spec, autoconstruct=True)
-print json.dumps(instance, indent=2)
+pprint(instance, indent=2)
 
 
 @register_constructor
@@ -226,8 +226,8 @@ def randomizer(instance, spec, loc, context):
 randomized_spec = doc_construct({}, simple_spec,
                                 autoconstruct='randomizer',
                                 constructors={'randomizer': randomizer})
-print json.dumps(randomized_spec, indent=2)
+pprint(randomized_spec, indent=2)
 
 
 randomized_instance = doc_construct({}, simple_spec)
-print json.dumps(randomized_instance, indent=2)
+pprint(randomized_instance, indent=2)
