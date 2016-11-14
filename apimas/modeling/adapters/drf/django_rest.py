@@ -158,7 +158,9 @@ class DjangoRestAdapter(NaiveAdapter):
         schema of a specific resource.
         """
         self.init_adapter_conf(instance)
-        resource_schema = self.construct_field_schema(instance)
+        field_properties = doc.doc_get(instance, ('*',))
+        resource_schema = self.construct_field_schema(
+            instance, field_properties)
         resource_schema.update(self.construct_resource_schema(instance))
         instance[self.ADAPTER_CONF].update(dict(
             resource_schema, **spec))
@@ -188,8 +190,10 @@ class DjangoRestAdapter(NaiveAdapter):
         self.validate_model_field(top_spec, loc, field_type, source)
         for k in nested_fields:
             if k in instance:
+                field_properties = doc.doc_get(instance, (k,))
                 nested = {self.NESTED_CONF_KEY: dict(
-                    self.construct_field_schema(instance), **spec)}
+                    self.construct_field_schema(instance, field_properties),
+                    **spec)}
                 instance[self.ADAPTER_CONF].update(nested)
         return instance
 
@@ -279,11 +283,10 @@ class DjangoRestAdapter(NaiveAdapter):
                         'Field `%s` cannot be both %s and %s' % (
                             field_name, u, v))
 
-    def construct_field_schema(self, instance):
+    def construct_field_schema(self, instance, field_properties):
         """ Aggregates propeties of all fields to form a field schema. """
         adapter_key = 'field_schema'
         self.init_adapter_conf(instance)
-        field_properties = doc.doc_get(instance, ('*',))
         attrs = {self.PROPERTIES_CONF_KEY: {}, self.NESTED_CONF_KEY: {}}
         for field_name, field_spec in field_properties.iteritems():
             for k, v in attrs.iteritems():

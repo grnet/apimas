@@ -11,17 +11,15 @@ spec:
                     .cli_option: {}
                     .field: {}
                     .drf_field: {}
+                    .required: {}
                     .integer: {}
-                    .readonly: {}
                 name:
-                    .cli_option:
-                        option_name: myname
+                    .cli_option: {}
                     .field: {}
                     .drf_field: {}
-                    .string: {}
                     .indexable: {}
                     .required: {}
-                    .blankable: {}
+                    .string: {}
             actions:
                 .list: {}
                 .create: {}
@@ -31,26 +29,37 @@ spec:
         carts:
             .collection:
                 model: eshop.models.Cart
+            .cli_commands: {}
             '*':
                products:
                    .structarray:
                        source: products
+                   .cli_option: {}
                    '*':
                        stock:
                            .integer: {}
+                           .cli_option: {}
+                           .field: {}
                            .required: {}
                        name:
                            .string: {}
+                           .cli_option: {}
+                           .field: {}
                            .blankable: {}
             actions:
                 .list: {}
+                .create: {}
         cities:
             .collection:
                 model: eshop.models.City
+            .cli_commands: {}
             '*':
                 name:
+                    .cli_option: {}
                     .drf_field: {}
                     .string: {}
+            actions:
+                .list: {}
         orders:
             .collection:
                 model: eshop.models.Order
@@ -59,10 +68,8 @@ spec:
                .auth_format:
                    format: yaml
                basic:
-                   username:
-                       .string: {}
-                   password:
-                       .string: {}
+                   - username
+                   - password
             '*':
                 id:
                     .cli_option: {}
@@ -83,29 +90,28 @@ spec:
                     .drf_field:
                         source: date
                 cart:
-                    .struct: {}
-                    .cli_option: {}
-                    .drf_field:
-                        source: cart
-                    .field: {}
-                    '*':
+                    .struct:
                         products:
-                            .structarray: {}
-                            .cli_option: {}
-                            .field: {}
-                            .drf_field:
-                                source: products
-                            '*':
+                            .structarray:
                                 name:
                                     .cli_option: {}
                                     .field: {}
                                     .drf_field: {}
                                     .string: {}
+                            .cli_option: {}
+                            .field: {}
+                            .drf_field:
+                                source: products
                         id:
                             .field: {}
                             .cli_option: {}
                             .drf_field: {}
                             .serial: {}
+
+                    .cli_option: {}
+                    .drf_field:
+                        source: cart
+                    .field: {}
             actions:
                 .list: {}
                 .create: {}

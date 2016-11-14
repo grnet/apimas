@@ -312,8 +312,7 @@ class ApimasCliAdapter(NaiveAdapter):
         auth_schema = {}
         for auth_mode in auth_modes:
             schema = doc.doc_get(spec, (auth_mode,))
-            assert type(schema) is dict
-            auth_schema[auth_mode] = schema.keys()
+            auth_schema[auth_mode] = schema
         commands = doc.doc_get(instance, (self.ADAPTER_CONF, 'actions'))
         credential_option = click.option(
             '--credentials', required=True, type=Credentials(
@@ -431,7 +430,8 @@ class ApimasCliAdapter(NaiveAdapter):
         * --cart-products
         """
         option_kwargs = {}
-        for field_name, schema in doc.doc_get(instance, ('*',)).iteritems():
+        for field_name, schema in doc.doc_get(
+                instance, ('.struct',)).iteritems():
             for nested, params in schema.get(self.ADAPTER_CONF).iteritems():
                 option_kwargs.update({option_name + '-' + nested: params})
                 self.struct_map[option_name + '-' + nested] = (
@@ -483,7 +483,7 @@ class ApimasCliAdapter(NaiveAdapter):
             return {}
 
         if self.ADAPTER_CONF not in instance:
-            self.init_adapter_conf(instance)
+            raise doc.DeferConstructor
         adapter_conf = doc.doc_get(instance, (
             self.ADAPTER_CONF,))
         for k, v in adapter_conf.iteritems():
