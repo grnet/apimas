@@ -160,7 +160,7 @@ class DjangoRestAdapter(NaiveAdapter):
         self.init_adapter_conf(instance)
         field_properties = doc.doc_get(instance, ('*',))
         resource_schema = self.construct_field_schema(
-            instance, field_properties)
+            instance, field_properties, **spec)
         resource_schema.update(self.construct_resource_schema(instance))
         instance[self.ADAPTER_CONF].update(dict(
             resource_schema, **spec))
@@ -191,9 +191,10 @@ class DjangoRestAdapter(NaiveAdapter):
         for k in nested_fields:
             if k in instance:
                 field_properties = doc.doc_get(instance, (k,))
+                source = spec.get('source', None)
                 nested = {self.NESTED_CONF_KEY: dict(
-                    self.construct_field_schema(instance, field_properties),
-                    **spec)}
+                    self.construct_field_schema(
+                        instance, field_properties, **spec), source=source)}
                 instance[self.ADAPTER_CONF].update(nested)
         return instance
 
@@ -283,11 +284,12 @@ class DjangoRestAdapter(NaiveAdapter):
                         'Field `%s` cannot be both %s and %s' % (
                             field_name, u, v))
 
-    def construct_field_schema(self, instance, field_properties):
+    def construct_field_schema(self, instance, field_properties, **kwargs):
         """ Aggregates propeties of all fields to form a field schema. """
         adapter_key = 'field_schema'
         self.init_adapter_conf(instance)
         attrs = {self.PROPERTIES_CONF_KEY: {}, self.NESTED_CONF_KEY: {}}
+        custom_mixins = kwargs.get('custom_mixins', [])
         for field_name, field_spec in field_properties.iteritems():
             for k, v in attrs.iteritems():
                 if k in field_spec[self.ADAPTER_CONF]:
@@ -296,6 +298,7 @@ class DjangoRestAdapter(NaiveAdapter):
         fields = [field_name for field_name, _ in field_properties.iteritems()]
         field_schema = {adapter_key: {
             'fields': fields,
+            'custom_mixins': custom_mixins,
         }}
         for k, v in attrs.iteritems():
             if v:

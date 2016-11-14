@@ -5,6 +5,7 @@ spec:
         products:
             .collection:
                 model: eshop.models.Product
+                custom_mixins: [eshop.api_schema.Custom]
             .cli_commands: {}
             '*':
                 stock:
@@ -111,6 +112,7 @@ spec:
                     .cli_option: {}
                     .drf_field:
                         source: cart
+                        custom_mixins: [eshop.api_schema.Custom]
                     .field: {}
             actions:
                 .list: {}
