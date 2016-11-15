@@ -63,7 +63,7 @@ class BaseCommand(object):
         its value given by user.
         """
         data = {'/'.join(
-            self.option_mapping[k]): v
+            self.option_mapping[k]): list(v) if type(v) is tuple else v
                 for k, v in option_data.iteritems()}
         return doc.doc_from_ns(data)
 
@@ -456,6 +456,7 @@ class ApimasCliAdapter(NaiveAdapter):
         outlier_cases = {
             '.boolean': self.construct_boolean_option,
             '.struct': self.construct_struct_option,
+            '.ref': self.construct_ref_option,
         }
         option_name = doc.doc_get(
             spec, ('option_name',)) or loc[-2]
@@ -471,6 +472,15 @@ class ApimasCliAdapter(NaiveAdapter):
 
     def _add_datetime_params(self, spec):
         return {'date_format': spec.get('format', None)}
+
+    def construct_ref_option(self, instance, spec, loc, context):
+        many = doc.doc_get(instance, ('.ref', 'many'))
+        option_name = doc.doc_get(
+            spec, ('option_name',)) or loc[-2]
+        if many is True:
+            instance[self.ADAPTER_CONF].update(
+                {option_name: {'multiple': True}})
+        return instance
 
     def construct_struct(self, instance, spec, loc, context):
         return instance

@@ -343,6 +343,15 @@ class ApimasClientAdapter(NaiveAdapter):
                 (self.root_url, loc[0], ref, '')))})
         return instance
 
+    def construct_ref(self, instance, spec, loc, context):
+        instance = super(self.__class__, self).construct_ref(
+            instance, spec, loc, context)
+        many = spec.get('many')
+        if many is True:
+            conf = {'type': 'list', 'schema': instance[self.ADAPTER_CONF]}
+            instance[self.ADAPTER_CONF] = conf
+        return instance
+
     def construct_nested_field(self, instance, spec, loc, context,
                                field_type=None):
         """
