@@ -13,6 +13,8 @@ class RefNormalizer(object):
         self.ref_endpoint = ref_endpoint
 
     def __call__(self, value):
+        if value is None:
+            return value
         return urljoin(self.ref_endpoint, value) + '/'
 
 
