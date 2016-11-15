@@ -443,7 +443,7 @@ class ApimasCliAdapter(NaiveAdapter):
         """
         Attaches keyword argument `is_flag` as `True`.
         """
-        instance[self.ADAPTER_CONF][option_name].update({'is_flag': True})
+        instance[self.ADAPTER_CONF].update({option_name: {'is_flag': True}})
         return instance
 
     def construct_cli_option(self, instance, spec, loc, context):
