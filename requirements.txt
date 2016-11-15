@@ -5,3 +5,4 @@ cerberus
 click
 pyyaml
 tabulate
+requests
