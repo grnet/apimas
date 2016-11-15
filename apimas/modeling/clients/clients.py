@@ -55,7 +55,7 @@ class ApimasClient(object):
         Example: POST endpoint/
         """
         data = self.validate(data or {}, raise_exception)
-        r = requests.post(self.endpoint, headers=headers, data=data,
+        r = requests.post(self.endpoint, headers=headers, json=data,
                           auth=self.auth)
         return r
 
@@ -69,7 +69,7 @@ class ApimasClient(object):
         """
         data = self.validate(data or {}, raise_exception)
         r = requests.put(self.format_endpoint(resource_id), headers=headers,
-                         data=data, auth=self.auth)
+                         json=data, auth=self.auth)
         return r
 
     @handle_exception
@@ -83,7 +83,7 @@ class ApimasClient(object):
         """
         data = self.partial_validate(data or {}, raise_exception)
         r = requests.patch(self.format_endpoint(resource_id), headers=headers,
-                           data=data, auth=self.auth)
+                           json=data, auth=self.auth)
         return r
 
     @handle_exception
