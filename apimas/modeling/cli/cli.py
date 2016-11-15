@@ -480,6 +480,8 @@ class ApimasCliAdapter(NaiveAdapter):
         if many is True:
             instance[self.ADAPTER_CONF].update(
                 {option_name: {'multiple': True}})
+        else:
+            instance[self.ADAPTER_CONF].update({option_name: {}})
         return instance
 
     def construct_struct(self, instance, spec, loc, context):
