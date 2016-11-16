@@ -77,7 +77,7 @@ from myapp.models import MyModel
 
 container = Container('myapi')
 # Create view for a single resource.
-view = container.create_view('myresource', MyModel, my_model_resource)
+view = container.create_view('myresource', MyModel, resource_schema)
 url_patterns = [view]
 
 ## your code
