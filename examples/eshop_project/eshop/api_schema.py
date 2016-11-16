@@ -9,6 +9,10 @@ class Hooks(HookMixin):
     def finalize_create(self):
         pdb.set_trace()
 
+class Custom(object):
+    def create(self, data):
+        import pdb
+        pdb.set_trace()
 
 user = {
     'model': 'eshop.models.UserProfile',

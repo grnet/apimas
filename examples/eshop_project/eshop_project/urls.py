@@ -1,4 +1,4 @@
-"""eshop_app URL Configuration
+"""eshop_project URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.9/topics/http/urls/
@@ -16,12 +16,15 @@ Including another URLconf
 """
 from django.conf.urls import url
 from django.contrib import admin
-from apimas.modeling.adapters.drf.container import Container
-from eshop.api_schema import API_SCHEMA
+from apimas.modeling.adapters.drf import django_rest
+from apimas.modeling.cli.cli import load_config
 
-container = Container('api')
+config = load_config()
+adapter = django_rest.DjangoRestAdapter()
+adapter.construct(config.get('spec'))
+adapter.apply()
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    container.create_api_views(API_SCHEMA)
+    adapter.urls
 ]
