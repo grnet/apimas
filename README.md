@@ -63,7 +63,7 @@ API_SCHEMA = {
         # global settings here.
     }
     'resources': {
-        'myresource': my_model_resource,
+        'myresource': resource_schema,
         # another resources here.
     }
 }
