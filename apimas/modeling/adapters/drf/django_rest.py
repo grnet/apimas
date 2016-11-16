@@ -22,7 +22,7 @@ class DjangoRestAdapter(NaiveAdapter):
         '.ref': '.drf_field',
         '.struct': '.drf_field',
         '.structarray': '.drf_field',
-        '.collection': '.collection',
+        '.collection': '.drf_collection',
     }
 
     ADAPTER_CONF = 'drf_conf'
@@ -60,7 +60,8 @@ class DjangoRestAdapter(NaiveAdapter):
                    models.OneToOneRel),
     }
 
-    PREDICATES = list(NaiveAdapter.PREDICATES) + ['.drf_field']
+    PREDICATES = list(NaiveAdapter.PREDICATES) + [
+        '.drf_field', '.drf_collection']
 
     def __init__(self):
         self.gen_adapter_spec = {}
@@ -166,6 +167,17 @@ class DjangoRestAdapter(NaiveAdapter):
             resource_schema, **spec))
         instance[self.ADAPTER_CONF].update(doc.doc_get(
             instance, ('actions', self.ADAPTER_CONF)) or {})
+        return instance
+
+    def construct_drf_collection(self, instance, spec, loc, context):
+        """
+        Constructor of `.drf_collection` predicate.
+
+        It enriches instance with drf specific configuration.
+        """
+        if self.ADAPTER_CONF not in instance:
+            raise doc.DeferConstructor
+        instance[self.ADAPTER_CONF].update(**spec)
         return instance
 
     def construct_drf_field(self, instance, spec, loc, context):
