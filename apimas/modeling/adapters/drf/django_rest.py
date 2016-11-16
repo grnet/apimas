@@ -159,14 +159,7 @@ class DjangoRestAdapter(NaiveAdapter):
         schema of a specific resource.
         """
         self.init_adapter_conf(instance)
-        field_properties = doc.doc_get(instance, ('*',))
-        resource_schema = self.construct_field_schema(
-            instance, field_properties, **spec)
-        resource_schema.update(self.construct_resource_schema(instance))
-        instance[self.ADAPTER_CONF].update(dict(
-            resource_schema, **spec))
-        instance[self.ADAPTER_CONF].update(doc.doc_get(
-            instance, ('actions', self.ADAPTER_CONF)) or {})
+        instance[self.ADAPTER_CONF].update(**spec)
         return instance
 
     def construct_drf_collection(self, instance, spec, loc, context):
@@ -177,7 +170,15 @@ class DjangoRestAdapter(NaiveAdapter):
         """
         if self.ADAPTER_CONF not in instance:
             raise doc.DeferConstructor
-        instance[self.ADAPTER_CONF].update(**spec)
+        field_properties = doc.doc_get(instance, ('*',))
+        resource_schema = self.construct_field_schema(
+            instance, field_properties,
+            serializers=spec.pop('serializers', []))
+        resource_schema.update(self.construct_resource_schema(instance))
+        instance[self.ADAPTER_CONF].update(dict(
+            resource_schema, **spec))
+        instance[self.ADAPTER_CONF].update(doc.doc_get(
+            instance, ('actions', self.ADAPTER_CONF)) or {})
         return instance
 
     def construct_drf_field(self, instance, spec, loc, context):
@@ -249,6 +250,8 @@ class DjangoRestAdapter(NaiveAdapter):
         it requires field to be initialized, otherwise, construction is
         defered.
         """
+        if self.ADAPTER_CONF not in instance:
+            raise doc.DeferConstructor
         property_path = (self.ADAPTER_CONF, self.PROPERTIES_CONF_KEY)
         field_schema = doc.doc_get(instance, self.ADAPTER_CONF)
         if field_schema is None:
@@ -301,7 +304,7 @@ class DjangoRestAdapter(NaiveAdapter):
         adapter_key = 'field_schema'
         self.init_adapter_conf(instance)
         attrs = {self.PROPERTIES_CONF_KEY: {}, self.NESTED_CONF_KEY: {}}
-        custom_mixins = kwargs.get('custom_mixins', [])
+        serializers = kwargs.get('serializers', [])
         for field_name, field_spec in field_properties.iteritems():
             for k, v in attrs.iteritems():
                 if k in field_spec[self.ADAPTER_CONF]:
@@ -310,7 +313,7 @@ class DjangoRestAdapter(NaiveAdapter):
         fields = [field_name for field_name, _ in field_properties.iteritems()]
         field_schema = {adapter_key: {
             'fields': fields,
-            'custom_mixins': custom_mixins,
+            'serializers': serializers,
         }}
         for k, v in attrs.iteritems():
             if v:

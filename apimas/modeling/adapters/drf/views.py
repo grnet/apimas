@@ -98,7 +98,7 @@ def get_bases_classes(config):
     """
     hook_class = get_hook_class(config)
     custom_mixins = tuple(map(
-        utils.LOAD_CLASS, config.get(utils.CUSTOM_MIXINS_LOOKUP_FIELD, [])))
+        utils.LOAD_CLASS, config.get(utils.MIXINS_LOOKUP_FIELD, [])))
     operations = config.get(utils.OPERATIONS_LOOKUP_FIELD, None)
     bases = (apimas_viewsets.ModelViewSet,) if not operations\
         else tuple([MIXINS[operation] for operation in operations]) + (

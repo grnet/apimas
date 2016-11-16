@@ -27,7 +27,7 @@ FIELD_SCHEMA = {
         'type': 'list',
         'schema': {'type': 'string'}
     },
-    'custom_mixins': {
+    'serializers': {
         'type': 'list',
         'schema': {'type': 'string'}
     },
@@ -121,7 +121,7 @@ RESOURCE_SCHEMA = {
         'type': 'list',
         'schema': {'type': 'string'},
     },
-    'custom_mixins': {
+    'mixins': {
         'type': 'list',
         'schema': {'type': 'string'},
     },
