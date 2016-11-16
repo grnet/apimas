@@ -25,7 +25,8 @@ def handle_exception(func):
                 r.raise_for_status()
             return r
         except HTTPError as e:
-            raise ex.ApimasClientException(e)
+            raise ex.ApimasClientException(
+                e.message, response=e.response, request=e.request)
     return wrapper
 
 
