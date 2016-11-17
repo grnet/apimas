@@ -322,7 +322,7 @@ class ApimasClientAdapter(NaiveAdapter):
             {'coerce': DateTimeNormalizer(date_format)})
         return instance
 
-    def _add_ref_params(self, instance, spec, loc, context, **kwargs):
+    def construct_ref(self, instance, spec, loc, context):
         """
         Construct a field that refes to another collection.
 
@@ -338,16 +338,13 @@ class ApimasClientAdapter(NaiveAdapter):
 
         This normalization is triggered before every cerberus validation.
         """
-        ref = kwargs.pop('to')
-        instance[self.ADAPTER_CONF].update(
-            {'coerce': RefNormalizer(TRAILING_SLASH.join(
-                (self.root_url, loc[0], ref, '')))})
-        return instance
-
-    def construct_ref(self, instance, spec, loc, context):
         instance = super(self.__class__, self).construct_ref(
             instance, spec, loc, context)
         many = spec.get('many')
+        ref = spec.get('to')
+        normalizer = {'coerce': RefNormalizer(TRAILING_SLASH.join(
+            (self.root_url, loc[0], ref, '')))}
+        instance[self.ADAPTER_CONF].update(normalizer)
         if many is True:
             conf = {'type': 'list', 'schema': instance[self.ADAPTER_CONF]}
             instance[self.ADAPTER_CONF] = conf
