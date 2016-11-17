@@ -1,4 +1,3 @@
-import json
 from requests import Response
 from requests.exceptions import HTTPError
 
@@ -16,4 +15,4 @@ class ApimasClientException(HTTPError):
             except ValueError:
                 details = self.response.text
             detailed_msg = {'message': self.message, 'details': details}
-            self.message = json.dumps(detailed_msg, indent=2)
+            self.message = detailed_msg

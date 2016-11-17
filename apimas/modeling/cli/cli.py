@@ -21,7 +21,10 @@ def handle_exception(func):
         try:
             func(*args, **kwargs)
         except ex.ApimasClientException as e:
-            click.secho(str(e.message), fg='red')
+            if isinstance(e.message, dict):
+                click.secho(json.dumps(e.message, indent=2), fg='red')
+            else:
+                click.secho(e.message, fg='red')
     return wrapper
 
 
