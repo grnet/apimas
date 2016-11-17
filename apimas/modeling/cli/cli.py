@@ -439,13 +439,6 @@ class ApimasCliAdapter(NaiveAdapter):
         instance[self.ADAPTER_CONF].update(option_kwargs)
         return instance
 
-    def construct_boolean_option(self, instance, spec, loc, option_name):
-        """
-        Attaches keyword argument `is_flag` as `True`.
-        """
-        instance[self.ADAPTER_CONF].update({option_name: {'is_flag': True}})
-        return instance
-
     def construct_cli_option(self, instance, spec, loc, context):
         """
         Constructor for '.cli_option' predicate.
@@ -454,7 +447,6 @@ class ApimasCliAdapter(NaiveAdapter):
         all required keyword arguments for `click.option()` constructor.
         """
         outlier_cases = {
-            '.boolean': self.construct_boolean_option,
             '.struct': self.construct_struct_option,
             '.ref': self.construct_ref_option,
         }
