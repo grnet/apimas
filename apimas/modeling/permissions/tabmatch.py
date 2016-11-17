@@ -59,9 +59,7 @@ class Tabmatch(object):
         depth = len(self.column_names)
         matches = doc_match_levels(self.rules_doc, pattern_sets,
                                    expand_levels)
-        for path in matches:
-            if len(path) == depth:
-                yield self.Row(*path)
+        return (self.Row(*path) for path in matches if len(path) == depth)
 
 
 def test():
