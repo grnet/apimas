@@ -153,23 +153,23 @@ class DjangoRestAdapter(NaiveAdapter):
 
     def construct_collection(self, instance, spec, loc, context):
         """
-        Constructor for `.collection` predicate.
-
-        Aggregates constructed field schema and actions in order to form
-        schema of a specific resource.
-        """
-        self.init_adapter_conf(instance)
-        instance[self.ADAPTER_CONF].update(**spec)
-        return instance
-
-    def construct_drf_collection(self, instance, spec, loc, context):
-        """
-        Constructor of `.drf_collection` predicate.
+        Constructor of `.collection` predicate.
 
         It enriches instance with drf specific configuration.
         """
         if self.ADAPTER_CONF not in instance:
             raise doc.DeferConstructor
+        instance[self.ADAPTER_CONF].update(**spec)
+        return instance
+
+    def construct_drf_collection(self, instance, spec, loc, context):
+        """
+        Constructor for `.drf_collection` predicate.
+
+        Aggregates constructed field schema and actions in order to form
+        schema of a specific resource.
+        """
+        self.init_adapter_conf(instance)
         field_properties = doc.doc_get(instance, ('*',))
         resource_schema = self.construct_field_schema(
             instance, field_properties,
@@ -179,6 +179,34 @@ class DjangoRestAdapter(NaiveAdapter):
             resource_schema, **spec))
         instance[self.ADAPTER_CONF].update(doc.doc_get(
             instance, ('actions', self.ADAPTER_CONF)) or {})
+        return instance
+
+    def construct_nested_drf_field(self, instance, spec, loc, context,
+                                   predicate_type):
+        field_properties = doc.doc_get(instance, (predicate_type,))
+        source = spec.pop('source', None)
+        top_spec = context.get('top_spec', {})
+        field_type = self.fields_type[loc[-2]]
+        self.validate_model_field(top_spec, loc, field_type, source)
+        nested = {self.NESTED_CONF_KEY: dict(
+            self.construct_field_schema(
+                instance, field_properties,
+                serializers=spec.pop('serializers', [])),
+            source=source)}
+        instance[self.ADAPTER_CONF].update(nested)
+        instance[self.ADAPTER_CONF][self.PROPERTIES_CONF_KEY].update(**spec)
+        return instance
+
+    def default_field_constructor(self, instance, spec, loc, context,
+                                  predicate_type):
+        field_type = self.fields_type[loc[-2]]
+        top_spec = context.get('top_spec', {})
+        source = spec.get('source', None)
+        if predicate_type == '.ref':
+            self.validate_ref(instance, spec, loc, top_spec, source)
+        else:
+            self.validate_model_field(top_spec, loc, field_type, source)
+        instance[self.ADAPTER_CONF][self.PROPERTIES_CONF_KEY].update(**spec)
         return instance
 
     def construct_drf_field(self, instance, spec, loc, context):
@@ -191,25 +219,20 @@ class DjangoRestAdapter(NaiveAdapter):
         In case of nested fields, e.g. `.struct`, `.structarray`, the field
         should be related to another model.
         """
-        nested_fields = {'.struct', '.structarray'}
+        field_contructors = {
+            '.struct': self.construct_nested_drf_field,
+            '.structarray': self.construct_nested_drf_field,
+        }
         if self.ADAPTER_CONF not in instance:
             raise doc.DeferConstructor
-        field_type = self.fields_type[loc[-2]]
-        top_spec = context.get('top_spec', {})
-        source = spec.get('source', None)
-        if '.ref' in instance:
-            self.validate_ref(instance, spec, loc, top_spec, source)
-            return instance
-        self.validate_model_field(top_spec, loc, field_type, source)
-        for k in nested_fields:
-            if k in instance:
-                field_properties = doc.doc_get(instance, (k,))
-                source = spec.get('source', None)
-                nested = {self.NESTED_CONF_KEY: dict(
-                    self.construct_field_schema(
-                        instance, field_properties, **spec), source=source)}
-                instance[self.ADAPTER_CONF].update(nested)
-        return instance
+        property_path = (self.ADAPTER_CONF, self.PROPERTIES_CONF_KEY)
+        properties = doc.doc_get(instance, property_path)
+        if properties is None:
+            doc.doc_set(instance, property_path, {})
+        type_predicate = self.extract_type(instance)
+        return field_contructors.get(
+            type_predicate, self.default_field_constructor)(
+                instance, spec, loc, context, type_predicate)
 
     def validate_ref(self, instance, spec, loc, top_spec, source):
         """
@@ -256,8 +279,6 @@ class DjangoRestAdapter(NaiveAdapter):
         field_schema = doc.doc_get(instance, self.ADAPTER_CONF)
         if field_schema is None:
             doc.doc_set(instance, property_path, {})
-        self.init_adapter_conf(
-            instance, initial={self.PROPERTIES_CONF_KEY: {}})
         instance[self.ADAPTER_CONF][self.PROPERTIES_CONF_KEY].update(
             {self.PROPERTY_MAPPING[key]: True})
         return instance
