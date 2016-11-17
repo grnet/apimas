@@ -333,7 +333,7 @@ class ApimasCliAdapter(NaiveAdapter):
         appropriate options to them based on field schema.
         """
         self.init_adapter_conf(instance, initial={'actions': set()})
-        commands = doc.doc_get(instance, ('actions', self.ADAPTER_CONF))
+        commands = doc.doc_get(instance, ('actions', self.ADAPTER_CONF)) or {}
         for action, command in commands.iteritems():
             command = self.construct_command(
                 instance, spec, loc, action, command)
