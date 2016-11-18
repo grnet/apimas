@@ -161,6 +161,11 @@ class ListCommand(BaseCommand):
         self.format_response(response.json(), format_type)
 
 
+def abort_if_false(ctx, param, value):
+    if not value:
+        ctx.abort()
+
+
 class DeleleCommand(BaseCommand):
     """
     Command to perform a `DELETE` request for the deletion of a specific
@@ -233,6 +238,8 @@ class ApimasCliAdapter(NaiveAdapter):
         'update',
         'delete',
     }
+
+    CRITICAL_ACTIONS = {'delete'}
 
     EXTRA_PREDICATES = [
         '.cli_option',
@@ -356,6 +363,12 @@ class ApimasCliAdapter(NaiveAdapter):
         command = self.COMMANDS[action](self.clients.get(loc[-3]))
         if action in self.RESOURCE_ACTIONS:
             command = click.argument('resource_id')(command)
+        if action in self.CRITICAL_ACTIONS:
+            option = click.option(
+                '--yes', is_flag=True, callback=abort_if_false,
+                expose_value=False,
+                prompt='Are you sure you want to perform this action?')
+            command = option(command)
         self._add_format_option(command, action)
         instance[self.ADAPTER_CONF][action] = command
         return instance
