@@ -68,7 +68,7 @@ class BaseCommand(object):
         """
         data = {'/'.join(
             self.option_mapping[k]): list(v) if type(v) is tuple else v
-                for k, v in option_data.iteritems()}
+                for k, v in option_data.iteritems() if v is not None}
         return doc.doc_from_ns(data)
 
     def add_credentials(self, data):
