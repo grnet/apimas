@@ -209,7 +209,7 @@ class NaiveAdapter(Adapter):
             if predicate in instance:
                 types.append(predicate)
         if len(types) > 1:
-            raise ex.ApimasException('Type is ambiguous. % found: %' % (
+            raise ex.ApimasException('Type is ambiguous. %s found: %s' % (
                 len(types), str(types)))
         return None if not types else types[0]
 
