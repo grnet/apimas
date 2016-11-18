@@ -58,6 +58,7 @@ class DjangoRestAdapter(NaiveAdapter):
                         models.ManyToManyRel),
         'struct': (models.ForeignKey, models.OneToOneField,
                    models.OneToOneRel),
+        'file': models.FileField,
     }
 
     PREDICATES = list(NaiveAdapter.PREDICATES) + [

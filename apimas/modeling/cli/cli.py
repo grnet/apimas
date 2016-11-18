@@ -1,4 +1,5 @@
 import json
+import functools
 from os.path import expanduser, join, isfile
 import click
 import yaml
@@ -190,6 +191,7 @@ class ApimasCliAdapter(NaiveAdapter):
         'datetime': DateTime,
         'ref': types.StringParamType,
         'structarray': Json,
+        'file': functools.partial(types.File, mode='rb')
     }
 
     # Map actions to commands.

@@ -1,4 +1,3 @@
-from cerberus import Validator
 import requests
 from requests.exceptions import HTTPError
 from requests.compat import urljoin, quote
@@ -6,8 +5,8 @@ from apimas.modeling.core import documents as doc, exceptions as ex
 from apimas.modeling.adapters.cookbooks import (
     NaiveAdapter, default_constructor)
 from apimas.modeling.clients.auth import ApimasClientAuth
-from apimas.modeling.clients.normalizers import (
-    RefNormalizer, DateNormalizer, DateTimeNormalizer)
+from apimas.modeling.clients.extensions import (
+    RefNormalizer, DateNormalizer, DateTimeNormalizer, ApimasValidator)
 
 
 TRAILING_SLASH = '/'
@@ -45,7 +44,7 @@ class ApimasClient(object):
     def __init__(self, endpoint, schema, **credentials):
         self.endpoint = endpoint
         self.validation_schema = schema
-        self.api_validator = Validator(self.validation_schema)
+        self.api_validator = ApimasValidator(self.validation_schema)
         self.auth = None
 
     @handle_exception
@@ -55,9 +54,12 @@ class ApimasClient(object):
 
         Example: POST endpoint/
         """
-        data = self.validate(data or {}, raise_exception)
-        r = requests.post(self.endpoint, headers=headers, json=data,
-                          auth=self.auth)
+        request_kwargs = {
+            'headers': headers,
+            'auth': self.auth,
+        }
+        request_kwargs.update(self.extract_write_data(data, raise_exception))
+        r = requests.post(self.endpoint, **request_kwargs)
         return r
 
     @handle_exception
@@ -68,9 +70,13 @@ class ApimasClient(object):
 
         Example: PUT endpoint/<pk>/
         """
+        request_kwargs = {
+            'headers': headers,
+            'auth': self.auth,
+        }
         data = self.validate(data or {}, raise_exception)
-        r = requests.put(self.format_endpoint(resource_id), headers=headers,
-                         json=data, auth=self.auth)
+        request_kwargs.update(self.extract_write_data(data, raise_exception))
+        r = requests.put(self.format_endpoint(resource_id), **request_kwargs)
         return r
 
     @handle_exception
@@ -82,9 +88,13 @@ class ApimasClient(object):
 
         Example: PATCH endpoint/<pk>/
         """
-        data = self.partial_validate(data or {}, raise_exception)
-        r = requests.patch(self.format_endpoint(resource_id), headers=headers,
-                           json=data, auth=self.auth)
+        request_kwargs = {
+            'headers': headers,
+            'auth': self.auth,
+        }
+        request_kwargs.update(self.extract_write_data(
+            data, raise_exception, partial=True))
+        r = requests.patch(self.format_endpoint(resource_id), **request_kwargs)
         return r
 
     @handle_exception
@@ -165,7 +175,7 @@ class ApimasClient(object):
         """
         partial_schema = {k: v for k, v in self.validation_schema.iteritems()
                           if k in data}
-        validator = Validator(partial_schema)
+        validator = ApimasValidator(partial_schema)
         is_valid = validator.validate(data)
         if raise_exception and not is_valid:
             raise ex.ApimasClientException(validator.errors)
@@ -183,6 +193,58 @@ class ApimasClient(object):
         if raise_exception and not is_valid:
             raise ex.ApimasClientException(self.api_validator.errors)
         return self.api_validator.document
+
+    def extract_files(self, data):
+        """
+        This functions checks if data which are going to be sent to request
+        include files and it extract them.
+
+        Then it performs two checks:
+        a) It checks that the location of files is not nested.
+        b) If files were detected, then it checks that request data does
+        not include nested data.
+
+        When uploading files, the `Content-Type` header of request is set
+        to `multipart/form-data`.
+
+        :param data: Dictionary of data which are going to be sent to request.
+
+        :returns: A dictionary keyed by the name of the field and it includes
+        all files to be uploaded.
+        """
+        paths = [path for path, val in doc.doc_iter(data)
+                 if isinstance(val, file)]
+        error_msg = ('Content-Type `application/json is not supported when'
+                     ' uploading files`')
+        if any(len(path) > 1 for path in paths):
+            raise ex.ApimasClientException(error_msg)
+        if paths and any(type(v) is dict for _, v in data.iteritems()):
+            raise ex.ApimasClientException(error_msg)
+        return {path[-1]: doc.doc_pop(data, path) for path in paths}
+
+    def extract_write_data(self, data, raise_exception, partial=False):
+        """
+        This function extracts data, sent for CREATE and UPDATE requests of
+        a resource.
+
+        This functions validates data, and then it seperates files to be
+        uploaded from the rest.
+
+        If files are present, then the `Content-Type` of request is set to
+        `multipart/form-data`, otherwise `application/json`.
+
+        :param data: Dictionary of data which are going to be sent to request.
+        :param raise_exception: True if an exception should be raised when
+        validation fails.
+        :param partial: True if request includes a subset of resource's fields,
+        False otherwise.
+        """
+        if partial:
+            data = self.partial_validate(data or {}, raise_exception)
+        else:
+            data = self.validate(data or {}, raise_exception)
+        files = self.extract_files(data)
+        return {'data': data, 'files': files} if files else {'json': data}
 
     def set_credentials(self, auth_type, **credentials):
         """
@@ -215,6 +277,7 @@ class ApimasClientAdapter(NaiveAdapter):
         'struct': 'dict',
         'structarray': 'list',
         'ref': 'string',
+        'file': 'file',
     }
 
     PREDICATES = list(NaiveAdapter.PREDICATES) + ['.field']

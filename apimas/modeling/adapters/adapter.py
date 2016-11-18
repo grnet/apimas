@@ -24,6 +24,7 @@ class Adapter(object):
         '.boolean',
         '.datetime',
         '.date',
+        '.file',
         '.blankable',
         '.required',
         '.nullable',
@@ -43,6 +44,7 @@ class Adapter(object):
         '.boolean',
         '.datetime',
         '.date',
+        '.file',
     ])
 
     PROPERTIES = frozenset([

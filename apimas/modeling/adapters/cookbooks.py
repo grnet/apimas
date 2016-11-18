@@ -146,6 +146,14 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'date')
 
+    def construct_file(self, instance, spec, loc, context):
+        """
+        Constuctor for `.file` predicate.
+
+        This maps predicate to the specified type according to mapping.
+        """
+        return self.construct_type(instance, spec, loc, context, 'file')
+
     def construct_blankable(self, instance, spec, loc, context):
         """
         Constuctor for `.blankable` predicate.

@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from cerberus import Validator
 from requests.compat import urljoin
 
 
@@ -42,3 +43,11 @@ class DateTimeNormalizer(object):
 
 class DateNormalizer(DateTimeNormalizer):
     DEFAULT_FORMAT = '%Y-%m-%d'
+
+
+class ApimasValidator(Validator):
+    """
+    Extends cerberus `Validator` by adding a new type, i.e.\ `file`.
+    """
+    def _validate_type_file(self, value):
+        return isinstance(value, file)
