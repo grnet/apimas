@@ -1,11 +1,8 @@
 import json
 import functools
-from os.path import expanduser, join, isfile
 import click
-import yaml
-from cerberus import Validator
-from apimas.modeling.core.exceptions import ApimasException
 from click import types
+from apimas.modeling import utils
 from apimas.modeling.cli.custom_types import (
     Json, Credentials, Date, DateTime)
 from apimas.modeling.clients import ApimasClientAdapter
@@ -524,37 +521,8 @@ class ApimasCliAdapter(NaiveAdapter):
         return instance
 
 
-
-HOME_DIR = expanduser("~")
-CONFIG_FILE = '.apimas'
-
-
-VALIDATION_SCHEMA = {
-    'root': {
-        'type': 'string'
-    },
-    'spec': {
-        'type': 'dict'
-    }
-}
-
-
-def load_config():
-    config = join(HOME_DIR, CONFIG_FILE)
-    if not isfile(config):
-        raise ApimasException('.apimas file not found')
-
-    with open(config) as data_file:
-        data = yaml.load(data_file)
-    validator = Validator(VALIDATION_SCHEMA)
-    is_valid = validator.validate(data)
-    if not is_valid:
-        raise ApimasException(validator.errors)
-    return data
-
-
 def main():
-    data = load_config()
+    data = utils.load_config()
     root_url = data['root']
     spec = data['spec']
     client_gen = ApimasClientAdapter(root_url)
