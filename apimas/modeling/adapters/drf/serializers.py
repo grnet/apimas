@@ -3,7 +3,7 @@ from collections import OrderedDict
 from rest_framework import serializers
 from rest_framework.settings import api_settings
 from rest_framework.utils import model_meta
-from apimas.modeling.core.documents import doc_to_ns, ANY
+from apimas.modeling.core.documents import ANY
 from apimas.modeling.adapters.drf import utils
 
 
@@ -11,6 +11,22 @@ NON_INTERSECTIONAL_PAIRS = [
     ('required', 'read_only'),
     ('write_only', 'read_only'),
 ]
+
+
+def get_paths(serializer_fields):
+    paths = []
+    for k, v in serializer_fields.iteritems():
+        fields = getattr(v, 'fields', None)
+        if fields is None:
+            child = getattr(v, 'child', None)
+            if child is None:
+                nested_paths = []
+            else:
+                nested_paths = get_paths(child.fields)
+        else:
+            nested_paths = get_paths(fields)
+        paths.extend([k + '/' + p for p in nested_paths] + [k])
+    return paths
 
 
 class ApimasSerializer(serializers.HyperlinkedModelSerializer):
@@ -28,7 +44,7 @@ class ApimasSerializer(serializers.HyperlinkedModelSerializer):
         if permitted_fields == ANY:
             return
         non_permitted_fields = set(
-            doc_to_ns(dict(serializer_fields)).keys()) - set(permitted_fields)
+            get_paths(serializer_fields)) - set(permitted_fields)
         for field in non_permitted_fields:
             self.set_field_property(field.split('/'), serializer_fields,
                                     'write_only')
@@ -39,8 +55,12 @@ class ApimasSerializer(serializers.HyperlinkedModelSerializer):
             if field:
                 setattr(field, property_key, True)
             return
+        serializer = fields.get(segments[0])
+        fields = serializer.child.fields\
+            if type(serializer) is serializers.ListSerializer else\
+            serializer.fields
         return self.set_field_property(
-            segments[1:], fields.get(segments[0], {}).fields, property_key)
+            segments[1:], fields, property_key)
 
     def get_fields(self):
         """
