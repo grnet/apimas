@@ -47,7 +47,7 @@ class DjangoRestAdapter(NaiveAdapter):
         'integer': models.IntegerField,
         'big-integer': models.BigIntegerField,
         'float': models.FloatField,
-        'string': models.CharField,
+        'string': (models.CharField, models.TextField),
         'boolean': models.BooleanField,
         'date': models.DateField,
         'datetime': models.DateTimeField,
