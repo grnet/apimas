@@ -31,15 +31,21 @@ def test():
             'three': 3,
         },
         'four': 4,
-        Prefix('foo'): 'baz',
+        '.patterns': {
+            '_foo': 'baz',
+        },
         'five': {
             'six': 6,
             'seven': {
                 'eight': 8,
-                Prefix('nine_'): 9,
+                '.patterns': {
+                    '_nine_': 9,
+                },
             },
         },
     }
+
+    rules_doc = doc_construct({}, rules_doc, autoconstruct=True)
 
     pattern_sets = [
         {'one', 'four', Prefix('f')},

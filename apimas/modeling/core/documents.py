@@ -266,75 +266,6 @@ def doc_update(target, source, multival=True):
     return target
 
 
-class SegmentPattern(object):
-    def match(self, segment):
-        raise NotImplementedError
-
-    def __eq__(self, other):
-        return self.match(other)
-
-
-class AnyPattern(SegmentPattern):
-    def match(self, segment):
-        return True
-
-    def __repr__(self):
-        return "<ANY>"
-
-    __str__ = __repr__
-
-
-ANY = AnyPattern()
-
-
-class Prefix(SegmentPattern):
-    def __init__(self, prefix):
-        self.prefix = prefix
-
-    def __repr__(self):
-        return "Prefix({prefix!r})".format(prefix=self.prefix)
-
-    __str__ = __repr__
-
-    def match(self, segment):
-        startswith = getattr(segment, 'startswith', None)
-        if startswith is not None:
-            return startswith(self.prefix)
-        elif isinstance(segment, AnyPattern):
-            return True
-        elif isinstance(segment, Regex):
-            m = "Comparison between Prefix and Regex not supported"
-            raise NotImplementedError(m)
-        else:
-            return False
-
-    def startswith(self, prefix):
-        return self.prefix.startswith(prefix)
-
-
-class Regex(SegmentPattern):
-    def __init__(self, pattern):
-        self.pattern = pattern
-        self.matcher = re.compile(pattern)
-
-    def __repr__(self):
-        return "Regex({pattern!r})".format(pattern=self.pattern)
-
-    __str__ = __repr__
-
-    def match(self, segment):
-        segment_type = type(segment)
-        if isinstance(segment_type, basestring):
-            return self.matcher.match(segment) is not None
-        elif isinstance(segment, AnyPattern):
-            return True
-        elif isinstance(segment, Prefix):
-            m = "Comparison between Regex and Prefix not supported"
-            raise NotImplementedError(m)
-        else:
-            return False
-
-
 def doc_match_levels(rules_doc, pattern_sets, expand_pattern_levels,
                      level=0, path=()):
 
@@ -769,6 +700,158 @@ def doc_to_level_patterns(doc):
         for level, segment in enumerate(p):
             pattern_sets[level].add(p[level])
     return pattern_sets
+
+
+class SegmentPattern(object):
+    def match(self, segment):
+        raise NotImplementedError
+
+    def __eq__(self, other):
+        return self.match(other)
+
+    @classmethod
+    def construct(cls, instance, spec, loc, context):
+        key = loc[-2]
+        return cls(key)
+
+
+class AnyPattern(SegmentPattern):
+    def match(self, segment):
+        return True
+
+    def __repr__(self):
+        return "<ANY>"
+
+    __str__ = __repr__
+
+
+ANY = AnyPattern()
+
+
+class Prefix(SegmentPattern):
+    def __init__(self, prefix):
+        self.prefix = prefix
+
+    def __repr__(self):
+        return "Prefix({prefix!r})".format(prefix=self.prefix)
+
+    __str__ = __repr__
+
+    def match(self, segment):
+        startswith = getattr(segment, 'startswith', None)
+        if startswith is not None:
+            return startswith(self.prefix)
+        elif isinstance(segment, AnyPattern):
+            return True
+        elif isinstance(segment, Regex):
+            m = "Comparison between Prefix and Regex not supported"
+            raise NotImplementedError(m)
+        else:
+            return False
+
+    def startswith(self, prefix):
+        return self.prefix.startswith(prefix)
+
+
+class Regex(SegmentPattern):
+    def __init__(self, pattern):
+        self.pattern = pattern
+        self.matcher = re.compile(pattern)
+
+    def __repr__(self):
+        return "Regex({pattern!r})".format(pattern=self.pattern)
+
+    __str__ = __repr__
+
+    def match(self, segment):
+        segment_type = type(segment)
+        if isinstance(segment_type, basestring):
+            return self.matcher.match(segment) is not None
+        elif isinstance(segment, AnyPattern):
+            return True
+        else:
+            m = "Comparison between Regex and {segment!r} not supported"
+            m = m.format(segment=segment)
+            raise NotImplementedError(m)
+            return False
+
+
+class Literal(SegmentPattern):
+    def __new__(cls, segment):
+        return segment
+
+
+class And(SegmentPattern):
+    def __init__(self, pattern):
+        self.patterns = parse_pattern(x for x in pattern.split('&'))
+
+    def match(self, segment):
+        return all(x == segment or segment == x for x in self.patterns)
+
+
+class Or(SegmentPattern):
+    def __init__(self, pattern):
+        self.patterns = parse_pattern(x for x in pattern.split('|'))
+
+    def match(self, segment):
+        return any(x == segment or segment == x for x in self.patterns)
+
+
+class Inverse(SegmentPattern):
+    def __init__(self, pattern):
+        self.pattern = parse_pattern(pattern)
+
+    def match(self, segment):
+        return not self.pattern == segment
+
+
+_pattern_prefixes = {
+    '*': AnyPattern,
+    '?': Regex,
+    '!': Inverse,
+    '_': Prefix,
+    '&': And,
+    '|': Or,
+    '=': Literal,
+}
+
+
+def parse_pattern(string):
+    prefix = string[:1]
+    if prefix not in _pattern_prefixes:
+        m = ("{string!r}: pattern strings must be prefixed by one character "
+             "in the following set:\n{prefixes!r}\n")
+        m = m.format(string=string, prifixes=_pattern_prefixes)
+        raise ValidationError(m)
+
+    if prefix in _pattern_prefixes:
+        pattern = string[1:]
+    else:
+        pattern = string
+        prefix = '='
+        
+    return _pattern_prefixes[prefix](pattern)
+
+
+def construct_patterns(instance, spec, loc, context):
+    spec_type = type(spec)
+    if spec_type is dict:
+        for pattern, val in spec.iteritems():
+            pattern_instance = parse_pattern(pattern)
+            instance[pattern_instance] = val
+    elif spec_type in (set, tuple, list):
+        for pattern in spec:
+            pattern_instance = parse_pattern(pattern)
+            instance[pattern_instance] = {}
+    else:
+        m = "Unsuported spec node type: {spec!r}"
+        m = m.format(spec=spec)
+        raise ValidationError(m)
+
+    return instance
+
+
+register_constructor(construct_patterns, 'patterns')
 
 
 def random_doc(nr_nodes=32, max_depth=7):
