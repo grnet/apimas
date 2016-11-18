@@ -208,7 +208,12 @@ class ApimasCliAdapter(NaiveAdapter):
             to_option(x),
             **{k: v for k, v in y.iteritems() if k != 'required'}),
         'create': lambda x, y: click.option(to_option(x), **y),
-        'update': lambda x, y: click.option(to_option(x), **y),
+        # Note that command of update, it performs a `PATCH` request instead
+        # `PUT`. Thus, user does not need to specify all fields for the action
+        # but only the fields which they actually want to update.
+        'update': lambda x, y: click.option(
+            to_option(x),
+            **{k: v for k, v in y.iteritems() if k != 'required'}),
         'delete': None,
         'retrieve': lambda x, y: click.option(
             to_option(x),
