@@ -3,10 +3,15 @@ import unittest
 from apimas.modeling.adapters.drf import utils
 from apimas.modeling.adapters.drf import serializers
 from apimas.modeling.adapters.drf.serializers import (
-    get_paths, validate)
+    get_paths, validate, generate, ApimasSerializer)
 
 
 class TestSerializers(unittest.TestCase):
+    def setUp(self):
+        self.mock_field = mock.MagicMock()
+        self.mock_meta = mock.MagicMock()
+        self.mock_meta.get_field.return_value = self.mock_field
+        self.mock_model = mock.MagicMock(_meta=self.mock_meta)
 
     def test_get_paths(self):
         fields = {'field1': 'value', 'field2': 'value'}
@@ -41,17 +46,38 @@ class TestSerializers(unittest.TestCase):
                 'prop_c': True,
             }
         }
-        mock_meta = mock.Mock()
-        mock_model = mock.Mock(_meta=mock_meta)
-        self.assertRaises(utils.DRFAdapterException, validate, mock_model,
+        self.assertRaises(utils.DRFAdapterException, validate, self.mock_model,
                           field_properties)
 
         field_properties['field1']['prop_a'] = False
-        validate(mock_model, field_properties)
+        validate(self.mock_model, field_properties)
 
-        mock_field = mock.Mock()
-        mock_field.get_internal_type.return_value = 'non_string'
-        mock_meta.get_field.return_value = mock_field
+        self.mock_field.get_internal_type.return_value = 'non_string'
         field_properties['field1']['allow_blank'] = True
-        self.assertRaises(utils.DRFAdapterException, validate, mock_model,
+        self.assertRaises(utils.DRFAdapterException, validate, self.mock_model,
                           field_properties)
+
+    def test_generate(self):
+        config = {
+            'fields': ['field1', 'field2'],
+            'read_only_fields': ['field1'],
+            'required_fields': ['field2'],
+            'nullable_fields': ['field2'],
+            'write_only_fields': ['field2'],
+        }
+        self.mock_model.__name__ = 'Mock'
+        serializer_cls = generate(self.mock_model, config)
+        meta = serializer_cls.Meta
+        self.assertIsNotNone(meta)
+        self.assertEqual(meta.fields, ['field1', 'field2'])
+        extra_kwargs = {
+            'field1': {
+                'read_only': True,
+            },
+            'field2': {
+                'required': True,
+                'allow_null': True,
+                'write_only': True,
+            }
+        }
+        self.assertEqual(meta.extra_kwargs, extra_kwargs)
