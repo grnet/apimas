@@ -818,15 +818,10 @@ _pattern_prefixes = {
 
 def parse_pattern(string):
     prefix = string[:1]
-    if prefix not in _pattern_prefixes:
-        m = ("{string!r}: pattern strings must be prefixed by one character "
-             "in the following set:\n{prefixes!r}\n")
-        m = m.format(string=string, prifixes=_pattern_prefixes)
-        raise ValidationError(m)
-
     if prefix in _pattern_prefixes:
         pattern = string[1:]
     else:
+        # Fail back to literal for rule readability.
         pattern = string
         prefix = '='
         
