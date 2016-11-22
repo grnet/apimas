@@ -350,7 +350,7 @@ class ApimasClientAdapter(NaiveAdapter):
         field_type = self.extract_type(instance)
         if not field_type:
             raise ex.ApimasException(
-                'You have to specify field type for field' % (loc[-2]))
+                'You have to specify field type for field `%s`' % (loc[-2]))
         self.init_adapter_conf(instance)
         for k in nested_structures:
             if k in instance:
