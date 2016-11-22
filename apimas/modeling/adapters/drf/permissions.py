@@ -24,7 +24,7 @@ class ApimasPermissions(BasePermission):
         Specifically, get groups to which use belongs, and action of request.
         """
         action = view.action
-        groups = map((lambda x: x.name), request.user.groups.all()) or []
+        groups = map((lambda x: x.name), request.user.groups.all())
         return [groups, [ANY], [action], [ANY]]
 
     def has_permission(self, request, view):
