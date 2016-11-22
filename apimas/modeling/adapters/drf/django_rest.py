@@ -143,10 +143,43 @@ class DjangoRestAdapter(NaiveAdapter):
         structural_elements = self.get_structural_elements(instance)
         assert len(structural_elements) == 1
         self.init_adapter_conf(instance)
+        permissions = spec.get('permissions', [])
+        instance = self.construct_permissions(
+            instance, permissions, (structural_elements[0],))
         api_schema = {resource: schema[self.ADAPTER_CONF]
                       for resource, schema in doc.doc_get(
                           instance, (structural_elements[0],)).iteritems()}
         instance[self.ADAPTER_CONF][adapter_key] = api_schema
+        return instance
+
+    def construct_permissions(self, instance, permissions, path):
+        """
+        It constructs permissions rules for every collection.
+
+        Typically, permission rules are provided at a global scope. Then,
+        this method, actually matches all permissions rules which are applied
+        to a specific collection and then it routes all matches to the
+        corresponding path.
+
+        For instance, permission rules applied to collection named
+        `mycollection`, they are carried to the path:
+        path = (`api`, `mycollection`, `conf`,` permissions`)
+        """
+        nu_columns = 6
+        permission_doc = {}
+        for rule in permissions:
+            doc.doc_set(permission_doc, rule[:-1], rule[-1])
+        for collection in doc.doc_get(instance, path).keys():
+            patterns = [[collection], [doc.ANY], [doc.ANY], [doc.ANY],
+                        [doc.ANY]]
+            matches = list(doc.doc_match_levels(
+                permission_doc, patterns,
+                expand_pattern_levels=range(nu_columns)))
+            if matches:
+                perm_path = path + (collection, self.ADAPTER_CONF,
+                                    'permissions')
+                collection_rules = map((lambda x: x[1:]), matches)
+                doc.doc_set(instance, perm_path, collection_rules)
         return instance
 
     def construct_collection(self, instance, spec, loc, context):
