@@ -90,8 +90,10 @@ class ApimasPermissions(BasePermission):
                     'request': request,
                     'view': view,
                 }
-                return method(obj, **kwargs) if obj is not None\
+                access_ok = method(obj, **kwargs) if obj is not None\
                     else method(**kwargs)
+                if access_ok:
+                    return True
         return False
 
     def __call__(self):
