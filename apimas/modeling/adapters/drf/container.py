@@ -1,13 +1,9 @@
-from django.apps import apps
 from django.conf.urls import url, include
 from rest_framework import routers
 from apimas.modeling.adapters.drf import utils
 from apimas.modeling.adapters.drf.schemas import (
     RESOURCE_SCHEMA_VALIDATOR, API_SCHEMA_VALIDATOR)
 from apimas.modeling.adapters.drf.views import generate
-
-
-APP_MODELS = apps.get_models()
 
 
 RESOURCES_LOOKUP_FIELD = 'resources'
@@ -70,13 +66,3 @@ class Container(object):
         if not validator.validate(schema):
             raise utils.DRFAdapterException(API_SCHEMA_VALIDATOR.errors)
         return schema
-
-    def validate_model(self, model):
-        """
-        Checks if given model is in the list of registered models of the
-        current app.
-        """
-        if model not in APP_MODELS:
-            raise utils.DRFAdapterException(
-                'Model %s is not a registered model of this app' % (
-                    model._meta.model_name))
