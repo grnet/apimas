@@ -703,6 +703,9 @@ def doc_to_level_patterns(doc):
 
 
 class SegmentPattern(object):
+    def __init__(self, *args):
+        self.args = args
+
     def match(self, segment):
         raise NotImplementedError
 
@@ -824,7 +827,7 @@ def parse_pattern(string):
         # Fail back to literal for rule readability.
         pattern = string
         prefix = '='
-        
+
     return _pattern_prefixes[prefix](pattern)
 
 
