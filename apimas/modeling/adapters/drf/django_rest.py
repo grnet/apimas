@@ -66,7 +66,6 @@ class DjangoRestAdapter(NaiveAdapter):
 
     def __init__(self):
         self.gen_adapter_spec = {}
-        self.fields_type = {}
         self.urls = None
 
     def apply(self):
@@ -84,9 +83,7 @@ class DjangoRestAdapter(NaiveAdapter):
     def construct_CRUD_action(self, instance, spec, loc, context, action):
         """ Adds an action to the list of allowable. """
         adapter_key = 'allowable_operations'
-        self.init_adapter_conf(instance)
-        if adapter_key not in instance[self.ADAPTER_CONF]:
-            instance[self.ADAPTER_CONF][adapter_key] = []
+        self.init_adapter_conf(instance, initial={adapter_key: []})
         instance[self.ADAPTER_CONF][adapter_key].append(action)
         return instance
 
@@ -172,6 +169,11 @@ class DjangoRestAdapter(NaiveAdapter):
         """
         self.init_adapter_conf(instance)
         field_properties = doc.doc_get(instance, ('*',))
+        assert len(loc) >= 3
+        if not field_properties:
+            raise DRFAdapterException(
+                'A collection must define its field schema.'
+                ' Empty collection found: %s' % (loc[-2]))
         resource_schema = self.construct_field_schema(
             instance, field_properties,
             serializers=spec.pop('serializers', []))
@@ -185,9 +187,14 @@ class DjangoRestAdapter(NaiveAdapter):
     def construct_nested_drf_field(self, instance, spec, loc, context,
                                    predicate_type):
         field_properties = doc.doc_get(instance, (predicate_type,))
+        if not field_properties:
+            raise DRFAdapterException(
+                'A `%s` must define its field schema.'
+                ' Empty `%s` found: %s' % (predicate_type, predicate_type,
+                                           loc[-2]))
         source = spec.pop('source', None)
         top_spec = context.get('top_spec', {})
-        field_type = self.fields_type[loc[-2]]
+        field_type = self.TYPE_MAPPING.get(predicate_type[1:])
         self.validate_model_field(top_spec, loc, field_type, source)
         nested = {self.NESTED_CONF_KEY: dict(
             self.construct_field_schema(
@@ -195,18 +202,20 @@ class DjangoRestAdapter(NaiveAdapter):
                 serializers=spec.pop('serializers', [])),
             source=source)}
         instance[self.ADAPTER_CONF].update(nested)
+        assert self.PROPERTIES_CONF_KEY in instance[self.ADAPTER_CONF]
         instance[self.ADAPTER_CONF][self.PROPERTIES_CONF_KEY].update(**spec)
         return instance
 
     def default_field_constructor(self, instance, spec, loc, context,
                                   predicate_type):
-        field_type = self.fields_type[loc[-2]]
+        field_type = self.TYPE_MAPPING[predicate_type[1:]]
         top_spec = context.get('top_spec', {})
         source = spec.get('source', None)
         if predicate_type == '.ref':
             self.validate_ref(instance, spec, loc, top_spec, source)
         else:
             self.validate_model_field(top_spec, loc, field_type, source)
+        assert self.PROPERTIES_CONF_KEY in instance[self.ADAPTER_CONF]
         instance[self.ADAPTER_CONF][self.PROPERTIES_CONF_KEY].update(**spec)
         return instance
 
@@ -261,11 +270,10 @@ class DjangoRestAdapter(NaiveAdapter):
         This constructor produces the corresponding cerberus syntax for
         specifying the type of a field.
         """
-        self.fields_type[loc[-2]] = self.TYPE_MAPPING[field_type]
         self.init_adapter_conf(instance)
         return instance
 
-    def construct_property(self, instance, spec, loc, context, key):
+    def construct_property(self, instance, spec, loc, context, property_name):
         """
         Constuctor for predicates that indicate a property of a field,
         e.g. nullable, readonly, required, etc.
@@ -281,7 +289,7 @@ class DjangoRestAdapter(NaiveAdapter):
         if field_schema is None:
             doc.doc_set(instance, property_path, {})
         instance[self.ADAPTER_CONF][self.PROPERTIES_CONF_KEY].update(
-            {self.PROPERTY_MAPPING[key]: True})
+            {self.PROPERTY_MAPPING[property_name]: True})
         return instance
 
     @handle_exception
