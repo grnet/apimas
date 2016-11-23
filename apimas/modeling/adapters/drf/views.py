@@ -76,9 +76,7 @@ def gen_apimas_permission_cls(model, config):
     Generate an `ApimasPermission` classes that conforms to the permission
     rules specified on the `APIMAS` specfication (if given).
     """
-    permissions = config.get('permissions', None)
-    if not permissions:
-        return None
+    permissions = config.get('permissions', [])
     return ApimasPermissions(permissions, model)
 
 
