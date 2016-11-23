@@ -33,6 +33,12 @@ class ApimasSerializer(serializers.HyperlinkedModelSerializer):
     def __init__(self, *args, **kwargs):
         super(serializers.HyperlinkedModelSerializer, self).__init__(
             *args, **kwargs)
+        self.adapt_fields_to_rules()
+
+    def adapt_fields_to_rules(self):
+        request = self.context.get('request')
+        if not request:
+            return
         readonly_fields = self.context['request'].parser_context.get(
             'non_writable_fields', [])
         permitted_fields = self.context['request'].parser_context.get(
