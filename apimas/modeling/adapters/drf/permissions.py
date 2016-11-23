@@ -9,10 +9,9 @@ class ApimasPermissions(BasePermission):
 
     message = None
 
-    permissions = Tabmatch(
-        ('group', 'field', 'action', 'state', 'comment'))
-
     def __init__(self, rules, model):
+        self.permissions = Tabmatch(
+            ('action', 'group', 'field', 'state', 'comment'))
         self.permissions.update(
             map((lambda x: self.permissions.Row(*x)), rules))
         self.model = model
@@ -25,7 +24,7 @@ class ApimasPermissions(BasePermission):
         """
         action = view.action
         groups = map((lambda x: x.name), request.user.groups.all())
-        return [groups, [ANY], [action], [ANY]]
+        return [[action], groups, [ANY], [ANY]]
 
     def has_permission(self, request, view):
         """
