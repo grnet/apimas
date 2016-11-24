@@ -26,6 +26,26 @@ class ApimasPermissions(BasePermission):
         groups = map((lambda x: x.name), request.user.groups.all())
         return [[action], groups, [ANY], [ANY]]
 
+    def isallowed(self, request, view, obj=None):
+        """
+        Method to check if requested user has permission to perform an action
+        to a collection or a resource level.
+
+        It actually matches the request context, i.e. action, groups, fields,
+        state with the already defined permission rules.
+
+        It marks which fields are accessible or writable so that serializer
+        can handle data accordingly afterwards.
+        """
+        pattern_set = self.get_pattern_sets(request, view)
+        expand_columns = {'field', 'state'}
+        matches = list(
+            self.permissions.multimatch(pattern_set, expand=expand_columns))
+        if not matches:
+            return False
+        self.check_field_conditions(request, view, matches)
+        return self.check_state_conditions(request, view, matches, obj)
+
     def has_permission(self, request, view):
         """
         Method to check if a user has a permission to perform an action on
@@ -37,9 +57,9 @@ class ApimasPermissions(BasePermission):
         The check of the state triggers a callable bound to the db model of
         the resource.
         """
-        pattern_set = self.get_pattern_sets(request, view)
-        self.check_field_conditions(request, view, pattern_set)
-        return self.check_state_conditions(request, view, pattern_set)
+        if view.lookup_field in view.kwargs:
+            return True
+        return self.isallowed(request, view)
 
     def has_object_permission(self, request, view, obj):
         """
@@ -49,17 +69,14 @@ class ApimasPermissions(BasePermission):
         It checks the state of the instance according to a callable bound
         to the db model of the resource..
         """
-        pattern_set = self.get_pattern_sets(request, view)
-        return self.check_state_conditions(request, view, pattern_set, obj=obj)
+        return self.isallowed(request, view, obj)
 
-    def check_field_conditions(self, request, view, pattern_set):
+    def check_field_conditions(self, request, view, matches):
         """
-        Check that all fields that are included in this request match with
-        the given rules.
+        It marks which fields are accessible or writable so that serializer
+        can handle data accordingly afterwards.
         """
         fields = set(doc_to_ns(dict(request.data)).keys())
-        matches = list(
-            self.permissions.multimatch(pattern_set, expand={'field'}))
         allowed_keys = {x.field for x in matches}
         if view.action in ['list', 'retrieve']:
             allowed_keys = ANY if ANY in allowed_keys else allowed_keys
@@ -69,14 +86,13 @@ class ApimasPermissions(BasePermission):
             return
         request.parser_context['non_writable_fields'] = fields - allowed_keys
 
-    def check_state_conditions(self, request, view, pattern_set, obj=None):
+    def check_state_conditions(self, request, view, matches, obj=None):
         """
         For the states that match to the pattern sets, this function checks
         if this state is statisfied.
 
         If any matched state is statisfied then, the permission is given.
         """
-        matches = self.permissions.multimatch(pattern_set, expand={'state'})
         for row in matches:
             if isinstance(row.state, AnyPattern):
                 return True
