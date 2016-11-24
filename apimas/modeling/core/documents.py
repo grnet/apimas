@@ -739,13 +739,13 @@ def doc_to_ns(doc, sep='/'):
 def doc_to_level_patterns(doc):
     pattern_sets = []
     for p, v in doc_iter(doc):
-	max_level = len(p)
-	nr_sets = len(pattern_sets)
-	level_diff = max_level - nr_sets + 1
-	if max_level >= nr_sets:
-	    pattern_sets += [set() for _ in xrange(level_diff)]
-	for level, segment in enumerate(p):
-	    pattern_sets[level].add(p[level])
+        max_level = len(p)
+        nr_sets = len(pattern_sets)
+        level_diff = max_level - nr_sets + 1
+        if max_level >= nr_sets:
+            pattern_sets += [set() for _ in xrange(level_diff)]
+        for level, segment in enumerate(p):
+            pattern_sets[level].add(p[level])
     return pattern_sets
 
 
