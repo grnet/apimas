@@ -77,12 +77,14 @@ class ApimasPermissions(BasePermission):
         serializer can handle data accordingly afterwards.
         """
         fields = set(doc_to_ns(dict(request.data)).keys())
-        allowed_keys = {x.field for x in matches}
+        allowed_keys = set()
+        for row in matches:
+            if isinstance(row.field, AnyPattern):
+                return True
+            allowed_keys.add(row.field)
         if view.action in ['list', 'retrieve']:
             allowed_keys = ANY if ANY in allowed_keys else allowed_keys
             request.parser_context['permitted_fields'] = allowed_keys
-            return
-        if ANY in allowed_keys:
             return
         request.parser_context['non_writable_fields'] = fields - allowed_keys
 
