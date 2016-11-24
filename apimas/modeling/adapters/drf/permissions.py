@@ -73,8 +73,8 @@ class ApimasPermissions(BasePermission):
 
     def check_field_conditions(self, request, view, matches):
         """
-        It marks which fields are accessible or writable so that serializer
-        can handle data accordingly afterwards.
+        This method marks which fields are accessible or writable so that
+        serializer can handle data accordingly afterwards.
         """
         fields = set(doc_to_ns(dict(request.data)).keys())
         allowed_keys = {x.field for x in matches}
