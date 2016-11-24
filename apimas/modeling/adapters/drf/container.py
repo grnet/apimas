@@ -44,7 +44,6 @@ class Container(object):
         """
         if not self._validated_schema:
             self.validate_schema(config, RESOURCE_SCHEMA_VALIDATOR)
-        self.validate_model(model)
         self.router.register(resource_name, generate(model, config, **kwargs),
                              base_name=model._meta.model_name)
 
