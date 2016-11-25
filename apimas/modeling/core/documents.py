@@ -335,7 +335,9 @@ def doc_match_levels(rules_doc, pattern_sets, expand_pattern_levels,
             rules_doc_iter = [(pattern, rules_doc[pattern])]
 
         else:
-            continue
+            rules_doc_iter = ((rule, subdoc)
+                              for rule, subdoc in rules_doc.iteritems()
+                              if rule == pattern)
 
         for rule, subdoc in rules_doc_iter:
             reportable_segment = rule if expand_pattern else pattern
