@@ -1,4 +1,5 @@
 from rest_framework.permissions import BasePermission
+from apimas.modeling.core.exceptions import ApimasException
 from apimas.modeling.core.documents import ANY, AnyPattern, doc_to_ns
 from apimas.modeling.permissions.tabmatch import Tabmatch
 
@@ -11,7 +12,7 @@ class ApimasPermissions(BasePermission):
 
     def __init__(self, rules, model):
         self.permissions = Tabmatch(
-            ('action', 'group', 'field', 'state', 'comment'))
+            ('action', 'role', 'field', 'state', 'comment'))
         self.permissions.update(
             map((lambda x: self.permissions.Row(*x)), rules))
         self.model = model
@@ -23,8 +24,11 @@ class ApimasPermissions(BasePermission):
         Specifically, get groups to which use belongs, and action of request.
         """
         action = view.action
-        groups = map((lambda x: x.name), request.user.groups.all())
-        return [[action], groups, [ANY], [ANY]]
+        roles = getattr(request.user, 'apimas_roles', None)
+        if roles is None:
+            raise ApimasException(
+                'Cannot find propety `apimas_roles` on `user` object')
+        return [[action], roles, [ANY], [ANY]]
 
     def isallowed(self, request, view, obj=None):
         """
