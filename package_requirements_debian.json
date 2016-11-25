@@ -1,0 +1,7 @@
+{
+    "python-django": "1.8*",
+    "python-click": "",
+    "python-yaml": "",
+    "python-tabulate": "",
+    "python-requests": ""
+}
