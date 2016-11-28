@@ -1,0 +1,5 @@
+upstream <%= @api_name %>_endpoints {
+<% @app_endpoints.each do |app_endpoint| -%>
+    server <%= app_endpoint %>;
+<% end -%>
+}
