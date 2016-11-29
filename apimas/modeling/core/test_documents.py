@@ -64,5 +64,39 @@ def test():
         pprint([p for p, v in doc_iter(match_doc, ordered=True, multival=True)])
 
 
+    skippable = {
+        'a': {
+            '1': {
+                'hello': 'there',
+                'my': 'friend',
+            },
+            '2': {
+                'how': 'are',
+                'you': 'doing',
+            },
+        },
+        'b': {
+            '3': {
+                'this': 'fine',
+                'day': 'today',
+            },
+            '4': {
+                'I': 'myself',
+                'am': 'good',
+            },
+        },
+    }
+
+    g = doc_iter(skippable, ordered=True, preorder=True, postorder=False)
+    try:
+        skip = None
+        while True:
+            path, val = g.send(skip)
+            print path, '=', val
+            skip = True if path == ('a', '2') else False
+    except StopIteration:
+        pass
+
+
 if __name__ == '__main__':
     test()

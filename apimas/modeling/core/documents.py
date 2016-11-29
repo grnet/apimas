@@ -148,32 +148,44 @@ def doc_iter(doc, preorder=False, postorder=True, path=(),
             there will be no chance to send True before the nod
             children are visited.
     """
+    skip = None
+
     if preorder:
         skip = (yield path, doc)
-        if skip:
-            return
 
-    doc_type = type(doc)
-    if multival and doc_type in (list, tuple, set):
-        for val in doc:
-            val_type = type(val)
-            if val_type in (dict, list, tuple, set):
+    if not skip:
+        doc_type = type(doc)
+        if multival and doc_type in (list, tuple, set):
+            for val in doc:
+                val_type = type(val)
+                if val_type not in (dict, list, tuple, set):
+                    yield path, val
+                    continue
+
                 subpath = path + (val,)
-                for t in doc_iter(val,
-                                  preorder=preorder, postorder=postorder,
-                                  path=subpath, multival=multival):
-                    yield t
-            else:
-                yield path, val
+                g = doc_iter(val,
+                             preorder=preorder, postorder=postorder,
+                             path=subpath, multival=multival)
+                try:
+                    skip = None
+                    while True:
+                        skip = yield g.send(skip)
+                except StopIteration:
+                    pass
 
-    elif doc_type is dict:
-        iteritems = sorted(doc.iteritems()) if ordered else doc.iteritems()
-        for key, val in iteritems:
-            subpath = path + (key,)
-            for t in doc_iter(val,
-                              preorder=preorder, postorder=postorder,
-                              path=subpath, multival=multival):
-                yield t
+        elif doc_type is dict:
+            iteritems = sorted(doc.iteritems()) if ordered else doc.iteritems()
+            for key, val in iteritems:
+                subpath = path + (key,)
+                g = doc_iter(val,
+                             preorder=preorder, postorder=postorder,
+                             path=subpath, multival=multival)
+                try:
+                    skip = None
+                    while True:
+                        skip = yield g.send(skip)
+                except StopIteration:
+                    pass
 
     if postorder:
         yield path, doc
