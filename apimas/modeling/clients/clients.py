@@ -147,7 +147,7 @@ class ApimasClient(object):
         return r
 
     @handle_exception
-    def list(self, raise_exception=True, headers=None, params=None):
+    def list(self, raise_exception=True, headers=None, params=None, data=None):
         """
         Method for getting a list of identical resources. Query parameters
         are supported.
@@ -155,12 +155,12 @@ class ApimasClient(object):
         Example: GET endpoint/
         """
         r = requests.get(self.endpoint, headers=headers, params=params,
-                         auth=self.auth)
+                         auth=self.auth, json=data)
         return r
 
     @handle_exception
     def retrieve(self, resource_id, raise_exception=True, headers=None,
-                 params=None):
+                 params=None, data=None):
         """
         Method for a single resource matched with the specified resource
         id given as parameter. Query parameters are supported.
@@ -168,7 +168,7 @@ class ApimasClient(object):
         Example: GET endpoint/<pk>/
         """
         r = requests.get(self.format_endpoint(resource_id), headers=headers,
-                         params=params, auth=self.auth)
+                         params=params, auth=self.auth, json=data)
         return r
 
     @handle_exception
