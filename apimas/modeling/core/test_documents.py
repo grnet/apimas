@@ -61,6 +61,7 @@ def test():
         for match in matches:
             doc_set(match_doc, match[:-1], match[-1], multival=True)
 
+        print "MULTIVAL"
         pprint([p for p, v in doc_iter(match_doc, ordered=True, multival=True)])
 
 

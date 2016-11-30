@@ -97,7 +97,7 @@ def doc_set(doc, path, value, multival=True):
         parent = nodes[-2]
         segment = trail[-1]
         old_value = parent[segment]
-        if multival:
+        if not multival:
             parent[segment] = value
         elif type(old_value) is list:
             old_value.append(value)
@@ -110,6 +110,13 @@ def doc_set(doc, path, value, multival=True):
 def doc_get(doc, path):
     feed, trail, nodes = doc_locate(doc, path)
     return None if feed else nodes[-1]
+
+
+class elem(long):
+    def __repr__(self):
+        return 'elem({0})'.format(long.__repr__(self)[:-1])
+
+    str = __repr__
 
 
 def doc_iter(doc, preorder=False, postorder=True, path=(),
@@ -132,6 +139,12 @@ def doc_iter(doc, preorder=False, postorder=True, path=(),
             but nothing is yielded.
         path (tuple):
             A prefix path to append in yielded paths
+        ordered (bool):
+            If keys within a node will be visited in a sorted order or not.
+        multival:
+            When true, lists, tuples, and sets are entered as subdocuments.
+            Their elements are enumerated and their index is appended in the
+            path as elem(long)
 
     Yields:
         tuple of (path, node):
@@ -156,13 +169,8 @@ def doc_iter(doc, preorder=False, postorder=True, path=(),
     if not skip:
         doc_type = type(doc)
         if multival and doc_type in (list, tuple, set):
-            for val in doc:
-                val_type = type(val)
-                if val_type not in (dict, list, tuple, set):
-                    yield path, val
-                    continue
-
-                subpath = path + (val,)
+            for i, val in enumerate(doc):
+                subpath = path + (elem(i),)
                 g = doc_iter(val,
                              preorder=preorder, postorder=postorder,
                              path=subpath, multival=multival)
