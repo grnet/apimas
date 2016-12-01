@@ -552,6 +552,7 @@ def _construct_doc_call_constructors(
 
     while True:
         context['sep'] = sep
+        context['all_constructors'] = constructor_names
         context['constructed'] = constructed
         context['cons_round'] = cons_round
 
