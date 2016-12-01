@@ -174,6 +174,8 @@ class DjangoRestAdapter(NaiveAdapter):
         nu_columns = 6
         permission_doc = {}
         permissions = doc.doc_get(top_spec, permission_path) or []
+        permissions = [[doc.parse_pattern(segment) for segment in row]
+                       for row in permissions]
         for rule in permissions:
             doc.doc_set(permission_doc, rule[:-1], rule[-1])
         patterns = [[collection], [doc.ANY], [doc.ANY], [doc.ANY],
