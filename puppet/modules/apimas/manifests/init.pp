@@ -43,37 +43,35 @@ class apimas (
 ) {
     apimas::pin {'nginx':
         version => "1.6.*",
+        before => Nginx_site["${server_name}"],
     }
 
     package { 'nginx':
         ensure => installed,
-        require => Apimas::Pin['nginx']
+        require => Apimas::Pin['nginx'],
+        before => Nginx_site["${server_name}"],
     }
 
     apimas::pin {'gunicorn':
         version => "19.6.*",
+        before => Nginx_site["${server_name}"],
     }
 
     package { 'gunicorn':
         ensure => installed,
-        require => Apimas::Pin['gunicorn']
+        require => Apimas::Pin['gunicorn'],
+        before => Nginx_site["${server_name}"],
     }
 
     apimas::pin {'postgresql':
         version => "9.4*",
+        before => Nginx_site["${server_name}"],
     }
 
     package { 'postgresql':
         ensure => installed,
-        require => Apimas::Pin['postgresql']
-    }
-
-    package { 'git':
-        ensure => installed,
-    }
-
-    package { 'virtualenv':
-        ensure => installed,
+        require => Apimas::Pin['postgresql'],
+        before => Nginx_site["${server_name}"],
     }
 
     apimas::nginx_site { $server_name:

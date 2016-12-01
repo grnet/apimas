@@ -1,3 +1,0 @@
-djangorestframework==3.3.3
-django-filter>=0.12
-cerberus

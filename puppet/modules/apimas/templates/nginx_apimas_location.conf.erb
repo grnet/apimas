@@ -1,9 +1,9 @@
 location /<%= @api_name %>/static/ {
-    alias /srv/<%= @api_name %>-server/venv/resources/www/;
+    alias <%= @lib_root %>/<%= @api_name %>/resources/www/;
 }
 
 location /<%= @api_name %>/api/ {
-    root /srv/www/<%= @api_name %>;
+    root <%= @srv_root %>/<%= @api_name %>/www;
     proxy_pass http://<%= @api_name %>_endpoints;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;

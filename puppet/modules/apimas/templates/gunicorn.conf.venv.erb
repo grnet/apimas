@@ -1,11 +1,14 @@
 CONFIG = {
     'mode': 'wsgi',
-    'working_dir': '<%= @etc_root %>/<%= @api_name %>/',
+    'environment': {
+        'PYTHONHOME': '<%= @srv_root %>/<%= @api_name %>-server/venv/',
+    },
+    'working_dir': '<%= @srv_root %>/<%= @api_name %>-data/',
     'user': '<%= @api_name %>',
     'group': '<%= @api_name %>',
     'args': (
-        '--log-level=<%= @debug_level %>',
-        '--log-file=<%= @srv_root %>/<%= @api_name %>/data/gunicorn.log',
+        '--log-level=debug',
+        '--log-file=<%= @srv_root %>/<%= @api_name %>-data/gunicorn.log',
         '--bind=<%= @app_address %>',
         '--workers=<%= @app_workers %>',
         '--reload',

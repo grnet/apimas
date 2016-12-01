@@ -2,6 +2,7 @@ define apimas::nginx_endpoint (
     $api_name,
     $app_endpoints,
     $nginx_root = "/etc/nginx",
+    $lib_root = "/usr/lib",
 ) {
     file { "${nginx_root}/apimas-locations/${api_name}.conf":
         ensure => file,
