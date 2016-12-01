@@ -104,7 +104,7 @@ def get_bases_classes(mixins, hook_class, actions):
     bases = (apimas_viewsets.ModelViewSet,) if not actions\
         else tuple([MIXINS[action] for action in actions]) + (
             viewsets.GenericViewSet,)
-    return (hook_class,) + mixins + bases
+    return (hook_class,) + tuple(mixins) + tuple(bases)
 
 
 def get_hook_class(config):
