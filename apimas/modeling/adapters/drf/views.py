@@ -1,8 +1,6 @@
 from rest_framework import filters, viewsets
 from apimas.modeling.adapters.drf import (
-    utils, mixins, viewsets as apimas_viewsets)
-from apimas.modeling.adapters.drf.serializers import (
-    generate as generate_serializer)
+    utils, mixins as view_mixins, viewsets as apimas_viewsets)
 from apimas.modeling.adapters.drf.permissions import ApimasPermissions
 
 
@@ -16,15 +14,18 @@ VIEWSET_ATTRS = [('filter_fields', None), ('ordering_fields', None),
 
 
 MIXINS = {
-    'create': mixins.CreateModelMixin,
-    'list': mixins.ListModelMixin,
-    'retrieve': mixins.RetrieveModelMixin,
-    'update': mixins.UpdateModelMixin,
-    'delete': mixins.DestroyModelMixin
+    'create': view_mixins.CreateModelMixin,
+    'list': view_mixins.ListModelMixin,
+    'retrieve': view_mixins.RetrieveModelMixin,
+    'update': view_mixins.UpdateModelMixin,
+    'delete': view_mixins.DestroyModelMixin
 }
 
 
-def generate(model, config, **kwargs):
+def generate_view(name, serializer, model, permissions=None,
+                  authentication_classes=(), permission_classes=(),
+                  mixins=(), hook_class=None, searchable_fields=None,
+                  actions=()):
     """
     A function to generate a viewset according to the model given as
     parameter.
@@ -40,60 +41,50 @@ def generate(model, config, **kwargs):
     class.
     :return: A `ViewSet` class.
     """
-    authentication_classes = config.get(
-        utils.AUTH_CLASSES_LOOKUP_FIELD,
-        kwargs.get(utils.AUTH_CLASSES_LOOKUP_FIELD, []))
-    permission_classes = config.get(
-        utils.PERM_CLASSES_LOOKUP_FIELD,
-        kwargs.get(utils.PERM_CLASSES_LOOKUP_FIELD, []))
-    field_schema = config.get(utils.FIELD_SCHEMA_LOOKUP_FIELD, {})
-    is_hyperlinked = config.get(
-        utils.HYPERLINKED_LOOKUP_FIELD,
-        kwargs.get(utils.HYPERLINKED_LOOKUP_FIELD, True))
+    searchable_fields = searchable_fields or {}
     permission_classes = map(utils.LOAD_CLASS, permission_classes)
-    apimas_perm_cls = gen_apimas_permission_cls(model, config)
+    apimas_perm_cls = gen_apimas_permission_cls(model, permissions)
     permission_classes += [apimas_perm_cls] if apimas_perm_cls else []
     standard_content = {
-        'serializer_class': generate_serializer(
-            model, field_schema, is_hyperlinked),
+        'serializer_class': serializer,
         'queryset': model.objects.all(),
         'authentication_classes': map(
             utils.LOAD_CLASS, authentication_classes),
         'permission_classes': permission_classes
     }
-    attrs = {field: config.get(field, default)
+    attrs = {field: searchable_fields.get(field, default)
              for field, default in VIEWSET_ATTRS}
-    filter_backends = get_filter_backends(config)
+    filter_backends = get_filter_backends(searchable_fields)
     dicts = [standard_content, attrs, filter_backends]
     # Compose content i.e. standard content, attributes, methods.
     class_dict = dict(sum((list(content.items()) for content in dicts), []))
-    bases = get_bases_classes(config)
-    return type(model.__name__, bases, class_dict)
+    bases = get_bases_classes(mixins, hook_class, actions)
+    return type(name, bases, class_dict)
 
 
-def gen_apimas_permission_cls(model, config):
+def gen_apimas_permission_cls(model, permissions):
     """
     Generate an `ApimasPermission` classes that conforms to the permission
     rules specified on the `APIMAS` specfication (if given).
     """
-    permissions = config.get('permissions', [])
+    permissions = permissions or []
     return ApimasPermissions(permissions, model)
 
 
-def get_filter_backends(config):
+def get_filter_backends(searchable_fields):
     """
     Initialize the corresponding Django filter backends if the corresponding
     fields of the viewset class have been assigned.
     """
     filter_backends = ()
     for filter_option, filter_backend in FILTERING_BACKENDS.iteritems():
-        value = config.get(filter_option, None)
+        value = searchable_fields.get(filter_option, None)
         if value:
             filter_backends += (filter_backend,)
     return {'filter_backends': filter_backends}
 
 
-def get_bases_classes(config):
+def get_bases_classes(mixins, hook_class, actions):
     """
     This function gets the corresponding base classes in order to construct
     the viewset class.
@@ -109,14 +100,11 @@ def get_bases_classes(config):
 
     :returns: A tuple of the corresponding base classes.
     """
-    hook_class = get_hook_class(config)
-    custom_mixins = tuple(map(
-        utils.LOAD_CLASS, config.get(utils.MIXINS_LOOKUP_FIELD, [])))
-    operations = config.get(utils.OPERATIONS_LOOKUP_FIELD, None)
-    bases = (apimas_viewsets.ModelViewSet,) if not operations\
-        else tuple([MIXINS[operation] for operation in operations]) + (
+    hook_class = hook_class or view_mixins.HookMixin
+    bases = (apimas_viewsets.ModelViewSet,) if not actions\
+        else tuple([MIXINS[action] for action in actions]) + (
             viewsets.GenericViewSet,)
-    return (hook_class,) + custom_mixins + bases
+    return (hook_class,) + mixins + bases
 
 
 def get_hook_class(config):
@@ -127,4 +115,5 @@ def get_hook_class(config):
     If no hook class is specified, then `BaseHook` class is used.
     """
     hook_class = config.get(utils.HOOK_CLASS_LOOKUP_FIELD, None)
-    return utils.import_object(hook_class) if hook_class else mixins.HookMixin
+    return utils.import_object(hook_class) if hook_class\
+        else view_mixins.HookMixin
