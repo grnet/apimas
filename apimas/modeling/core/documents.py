@@ -97,7 +97,7 @@ def doc_set(doc, path, value, multival=True):
         parent = nodes[-2]
         segment = trail[-1]
         old_value = parent[segment]
-        if multival:
+        if not multival:
             parent[segment] = value
         elif type(old_value) is list:
             old_value.append(value)
@@ -110,6 +110,13 @@ def doc_set(doc, path, value, multival=True):
 def doc_get(doc, path):
     feed, trail, nodes = doc_locate(doc, path)
     return None if feed else nodes[-1]
+
+
+class elem(long):
+    def __repr__(self):
+        return 'elem({0})'.format(long.__repr__(self)[:-1])
+
+    str = __repr__
 
 
 def doc_iter(doc, preorder=False, postorder=True, path=(),
@@ -132,6 +139,12 @@ def doc_iter(doc, preorder=False, postorder=True, path=(),
             but nothing is yielded.
         path (tuple):
             A prefix path to append in yielded paths
+        ordered (bool):
+            If keys within a node will be visited in a sorted order or not.
+        multival:
+            When true, lists, tuples, and sets are entered as subdocuments.
+            Their elements are enumerated and their index is appended in the
+            path as elem(long)
 
     Yields:
         tuple of (path, node):
@@ -148,32 +161,39 @@ def doc_iter(doc, preorder=False, postorder=True, path=(),
             there will be no chance to send True before the nod
             children are visited.
     """
+    skip = None
+
     if preorder:
         skip = (yield path, doc)
-        if skip:
-            return
 
-    doc_type = type(doc)
-    if multival and doc_type in (list, tuple, set):
-        for val in doc:
-            val_type = type(val)
-            if val_type in (dict, list, tuple, set):
-                subpath = path + (val,)
-                for t in doc_iter(val,
-                                  preorder=preorder, postorder=postorder,
-                                  path=subpath, multival=multival):
-                    yield t
-            else:
-                yield path, val
+    if not skip:
+        doc_type = type(doc)
+        if multival and doc_type in (list, tuple, set):
+            for i, val in enumerate(doc):
+                subpath = path + (elem(i),)
+                g = doc_iter(val,
+                             preorder=preorder, postorder=postorder,
+                             path=subpath, multival=multival)
+                try:
+                    skip = None
+                    while True:
+                        skip = yield g.send(skip)
+                except StopIteration:
+                    pass
 
-    elif doc_type is dict:
-        iteritems = sorted(doc.iteritems()) if ordered else doc.iteritems()
-        for key, val in iteritems:
-            subpath = path + (key,)
-            for t in doc_iter(val,
-                              preorder=preorder, postorder=postorder,
-                              path=subpath, multival=multival):
-                yield t
+        elif doc_type is dict:
+            iteritems = sorted(doc.iteritems()) if ordered else doc.iteritems()
+            for key, val in iteritems:
+                subpath = path + (key,)
+                g = doc_iter(val,
+                             preorder=preorder, postorder=postorder,
+                             path=subpath, multival=multival)
+                try:
+                    skip = None
+                    while True:
+                        skip = yield g.send(skip)
+                except StopIteration:
+                    pass
 
     if postorder:
         yield path, doc
