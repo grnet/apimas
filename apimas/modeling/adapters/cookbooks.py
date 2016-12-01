@@ -43,6 +43,16 @@ class NaiveAdapter(Adapter):
             and not x == self.ADAPTER_CONF
         return filter(filter_func, instance.keys())
 
+    def construct_collection(self, instance, spec, loc, context):
+        self.init_adapter_conf(instance)
+        field_schema = doc.doc_get(instance, ('*',))
+        assert len(loc) >= 3
+        if not field_schema:
+            raise ex.ApimasException(
+                'A collection must define its field schema.'
+                ' Empty collection found: %s' % (loc[-2]))
+        return instance
+
     def construct_type(self, instance, spec, loc, context, field_type=None):
         """
         Contructor for predicates that indicate the type of a field.
@@ -55,12 +65,19 @@ class NaiveAdapter(Adapter):
         instance[self.ADAPTER_CONF].update(field_schema)
         return instance
 
+    def validate_structure(self, instance, spec, loc, context):
+        if not spec:
+            raise ex.ApimasException(
+                'A structure must define its field schema.'
+                ' Empty structure found: %s' % (loc[-2]))
+
     def construct_struct(self, instance, spec, loc, context):
         """
         Constructor for `.struct` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
+        self.validate_structure(instance, spec, loc, context)
         return self.construct_type(instance, spec, loc, context, 'struct')
 
     def construct_structarray(self, instance, spec, loc, context):
@@ -69,6 +86,7 @@ class NaiveAdapter(Adapter):
 
         This maps predicate to the specified type according to mapping.
         """
+        self.validate_structure(instance, spec, loc, context)
         return self.construct_type(
             instance, spec, loc, context, 'structarray')
 
@@ -190,6 +208,15 @@ class NaiveAdapter(Adapter):
         return self.construct_property(instance, spec, loc, context,
                                        'readonly')
 
+    def construct_writeonly(self, instance, spec, loc, context):
+        """
+        Constuctor for `.readonly` predicate.
+
+        This maps predicate to the specified property according to mapping.
+        """
+        return self.construct_property(instance, spec, loc, context,
+                                       'writeonly')
+
     def construct_property(self, instance, spec, loc, context, property_name):
         """
         Constuctor for predicates that indicate a property of a field,
@@ -226,4 +253,5 @@ class NaiveAdapter(Adapter):
         Initialize adapter confication node if it does not already exist.
         """
         if self.ADAPTER_CONF not in instance:
-            instance[self.ADAPTER_CONF] = initial or {}
+            instance[self.ADAPTER_CONF] = initial if initial is not None\
+                else {}
