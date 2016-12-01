@@ -302,8 +302,9 @@ def doc_match_levels(rules_doc, pattern_sets, expand_pattern_levels,
                     level=level + 1, path=subpath)
 
             for reportable_path in reportable_paths:
-                if reportable_path not in reported_paths:
-                    reported_paths.add(reportable_path)
+                reported_path = reportable_path[:-1]
+                if reported_path not in reported_paths:
+                    reported_paths.add(reported_path)
                     yield reportable_path
 
 
