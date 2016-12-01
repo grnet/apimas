@@ -101,6 +101,7 @@ def get_bases_classes(mixins, hook_class, actions):
     :returns: A tuple of the corresponding base classes.
     """
     hook_class = hook_class or view_mixins.HookMixin
+    mixins = map(utils.LOAD_CLASS, mixins)
     bases = (apimas_viewsets.ModelViewSet,) if not actions\
         else tuple([MIXINS[action] for action in actions]) + (
             viewsets.GenericViewSet,)
