@@ -1,9 +1,17 @@
 from collections import Iterable
 from django.db import models
+from django.conf.urls import url, include
 from django.core.exceptions import FieldDoesNotExist
+from rest_framework import serializers
+from rest_framework import routers
+from rest_framework.utils import model_meta
+from rest_framework.utils.field_mapping import get_relation_kwargs
 from apimas.modeling.core import documents as doc
+from apimas.modeling.adapters.drf import utils
+from apimas.modeling.adapters.drf.serializers import (
+    generate_container_serializer)
+from apimas.modeling.adapters.drf.views import generate_view
 from apimas.modeling.adapters.cookbooks import NaiveAdapter
-from apimas.modeling.adapters.drf.container import Container
 from apimas.modeling.adapters.drf.utils import (
     DRFAdapterException, import_object)
 
@@ -19,7 +27,6 @@ def handle_exception(func):
 
 class DjangoRestAdapter(NaiveAdapter):
     STRUCTURES = {
-        '.ref': '.drf_field',
         '.struct': '.drf_field',
         '.structarray': '.drf_field',
         '.collection': '.drf_collection',
@@ -40,6 +47,21 @@ class DjangoRestAdapter(NaiveAdapter):
         'blankable': 'allow_blank',
         'nullable': 'allow_null',
         'required': 'required',
+    }
+
+    SERILIZERS_TYPE_MAPPING = {
+        'serial': serializers.IntegerField,
+        'integer': serializers.IntegerField,
+        'big-integer': serializers.IntegerField,
+        'float': serializers.FloatField,
+        'string': serializers.CharField,
+        'boolean': serializers.BooleanField,
+        'date': serializers.DateField,
+        'datetime': serializers.DateTimeField,
+        'structarray': serializers.ListSerializer,
+        'struct': serializers.Serializer,
+        'ref': serializers.HyperlinkedRelatedField,
+        'file': serializers.FileField,
     }
 
     TYPE_MAPPING = {
@@ -76,15 +98,18 @@ class DjangoRestAdapter(NaiveAdapter):
             raise DRFAdapterException(
                 'Cannot apply an empty adapter specification')
         structural_elements = self.get_structural_elements(self.adapter_spec)
-        container = Container(structural_elements[0])
-        self.urls = container.create_api_views(
-            self.adapter_spec.get(self.ADAPTER_CONF, {}))
+        api = structural_elements[0]
+        router = routers.DefaultRouter()
+        for collection, spec in doc.doc_get(
+                self.adapter_spec, (api,)).iteritems():
+            view = spec.get(self.ADAPTER_CONF)
+            router.register(collection, view)
+        self.urls = url(r'^' + api + '/', include(router.urls))
 
     def construct_CRUD_action(self, instance, spec, loc, context, action):
         """ Adds an action to the list of allowable. """
-        adapter_key = 'allowable_operations'
-        self.init_adapter_conf(instance, initial={adapter_key: []})
-        instance[self.ADAPTER_CONF][adapter_key].append(action)
+        self.init_adapter_conf(instance, initial=[])
+        instance[self.ADAPTER_CONF].append(action)
         return instance
 
     def construct_list(self, instance, spec, loc, context):
@@ -132,27 +157,7 @@ class DjangoRestAdapter(NaiveAdapter):
         return self.construct_CRUD_action(instance, spec, loc, context,
                                           'delete')
 
-    def construct_endpoint(self, instance, spec, loc, context):
-        """
-        Constuctor for `.endpoint` predicate.
-
-        Aggregates all constructed resources in order to form a complete
-        API SCHEMA to create all required views.
-        """
-        adapter_key = 'resources'
-        structural_elements = self.get_structural_elements(instance)
-        assert len(structural_elements) == 1
-        self.init_adapter_conf(instance)
-        permissions = spec.get('permissions', [])
-        instance = self.construct_permissions(
-            instance, permissions, (structural_elements[0],))
-        api_schema = {resource: schema[self.ADAPTER_CONF]
-                      for resource, schema in doc.doc_get(
-                          instance, (structural_elements[0],)).iteritems()}
-        instance[self.ADAPTER_CONF][adapter_key] = api_schema
-        return instance
-
-    def construct_permissions(self, instance, permissions, path):
+    def get_permissions(self, collection, top_spec):
         """
         It constructs permissions rules for every collection.
 
@@ -165,33 +170,31 @@ class DjangoRestAdapter(NaiveAdapter):
         `mycollection`, they are carried to the path:
         path = (`api`, `mycollection`, `conf`,` permissions`)
         """
+        permission_path = ('.endpoint', 'permissions')
         nu_columns = 6
         permission_doc = {}
+        permissions = doc.doc_get(top_spec, permission_path) or []
         for rule in permissions:
             doc.doc_set(permission_doc, rule[:-1], rule[-1])
-        for collection in doc.doc_get(instance, path).keys():
-            patterns = [[collection], [doc.ANY], [doc.ANY], [doc.ANY],
-                        [doc.ANY]]
-            matches = list(doc.doc_match_levels(
-                permission_doc, patterns,
-                expand_pattern_levels=range(nu_columns)))
-            if matches:
-                perm_path = path + (collection, self.ADAPTER_CONF,
-                                    'permissions')
-                collection_rules = map((lambda x: x[1:]), matches)
-                doc.doc_set(instance, perm_path, collection_rules)
-        return instance
+        patterns = [[collection], [doc.ANY], [doc.ANY], [doc.ANY],
+                    [doc.ANY]]
+        matches = list(doc.doc_match_levels(
+            permission_doc, patterns,
+            expand_pattern_levels=range(nu_columns)))
+        if not matches:
+            return None
+        return map((lambda x: x[1:]), matches)
 
-    def construct_collection(self, instance, spec, loc, context):
-        """
-        Constructor of `.collection` predicate.
-
-        It enriches instance with drf specific configuration.
-        """
-        if self.ADAPTER_CONF not in instance:
-            raise doc.DeferConstructor
-        instance[self.ADAPTER_CONF].update(**spec)
-        return instance
+    def generate_serializer(self, field_schema, name, model=None,
+                            model_serializers=None, extra_serializers=None):
+        model_fields, extra_fields, sources = self._classify_fields(
+            field_schema)
+        serializer = generate_container_serializer(
+            model_fields, extra_fields, name, model,
+            instance_sources=sources,
+            model_serializers=model_serializers,
+            extra_serializers=extra_serializers)
+        return serializer
 
     def construct_drf_collection(self, instance, spec, loc, context):
         """
@@ -200,57 +203,96 @@ class DjangoRestAdapter(NaiveAdapter):
         Aggregates constructed field schema and actions in order to form
         schema of a specific resource.
         """
-        self.init_adapter_conf(instance)
-        field_properties = doc.doc_get(instance, ('*',))
-        assert len(loc) >= 3
-        if not field_properties:
-            raise DRFAdapterException(
-                'A collection must define its field schema.'
-                ' Empty collection found: %s' % (loc[-2]))
-        resource_schema = self.construct_field_schema(
-            instance, field_properties,
-            serializers=spec.pop('serializers', []))
-        resource_schema.update(self.construct_resource_schema(instance))
-        instance[self.ADAPTER_CONF].update(dict(
-            resource_schema, **spec))
-        instance[self.ADAPTER_CONF].update(doc.doc_get(
-            instance, ('actions', self.ADAPTER_CONF)) or {})
+        if self.ADAPTER_CONF not in instance:
+            raise doc.DeferConstructor
+        field_schema = doc.doc_get(instance, ('*',))
+        actions = doc.doc_get(instance, ('ations', self.ADAPTER_CONF)) or []
+        model = utils.import_object(spec.get('model'))
+        model_serializers = spec.pop('model_serializers', [])
+        extra_serializers = spec.pop('serializers', [])
+        serializer = self.generate_serializer(
+            field_schema, loc[-2], model=model,
+            model_serializers=model_serializers,
+            extra_serializers=extra_serializers)
+        kwargs = {k: v for k, v in spec.iteritems() if k != 'model'}
+        permissions = self.get_permissions(loc[-2], context.get('top_spec'))
+        view = generate_view(loc[-2], serializer, model, actions=actions,
+                             permissions=permissions, **kwargs)
+        instance[self.ADAPTER_CONF] = view
         return instance
 
-    def construct_nested_drf_field(self, instance, spec, loc, context,
-                                   predicate_type):
-        field_properties = doc.doc_get(instance, (predicate_type,))
-        if not field_properties:
-            raise DRFAdapterException(
-                'A `%s` must define its field schema.'
-                ' Empty `%s` found: %s' % (predicate_type, predicate_type,
-                                           loc[-2]))
-        source = spec.pop('source', None)
-        top_spec = context.get('top_spec', {})
-        field_type = self.TYPE_MAPPING.get(predicate_type[1:])
-        self.validate_model_field(top_spec, loc, field_type, source)
-        nested = {self.NESTED_CONF_KEY: dict(
-            self.construct_field_schema(
-                instance, field_properties,
-                serializers=spec.pop('serializers', [])),
-            source=source)}
-        instance[self.ADAPTER_CONF].update(nested)
-        assert self.PROPERTIES_CONF_KEY in instance[self.ADAPTER_CONF]
-        instance[self.ADAPTER_CONF][self.PROPERTIES_CONF_KEY].update(**spec)
-        return instance
+    def _classify_fields(self, field_schema):
+        model_fields = {}
+        extra_fields = {}
+        instance_sources = {}
+        for field_name, properties in field_schema.iteritems():
+            onmodel = doc.doc_get(properties, ('.drf_field', 'onmodel'))
+            field_path = (self.ADAPTER_CONF, 'field')
+            instance_path = (self.ADAPTER_CONF, 'source')
+            if onmodel:
+                model_fields[field_name] = doc.doc_get(properties, field_path)
+            else:
+                extra_fields[field_name] = doc.doc_get(properties, field_path)
+            instance_sources[field_name] = doc.doc_get(properties,
+                                                       instance_path)
+        return model_fields, extra_fields, instance_sources
+
+    def generate_nested_drf_field(self, instance, loc, predicate_type, model,
+                                  **kwargs):
+        field_schema = doc.doc_get(instance, (predicate_type,))
+        many = predicate_type == 'structarray'
+        model_serializers = kwargs.pop('model_serializers', [])
+        extra_serializers = kwargs.pop('serializers', [])
+        serializer = self.generate_serializer(
+            field_schema, loc[-2],
+            model_serializers=model_serializers,
+            extra_serializers=extra_serializers, model=model)
+        return serializer(many=many, **kwargs)
+
+    def get_extra_ref_kwargs(self, name, model):
+        model_info = model_meta.get_field_info(model)
+        relation_info = model_info.relations[name]
+        kwargs = get_relation_kwargs(name, relation_info)
+        kwargs.pop('to_field', None)
+        return kwargs
 
     def default_field_constructor(self, instance, spec, loc, context,
                                   predicate_type):
-        field_type = self.TYPE_MAPPING[predicate_type[1:]]
-        top_spec = context.get('top_spec', {})
-        source = spec.get('source', None)
+        model = self.validate_model_configuration(
+            instance, spec, loc, context, predicate_type)
+        path = (self.ADAPTER_CONF,)
+        instance_source = spec.pop('instance_source', None)
+        field_kwargs = {k: v for k, v in spec.iteritems() if k != 'onmodel'}
         if predicate_type == '.ref':
-            self.validate_ref(instance, spec, loc, top_spec, source)
+            field_kwargs.update(self.get_extra_ref_kwargs(loc[-2], model))
+        field_kwargs.update(doc.doc_get(instance, path) or {})
+        doc.doc_set(instance, (self.ADAPTER_CONF, 'source'), instance_source)
+        if predicate_type in self.STRUCTURES:
+            drf_field = self.generate_nested_drf_field(
+                instance, loc, predicate_type, model, **field_kwargs)
         else:
-            self.validate_model_field(top_spec, loc, field_type, source)
-        assert self.PROPERTIES_CONF_KEY in instance[self.ADAPTER_CONF]
-        instance[self.ADAPTER_CONF][self.PROPERTIES_CONF_KEY].update(**spec)
+            drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
+                **field_kwargs)
+        doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
         return instance
+
+    def validate_model_configuration(self, instance, spec, loc, context,
+                                     predicate_type):
+        onmodel = spec.get('onmodel', True)
+        source = spec.get('source')
+        top_spec = context.get('top_spec')
+        model_path = ('.drf_collection', 'model')
+        model = utils.import_object(
+            doc.doc_get(top_spec, loc[0:2] + model_path))
+        if onmodel:
+            field_type = self.TYPE_MAPPING[predicate_type[1:]]
+            if predicate_type == '.ref':
+                _, model, _ = self.validate_ref(
+                    instance, spec, loc, top_spec, source)
+            else:
+                _, model = self.validate_model_field(
+                    top_spec, loc, field_type, source)
+        return model
 
     def construct_drf_field(self, instance, spec, loc, context):
         """
@@ -262,18 +304,17 @@ class DjangoRestAdapter(NaiveAdapter):
         In case of nested fields, e.g. `.struct`, `.structarray`, the field
         should be related to another model.
         """
-        field_contructors = {
-            '.struct': self.construct_nested_drf_field,
-            '.structarray': self.construct_nested_drf_field,
-        }
-        if self.ADAPTER_CONF not in instance:
+        all_constructors = context.get('all_constructors')
+        constructed = context.get('constructed')
+        field_constructors = {}
+        if len(constructed) < len(all_constructors) - 1:
             raise doc.DeferConstructor
-        property_path = (self.ADAPTER_CONF, self.PROPERTIES_CONF_KEY)
-        properties = doc.doc_get(instance, property_path)
-        if properties is None:
-            doc.doc_set(instance, property_path, {})
         type_predicate = self.extract_type(instance)
-        return field_contructors.get(
+        if type_predicate is None:
+            raise utils.DRFAdapterException(
+                'Cannot construct drf field `%s` without specifying its'
+                ' type' % (loc[-2]))
+        return field_constructors.get(
             type_predicate, self.default_field_constructor)(
                 instance, spec, loc, context, type_predicate)
 
@@ -288,13 +329,13 @@ class DjangoRestAdapter(NaiveAdapter):
         django_conf = self.get_constructor_params(top_spec, loc, [])
         model = self.extract_model(source or loc[-2], django_conf)
         model_field = model._meta.get_field(source or loc[-2])
-        _, ref_params = self.get_constructor_params(
-            top_spec, root_loc + (ref, '*'), [])[0]
-        ref_model = ref_params.get('model', None)
-        if model_field.related_model is not import_object(ref_model):
+        path = root_loc + (ref, '.drf_collection', 'model')
+        ref_model = import_object(doc.doc_get(top_spec, path))
+        if model_field.related_model is not ref_model:
             raise DRFAdapterException(
                 'Model field of %s is not related to %s. Loc: %s' % (
                     source or loc[-2], ref_model, str(loc)))
+        return model_field, model, ref_model
 
     def construct_type(self, instance, spec, loc, context, field_type=None):
         """
@@ -303,7 +344,6 @@ class DjangoRestAdapter(NaiveAdapter):
         This constructor produces the corresponding cerberus syntax for
         specifying the type of a field.
         """
-        self.init_adapter_conf(instance)
         return instance
 
     def construct_property(self, instance, spec, loc, context, property_name):
@@ -315,13 +355,8 @@ class DjangoRestAdapter(NaiveAdapter):
         it requires field to be initialized, otherwise, construction is
         defered.
         """
-        if self.ADAPTER_CONF not in instance:
-            raise doc.DeferConstructor
-        property_path = (self.ADAPTER_CONF, self.PROPERTIES_CONF_KEY)
-        field_schema = doc.doc_get(instance, self.ADAPTER_CONF)
-        if field_schema is None:
-            doc.doc_set(instance, property_path, {})
-        instance[self.ADAPTER_CONF][self.PROPERTIES_CONF_KEY].update(
+        self.init_adapter_conf(instance)
+        instance[self.ADAPTER_CONF].update(
             {self.PROPERTY_MAPPING[property_name]: True})
         return instance
 
@@ -346,6 +381,7 @@ class DjangoRestAdapter(NaiveAdapter):
             raise DRFAdapterException(
                 'Field %s is not %s type in your django model' % (
                     repr(loc[-2]), repr(django_field_type)))
+        return model_field, model
 
     def validate_intersectional_pairs(self, properties):
         """
@@ -389,10 +425,11 @@ class DjangoRestAdapter(NaiveAdapter):
         structure, e.g. `.struct`, `.collection`, etc.
         """
         for structure in self.STRUCTURES.keys():
-            struct_doc = doc.doc_get(spec, loc[:-1])
+            struct_doc = doc.doc_get(spec, loc[:-1]) or {}
             structure_params = doc.doc_get(
-                spec, loc[:-1] + (self.STRUCTURES[structure],))
-            if structure in struct_doc and structure_params:
+                struct_doc, (self.STRUCTURES[structure],)) or {}
+            onmodel = structure_params.get('onmodel', True)
+            if structure in struct_doc and onmodel:
                 params.append((structure, structure_params))
         if loc[:-1]:
             return self.get_constructor_params(spec, loc[:-1], params)
