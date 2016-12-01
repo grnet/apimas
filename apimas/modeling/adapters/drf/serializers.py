@@ -48,7 +48,7 @@ def get_paths(serializer_fields):
                 nested_paths = get_paths(child.fields)
         else:
             nested_paths = get_paths(fields)
-        paths.extend([k + '/' + p for p in nested_paths] + [k])
+        paths.extend([k + '/' + p for p in nested_paths] or [k])
     return paths
 
 
