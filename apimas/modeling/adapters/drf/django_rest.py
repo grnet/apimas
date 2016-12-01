@@ -430,7 +430,11 @@ class DjangoRestAdapter(NaiveAdapter):
                 struct_doc, (self.STRUCTURES[structure],)) or {}
             onmodel = structure_params.get('onmodel', True)
             if structure in struct_doc and onmodel:
-                params.append((structure, structure_params))
+                if structure == '.collection':
+                    params.append((structure, structure_params))
+                    continue
+                source = structure_params.get('source')
+                params.append((structure, {'source': source or loc[-2]}))
         if loc[:-1]:
             return self.get_constructor_params(spec, loc[:-1], params)
         return params
@@ -445,7 +449,7 @@ class DjangoRestAdapter(NaiveAdapter):
         _, params = django_conf[0]
         if len(django_conf) > 1:
             return self.extract_related_model(
-                params.get('source', related_field), django_conf[1:])
+                params.get('source'), django_conf[1:])
         return import_object(params.get('model', None))
 
     @handle_exception
