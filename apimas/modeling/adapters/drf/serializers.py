@@ -1,16 +1,39 @@
 import copy
+import inspect
 from collections import OrderedDict
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.settings import api_settings
 from rest_framework.utils import model_meta
+from apimas.modeling.core import exceptions as ex
 from apimas.modeling.core.documents import ANY
 from apimas.modeling.adapters.drf import utils
 
 
-NON_INTERSECTIONAL_PAIRS = [
-    ('required', 'read_only'),
-    ('write_only', 'read_only'),
-]
+def lookup_value(field_name, source, instance):
+    """
+    Similar to Python's built in `getattr(instance, attr)`,
+    but takes a list of nested attributes, instead of a single attribute.
+    Also accepts either attribute lookup on objects or dictionary lookups.
+    """
+    if instance is None:
+        return instance
+
+    if source is None:
+        raise ex.ApimasException(
+            'Cannot retrieve instance value for the field `%s` given a'
+            ' NoneType source' % (field_name))
+
+    attrs = source.split(',')
+    for attr in attrs:
+        func = utils.import_object(attr)
+        if callable(func):
+            instance = func(instance)
+        else:
+            raise ex.ApimasException(
+                'Cannot retrieve instance value of the'
+                ' field %s given the source `%s`' % (field_name, source))
+    return instance
 
 
 def get_paths(serializer_fields):
@@ -29,9 +52,154 @@ def get_paths(serializer_fields):
     return paths
 
 
-class ApimasSerializer(serializers.HyperlinkedModelSerializer):
+class ContainerSerializer(serializers.BaseSerializer):
+    model_ser_cls = None
+
+    ser_cls = None
+
     def __init__(self, *args, **kwargs):
-        super(serializers.HyperlinkedModelSerializer, self).__init__(
+        super(ContainerSerializer, self).__init__(*args, **kwargs)
+        self.model_ser = None
+        self.ser = None
+        self.build_serializers()
+        self.contained_sers = [self.ser, self.model_ser]
+
+    def _validate_configuration(self):
+        meta_cls = getattr(self, 'Meta', None)
+        if meta_cls is None:
+            raise utils.DRFAdapterException('`Meta` class cannot be found')
+        model_fields = getattr(meta_cls, 'model_fields', [])
+        fields = getattr(meta_cls, 'extra_fields', [])
+        if not (fields or model_fields):
+            raise utils.DRFAdapterException(
+                '`extra_fields` and `model_fields` attributes are unspecified')
+        if not (self.model_ser_cls or self.ser_cls):
+            raise utils.DRFAdapterException(
+                'A `ContainerSerializer` must define a `ModelSerializer` class'
+                ' or a `Serializer class')
+        if not (self.model_ser_cls or self.ser_cls):
+            raise utils.DRFAdapterException(
+                'A `ContainerSerializer` must include a ModelSerializer'
+                ' and Serializer class')
+        if self.model_ser_cls:
+            mro = inspect.getmro(self.model_ser_cls)
+            if serializers.HyperlinkedModelSerializer not in mro:
+                raise utils.DRFAdapterException(
+                    'A model serializer class must inherit'
+                    ' `serializers.ModelSerializer`')
+        if self.ser_cls:
+            mro = inspect.getmro(self.ser_cls)
+            if serializers.BaseSerializer not in mro:
+                raise utils.DRFAdapterException(
+                    'A serializer class must implement'
+                    ' `serializers.BaseSerializer`')
+        return model_fields, fields
+
+    def build_serializers(self):
+        model_fields, fields = self._validate_configuration()
+        self.model_ser = self._build_serializer(
+            self.model_ser_cls,
+            fields=model_fields, instance=self.instance)
+        self.ser = self._build_serializer(
+            self.ser_cls, fields=fields, instance=self.instance)
+
+    def _build_serializer(self, cls, fields=None, instance=None):
+        if cls is None:
+            return None
+        kwargs = {}
+        if hasattr(self, 'initial_data'):
+            initial_data = self.initial_data or {}
+            data = {k: v for k, v in initial_data.iteritems()
+                    if k in fields}
+            kwargs['data'] = data
+        return cls(context=self._context, partial=self.partial,
+                   **kwargs)
+
+    def is_valid(self, raise_exception=False):
+        self._errors = {}
+        for serializer in self.contained_sers:
+            if serializer is None:
+                continue
+            isvalid = serializer.is_valid(raise_exception=False)
+            if not isvalid:
+                self._errors.update(serializer._errors)
+        if self._errors and raise_exception:
+            raise ValidationError(self.errors)
+        return not bool(self._errors)
+
+    def save(self, **kwargs):
+        extra_kwargs = kwargs.pop('extra', {})
+        model_kwargs = kwargs.pop('model', {})
+        if self.ser:
+            instance_a = self.ser.save(**extra_kwargs)
+        else:
+            instance_a = None
+        if self.model_ser:
+            instance_b = self.model_ser.save(**model_kwargs)
+        else:
+            instance_b = None
+        return instance_a, instance_b
+
+    def perform_action(self, validated_data, instance=None):
+        output = []
+        method_name = 'update' if instance else 'create'
+        for i, serializer in enumerate(self.contained_sers):
+            if serializer is None:
+                output.append(None)
+                continue
+
+            method = getattr(serializer, method_name)
+            kwargs = {'validated_data': validated_data[i]}
+            if instance:
+                kwargs['instance'] = instance
+            output.append(method(**kwargs))
+        return tuple(output)
+
+    def create(self, validated_data):
+        return self.perform_action(validated_data)
+
+    def update(self, instance, validated_data):
+        return self.perform_action(validated_data, instance=instance)
+
+    def to_representation(self, instance):
+        data = {}
+        if not isinstance(instance, tuple):
+            instance = (instance,)
+        if self.ser:
+            data.update(self.ser.to_representation(instance[0]))
+        if self.model_ser:
+            data.update(self.model_ser.to_representation(instance[-1]))
+        return data
+
+    def to_internal_value(self, data):
+        output = []
+        for serializer in self.contained_sers:
+            output.append({} if serializer is None else
+                          serializer.to_internal_value(data))
+        return tuple(output)
+
+    @property
+    def data(self):
+        self._data = {}
+        if self.instance is not None:
+            return self.to_representation(
+                self.instance)
+        for serializer in self.contained_sers:
+            if serializer:
+                self._data.update(serializer.data)
+        return self._data
+
+    def get_attribute(self, instance):
+        try:
+            return super(ContainerSerializer, self).get_attribute(instance)
+        except AttributeError:
+            return instance
+
+
+class ApimasSerializer(serializers.Serializer):
+
+    def __init__(self, *args, **kwargs):
+        super(ApimasSerializer, self).__init__(
             *args, **kwargs)
         self.adapt_fields_to_rules()
 
@@ -67,6 +235,77 @@ class ApimasSerializer(serializers.HyperlinkedModelSerializer):
             serializer.fields
         return self.set_field_property(
             segments[1:], fields, property_key)
+
+    def get_attribute(self, instance):
+        try:
+            return super(ApimasSerializer, self).get_attribute(instance)
+        except AttributeError:
+            return instance
+
+    def perform_action(self, validated_data, instance=None):
+        data = {}
+        for k, v in validated_data.iteritems():
+            drf_field = self.fields[k]
+            if isinstance(drf_field, serializers.BaseSerializer):
+                instance = drf_field.update(instance, v) if instance\
+                    else drf_field.create(v)
+            else:
+                instance = self.create_non_model_field(
+                    drf_field, v, validated_data) if instance else\
+                        self.update_non_model_field(
+                            drf_field, instance, v, validated_data)
+            data[k] = instance
+        return data
+
+    def create(self, validated_data):
+        return self.perform_action(validated_data)
+
+    def update(self, instance, validated_data):
+        return self.perform_action(validated_data, instance=instance)
+
+    def create_non_model_field(self, field, value, context):
+        return value
+
+    def update_non_model_field(self, field, instance, value, context):
+        return value
+
+    def to_representation(self, instance):
+        """
+        Object instance -> Dict of primitive datatypes.
+        """
+        ret = OrderedDict()
+        fields = self._readable_fields
+
+        for field in fields:
+            try:
+                instance_sources = getattr(self, 'instance_sources', {})
+                attribute = lookup_value(
+                    field.field_name,
+                    instance_sources.get(field.field_name),
+                    instance)
+            except (ImportError, ex.ApimasException):
+                try:
+                    attribute = field.get_attribute(instance)
+                except serializers.SkipField:
+                    continue
+
+            # We skip `to_representation` for `None` values so that fields
+            # do not have to explicitly deal with that case.
+            #
+            # For related fields with `use_pk_only_optimization` we need to
+            # resolve the pk value.
+            check_for_none = attribute.pk if isinstance(
+                attribute, serializers.PKOnlyObject) else attribute
+            if check_for_none is None:
+                ret[field.field_name] = None
+            else:
+                ret[field.field_name] = field.to_representation(attribute)
+
+        return ret
+
+
+class ApimasModelSerializer(serializers.HyperlinkedModelSerializer,
+                            ApimasSerializer):
 
     def get_fields(self):
         """
@@ -140,161 +379,44 @@ class ApimasSerializer(serializers.HyperlinkedModelSerializer):
         return fields
 
 
-def generate(model, config, is_collection=True):
-    """
-    A function to generate a serializer according to the model given
-    as parameter.
-
-    Configuration of serializer (which fields will be exposed and how will be
-    treated) is defined by the dict given as parameter.
-
-    :param model: The model class required to generate a
-    `HyperlinkedModelSerializer` based on it.
-    :param config: A dictionary which includes all required configuration of
-    serializer.
-    :return: A `HyperLinkedModelSerializer` class.
-    """
-    serializer_class = ApimasSerializer if is_collection\
-        else serializers.HyperlinkedModelSerializer
-    meta = generate_meta(model, config)
-    nested_serializers = generate_nested_serializers(model, config)
-    dicts = [meta, nested_serializers]
-    # Compose content i.e. nested serializers, Meta class and custom methods.
-    class_dict = dict(sum((list(content.items()) for content in dicts), []))
-    custom_mixins = map(utils.LOAD_CLASS, config.get(
-        utils.SERIALIZERS_LOOKUP_FIELD, []))
-    cls = type(model.__name__, tuple(custom_mixins) + (
-        serializer_class,), class_dict)
-    return cls
-
-
-CHAR_FIELD = 'CharField'
-
-
-def get_related_model(model, model_field_name):
-    """
-    This function get the related model class.
-
-    Based on the given model class and the model field name which corresponds
-    to a relation with another model, this function extracts the underlying
-    related model class.
-
-    :param model: Model class.
-    :param model_field_name: Model field name which corresponds to relation
-    with another model.
-    :returns: Related model class.
-
-    :raises: DRFAdapterException If the given field is not related to another
-    model.
-    """
-
-    model_field = model._meta.get_field(model_field_name)
-    if model_field.related_model is None:
-        raise utils.DRFAdapterException(
-            'Field %s is not related with another model' % (
-                repr(model_field_name)))
-    return model_field.related_model
-
-
-def get_base_or_proxy(base_model_class, proxy_model_class):
-    """
-    Get model class to construct model serializer.
-
-    If a proxy model has not been specified, then it gets the base model class.
-    If a proxy model has been specified, then it checks that it is actual a
-    proxy model of the given base model class.
-
-    :param base_model_class: Base model class of relation.
-    :param proxy_model_class: Specified proxy model class.
-    :returns: Either the base model class or proxy model class.
-
-    :raises: DRFAdapterException if the given proxy model is not an actual
-    proxy model of the defined base model.
-    """
-    if not proxy_model_class:
-        return base_model_class
-    if not (proxy_model_class._meta.proxy and
-            proxy_model_class._meta.concrete_model is base_model_class):
-        raise utils.DRFAdapterException('Given proxy model %s is invalid' % (
-            proxy_model_class.__class__.__name__))
-    return proxy_model_class
-
-
-def generate_nested_serializers(model, config):
-    """
-    This function constructs nested serializers based on the nested relations
-    defined on the configuration of parent serializer.
-
-    :param model: Model class which supports nested serialization.
-    :param config: Dictionary of serializer configuration.
-
-    :returns: A dictionary keyed by the api field name which corresponds to
-    the nested serializer and it maps to the corresponding serializer class.
-    """
-    nested_objects = config.get(utils.NESTED_OBJECTS_LOOKUP_FIELD, {})
-    if not nested_objects:
-        return {}
-    nested_serializers = {}
-    for api_field_name, nested_object in nested_objects.iteritems():
-        model_field_name = nested_object.get(utils.MODEL_LOOKUP_FIELD, None)
-        rel_model = get_related_model(model, model_field_name)
-        serializer_class = generate(rel_model, nested_object.get(
-            utils.FIELD_SCHEMA_LOOKUP_FIELD, {}), is_collection=False)
-        field = model._meta.get_field(model_field_name)
-        many = field.many_to_many or field.one_to_many
-        source = None if api_field_name == model_field_name\
-            else model_field_name
-        extra_kwargs = config.get(utils.EXTRA_KWARGS_LOOKUP_FIELD, {})
-        field_kwargs = extra_kwargs.get(api_field_name, {})\
-            if extra_kwargs else {}
-        nested_serializers[api_field_name] = serializer_class(
-            many=many, source=source, **utils.build_field_properties(
-                api_field_name, config, field_kwargs))
-    return nested_serializers
-
-
-def generate_meta(model, config):
-    """
-    Generate `Meta` class of serializer according to the model and the
-    configuration object given as parameters.
-
-    :param model: Model class bound to the serializer's `Meta` class.
-    :param config: Dictionary which includes all required configuration of
-    serializer.
-    """
-    exposed_fields = config.get(utils.FIELDS_LOOKUP_FIELD, [])
-    field_properties = utils.build_properties(exposed_fields, config)
-    validate(model, field_properties)
-    class_dict = {
-        'fields': exposed_fields,
-        'extra_kwargs': field_properties,
-        'model': model,
+def generate_container_serializer(model_fields, extra_fields, name,
+                                  model, model_serializers=None,
+                                  extra_serializers=None,
+                                  instance_sources=None):
+    model_serializer = generate_serializer(
+        model_fields, name, model_serializers, model=model)
+    serializer = generate_serializer(
+        extra_fields, name, extra_serializers, model=None,
+        instance_sources=instance_sources)
+    content = {'extra_fields': extra_fields.keys(),
+               'model_fields': model_fields.keys()}
+    meta_cls = type('Meta', (object,), content)
+    content = {
+        'model_ser_cls': model_serializer,
+        'ser_cls': serializer,
+        'Meta': meta_cls,
     }
-    return {'Meta': type('Meta', (object,), class_dict)}
+    return type(name, (ContainerSerializer,), content)
 
 
-def validate(model, field_properties):
-    """
-    Validate fields and their properties.
-
-    It is not meaningful for some attributes to be placed together, e.g.
-    a field cannot be set as required and read only, etc.
-    In addition, only string field can be set as blankable.
-
-    :param model: Model class attached to the generated class of serializer.
-    :param field_properties: A dictionary of fields along with their
-    properties.
-    :raises DRFAdapterException: if there are intersections between lists of
-    attributes.
-    """
-    for field, config in field_properties.iteritems():
-        for u, v in NON_INTERSECTIONAL_PAIRS:
-            if config.get(u, False) and config.get(v, False):
-                raise utils.DRFAdapterException(
-                    'Field %s cannot be both %s and %s' % (
-                        repr(field), u, v))
-        if config.get('allow_blank', False) and (model._meta.get_field(
-                field).get_internal_type() != CHAR_FIELD):
-            raise utils.DRFAdapterException(
-                'Field %s can be set as blankable as it is not CharField' % (
-                    repr(field)))
+def generate_serializer(field_properties, name, bases=None, model=None,
+                        instance_sources=None):
+    if not field_properties:
+        return None
+    content = {}
+    for field_name, properties in field_properties.iteritems():
+        content[field_name] = properties
+    meta_cls_content = {'fields': field_properties.keys()}
+    base_classes = {
+        True: ApimasModelSerializer,
+        False: ApimasSerializer,
+    }
+    if model:
+        meta_cls_content['model'] = model
+    else:
+        content['instance_sources'] = instance_sources
+    custom_bases = map(utils.LOAD_CLASS, bases or [])
+    base_cls = tuple(custom_bases) + (base_classes[bool(model)],)
+    meta_cls = type('Meta', (object,), meta_cls_content)
+    cls_content = dict({'Meta': meta_cls}, **content)
+    return type(name, base_cls, cls_content)
