@@ -179,6 +179,15 @@ class ContainerSerializer(serializers.BaseSerializer):
         return tuple(output)
 
     @property
+    def fields(self):
+        fields = {}
+        for serializer in self.contained_sers:
+            if serializer is None:
+                continue
+            fields.update(serializer.fields)
+        return fields
+
+    @property
     def data(self):
         self._data = {}
         if self.instance is not None:
