@@ -132,14 +132,12 @@ class ContainerSerializer(serializers.BaseSerializer):
         return not bool(self._errors)
 
     def save(self, **kwargs):
-        extra_kwargs = kwargs.pop('extra', {})
-        model_kwargs = kwargs.pop('model', {})
         if self.ser:
-            instance_a = self.ser.save(**extra_kwargs)
+            instance_a = self.ser.save(**kwargs)
         else:
             instance_a = None
         if self.model_ser:
-            instance_b = self.model_ser.save(**model_kwargs)
+            instance_b = self.model_ser.save(**kwargs)
         else:
             instance_b = None
         assert not (instance_a and instance_b), (
@@ -255,9 +253,24 @@ class ApimasSerializer(serializers.Serializer):
         except AttributeError:
             return instance
 
+    def _get_model_data(self, data=None):
+        data = data or self.validated_data
+        for k, v in data.iteritems():
+            if isinstance(v, tuple):
+                extra, model = v
+                if model:
+                    return model
+                else:
+                    return self._get_model_data(extra)
+
     def save(self, **kwargs):
+        model_data = self._get_model_data()
+        if model_data:
+            model_data.update(kwargs)
+        else:
+            raise ex.ApimasException('You cannot add extra to non model data')
         try:
-            return super(ApimasSerializer, self).save(**kwargs)
+            return super(ApimasSerializer, self).save()
         except AbortException:
             return None
 
