@@ -1,3 +1,4 @@
+from django.contrib.auth.models import AnonymousUser
 from rest_framework.permissions import BasePermission
 from apimas.modeling.core.exceptions import ApimasException
 from apimas.modeling.core.documents import ANY, AnyPattern, doc_to_ns
@@ -9,6 +10,8 @@ class ApimasPermissions(BasePermission):
     OBJECT_CHECK_PREFIX = 'check_resource_state'
 
     message = None
+
+    ANONYMOUS_ROLES = ['anonymous']
 
     def __init__(self, rules, model):
         self.permissions = Tabmatch(
@@ -24,10 +27,13 @@ class ApimasPermissions(BasePermission):
         Specifically, get groups to which use belongs, and action of request.
         """
         action = view.action
-        roles = getattr(request.user, 'apimas_roles', None)
-        if roles is None:
-            raise ApimasException(
-                'Cannot find propety `apimas_roles` on `user` object')
+        if isinstance(request.user, AnonymousUser):
+            roles = self.ANONYMOUS_ROLES
+        else:
+            roles = getattr(request.user, 'apimas_roles', None)
+            if roles is None:
+                raise ApimasException(
+                    'Cannot find propety `apimas_roles` on `user` object')
         return [[action], roles, [ANY], [ANY]]
 
     def isallowed(self, request, view, obj=None):
