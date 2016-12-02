@@ -100,21 +100,10 @@ def get_bases_classes(mixins, hook_class, actions):
 
     :returns: A tuple of the corresponding base classes.
     """
-    hook_class = hook_class or view_mixins.HookMixin
+    hook_class = utils.import_object(hook_class) if hook_class\
+        else view_mixins.HookMixin
     mixins = map(utils.LOAD_CLASS, mixins)
     bases = (apimas_viewsets.ModelViewSet,) if not actions\
         else tuple([MIXINS[action] for action in actions]) + (
             viewsets.GenericViewSet,)
     return (hook_class,) + tuple(mixins) + tuple(bases)
-
-
-def get_hook_class(config):
-    """
-    A simple function for retrieving the hook class to be set to the
-    generated ViewSet class.
-
-    If no hook class is specified, then `BaseHook` class is used.
-    """
-    hook_class = config.get(utils.HOOK_CLASS_LOOKUP_FIELD, None)
-    return utils.import_object(hook_class) if hook_class\
-        else view_mixins.HookMixin
