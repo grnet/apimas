@@ -2,6 +2,9 @@ from apimas.modeling.core import documents as doc, exceptions as ex
 from apimas.modeling.adapters import Adapter
 
 
+SKIP = object()
+
+
 def default_constructor(instance, spec, loc, context):
     return instance
 
@@ -14,6 +17,8 @@ class NaiveAdapter(Adapter):
 
     PROPERTY_MAPPING = {
     }
+
+    SKIP_FIELDS = set()
 
     def __init__(self):
         self.adapter_spec = None
@@ -172,6 +177,28 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'file')
 
+    def construct_identity(self, instance, spec, loc, context):
+        """
+        Constructor of `.identity` predicate.
+
+        An `.identity` field is always `readonly`.
+        """
+        constructors = set(context.get('all_constructors') + ['.readonly'])
+        properties = self.PROPERTIES.intersection(constructors)
+        if len(properties) > 1:
+            raise ex.ApimasException(
+                '.identity field `%s` can only be readonly' % (loc[-2]))
+        if properties != set(['.readonly']):
+            raise ex.ApimasException(
+                '.identity field `%s` is always a readonly field' % (loc[-2]))
+        paths = doc.doc_search(context.get('top_spec'), '.drf_collection')
+        collection_path = loc[:-3]
+        if collection_path not in [p[:-1] for p in paths]:
+            raise ex.ApimasException(
+                '.identity field `%s` must identify the whole collection' % (
+                    loc[-2]))
+        return instance
+
     def construct_blankable(self, instance, spec, loc, context):
         """
         Constuctor for `.blankable` predicate.
@@ -226,10 +253,14 @@ class NaiveAdapter(Adapter):
         it requires field to be initialized, otherwise, construction is
         defered.
         """
-        field_schema = doc.doc_get(instance, (self.ADAPTER_CONF,))
-        if field_schema is None:
+        constructed = context.get('constructed')
+        predicate_type = self.extract_type(instance)
+        if predicate_type not in constructed:
             raise doc.DeferConstructor
 
+        if predicate_type in self.SKIP_FIELDS:
+            return instance
+        field_schema = doc.doc_get(instance, (self.ADAPTER_CONF,))
         field_schema.update({self.PROPERTY_MAPPING.get(
             property_name, property_name): True})
         return instance

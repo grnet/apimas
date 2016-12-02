@@ -25,6 +25,7 @@ class Adapter(object):
         '.datetime',
         '.date',
         '.file',
+        '.identity',
         '.blankable',
         '.required',
         '.nullable',
@@ -45,6 +46,7 @@ class Adapter(object):
         '.datetime',
         '.date',
         '.file',
+        '.identity',
     ])
 
     PROPERTIES = frozenset([

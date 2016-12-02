@@ -62,6 +62,7 @@ class DjangoRestAdapter(NaiveAdapter):
         'struct': serializers.Serializer,
         'ref': serializers.HyperlinkedRelatedField,
         'file': serializers.FileField,
+        'identity': serializers.HyperlinkedIdentityField,
     }
 
     TYPE_MAPPING = {
@@ -81,6 +82,7 @@ class DjangoRestAdapter(NaiveAdapter):
         'struct': (models.ForeignKey, models.OneToOneField,
                    models.OneToOneRel),
         'file': models.FileField,
+        'identity': None,
     }
 
     PREDICATES = list(NaiveAdapter.PREDICATES) + [
@@ -103,7 +105,7 @@ class DjangoRestAdapter(NaiveAdapter):
         for collection, spec in doc.doc_get(
                 self.adapter_spec, (api,)).iteritems():
             view = spec.get(self.ADAPTER_CONF)
-            router.register(collection, view)
+            router.register(collection, view, base_name=collection)
         self.urls = url(r'^' + api + '/', include(router.urls))
 
     def construct_CRUD_action(self, instance, spec, loc, context, action):
@@ -258,6 +260,14 @@ class DjangoRestAdapter(NaiveAdapter):
         kwargs.pop('to_field', None)
         return kwargs
 
+    def construct_identity_field(self, instance, spec, loc, context,
+                                 predicate_type):
+        collection_name = loc[-4]
+        drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
+            view_name='%s-detail' % (collection_name))
+        doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
+        return instance
+
     def default_field_constructor(self, instance, spec, loc, context,
                                   predicate_type):
         model = self.validate_model_configuration(
@@ -306,9 +316,11 @@ class DjangoRestAdapter(NaiveAdapter):
         In case of nested fields, e.g. `.struct`, `.structarray`, the field
         should be related to another model.
         """
+        field_constructors = {
+            '.identity': self.construct_identity_field,
+        }
         all_constructors = context.get('all_constructors')
         constructed = context.get('constructed')
-        field_constructors = {}
         if len(constructed) < len(all_constructors) - 1:
             raise doc.DeferConstructor
         type_predicate = self.extract_type(instance)

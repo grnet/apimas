@@ -280,6 +280,8 @@ class ApimasClientAdapter(NaiveAdapter):
         'file': 'file',
     }
 
+    SKIP_FIELDS = {'.identity'}
+
     PREDICATES = list(NaiveAdapter.PREDICATES) + ['.field']
 
     def __init__(self, root_url):

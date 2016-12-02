@@ -7,7 +7,7 @@ from apimas.modeling.cli.custom_types import (
     Json, Credentials, Date, DateTime)
 from apimas.modeling.clients import ApimasClientAdapter
 from apimas.modeling.core import documents as doc, exceptions as ex
-from apimas.modeling.adapters.cookbooks import NaiveAdapter
+from apimas.modeling.adapters.cookbooks import NaiveAdapter, SKIP
 
 
 def to_option(name):
@@ -248,6 +248,8 @@ class ApimasCliAdapter(NaiveAdapter):
         '.auth_format'
     ]
 
+    SKIP_FIELDS = {'.identity'}
+
     PREDICATES = list(NaiveAdapter.PREDICATES) + EXTRA_PREDICATES
 
     def __init__(self, clients):
@@ -380,6 +382,8 @@ class ApimasCliAdapter(NaiveAdapter):
         """
         field_schema = doc.doc_get(instance, ('*',))
         for field_name, spec in field_schema.iteritems():
+            if spec == SKIP:
+                continue
             for option_name, params in spec.get(self.ADAPTER_CONF).iteritems():
                 option_constructor = self.OPTION_CONSTRUCTORS[action]
                 if not self.option_allowed(action, spec, option_constructor):
@@ -450,6 +454,7 @@ class ApimasCliAdapter(NaiveAdapter):
         * --cart-products
         """
         option_kwargs = {}
+        self.init_adapter_conf(instance)
         for field_name, schema in doc.doc_get(
                 instance, ('.struct',)).iteritems():
             for nested, params in schema.get(self.ADAPTER_CONF).iteritems():
@@ -459,6 +464,28 @@ class ApimasCliAdapter(NaiveAdapter):
         instance[self.ADAPTER_CONF].update(option_kwargs)
         return instance
 
+    def construct_option_type(self, instance, spec, loc, context,
+                              predicate_type):
+        constructors = {
+            '.date': self._add_date_params,
+            '.datetime': self._add_date_params,
+        }
+        predicate_type = self.extract_type(instance)
+        if predicate_type in self.SKIP_FIELDS:
+            return None
+
+        def default(instance, spec, loc, context):
+            return {}
+
+        kwargs = constructors.get(predicate_type, default)(
+            instance, spec, loc, context)
+        option_type = self.TYPE_MAPPING[predicate_type[1:]]
+        return option_type(**kwargs)
+
+    def construct_identity(self, instance, spec, loc, context):
+        instance = SKIP
+        return instance
+
     def construct_cli_option(self, instance, spec, loc, context):
         """
         Constructor for '.cli_option' predicate.
@@ -466,71 +493,43 @@ class ApimasCliAdapter(NaiveAdapter):
         It constructs a dictionary keyed by option name which contains
         all required keyword arguments for `click.option()` constructor.
         """
-        outlier_cases = {
-            '.struct': self.construct_struct_option,
-            '.ref': self.construct_ref_option,
-        }
+        extra_params = {'.ref': self._add_ref_params}
+        if instance == SKIP:
+            return instance
+        predicate_type = self.extract_type(instance)
         option_name = doc.doc_get(
             spec, ('option_name',)) or loc[-2]
-        self.init_adapter_conf(instance)
-        for case, method in outlier_cases.iteritems():
-            if case in instance:
-                return method(instance, spec, loc, option_name)
-        instance[self.ADAPTER_CONF][option_name] = {}
+        if predicate_type == '.struct':
+            return self.construct_struct_option(instance, spec, loc,
+                                                option_name)
+        self.init_adapter_conf(instance, initial={option_name: {}})
+        kwargs = {'type': self.construct_option_type(
+            instance, spec, loc, context, predicate_type)}
+        extra = extra_params.get(predicate_type)
+        if extra:
+            kwargs.update(extra(instance, spec, loc, context))
+        if '.required' in instance:
+            kwargs.update({'required': True})
+        instance[self.ADAPTER_CONF][option_name] = kwargs
         return instance
 
-    def _add_date_params(self, spec):
+    def _add_date_params(self, instance, spec, loc, context):
         return {'date_format': spec.get('format', None)}
 
-    def _add_datetime_params(self, spec):
-        return {'date_format': spec.get('format', None)}
-
-    def construct_ref_option(self, instance, spec, loc, context):
+    def _add_ref_params(self, instance, spec, loc, context):
         many = doc.doc_get(instance, ('.ref', 'many'))
-        option_name = doc.doc_get(
-            spec, ('option_name',)) or loc[-2]
-        if many is True:
-            instance[self.ADAPTER_CONF].update(
-                {option_name: {'multiple': True}})
-        else:
-            instance[self.ADAPTER_CONF].update({option_name: {}})
-        return instance
+        return {'multiple': True} if many else {}
 
     def construct_struct(self, instance, spec, loc, context):
         return instance
 
-    def construct_type(self, instance, spec, loc, context, field_type=None):
-        """
-        Contructor for predicates that indicate the type of a field.
-        """
-        def default(spec):
-            return {}
-
-        if self.ADAPTER_CONF not in instance:
-            raise doc.DeferConstructor
-        adapter_conf = doc.doc_get(instance, (
-            self.ADAPTER_CONF,))
-        for k, v in adapter_conf.iteritems():
-            method_name = '_add_' + field_type + '_params'
-            method = getattr(self, method_name, default)
-            v.update({'type': self.TYPE_MAPPING[field_type](
-                **method(spec))})
+    def construct_type(self, instance, spec, loc, context, field_type):
         return instance
 
     def construct_property(self, instance, spec, loc, context, property_name):
         """
         Constuctor for `.required` predicate.
-
-        It creates a required option.
         """
-        if property_name != 'required':
-            return instance
-        adapter_conf = doc.doc_get(instance, (
-            self.ADAPTER_CONF,))
-        if adapter_conf is None:
-            raise doc.DeferConstructor
-        for k, v in adapter_conf.iteritems():
-            v.update({property_name: True})
         return instance
 
 
