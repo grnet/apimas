@@ -91,6 +91,30 @@ class DjangoRestAdapter(NaiveAdapter):
     def __init__(self):
         self.gen_adapter_spec = {}
         self.urls = None
+        self.serializers = {}
+        self.views = {}
+
+    def get_views(self):
+        return self.views
+
+    def get_serializers(self):
+        return self.serializers
+
+    def get_class(self, class_container, collection):
+        if not class_container:
+            raise utils.DRFAdapterException(
+                'Classes have not been constructed yet. Run %s.construct()' % (
+                    self.__class__.__name__))
+        if collection not in class_container:
+            raise utils.DRFAdapterException(
+                'Class not found for collection %s' % (collection))
+        return class_container[collection]
+
+    def get_serializer(self, collection):
+        return self.get_class(self.serializers, collection)
+
+    def get_view(self, collection):
+        return self.get_class(self.views, collection)
 
     def apply(self):
         """
@@ -223,6 +247,8 @@ class DjangoRestAdapter(NaiveAdapter):
         view = generate_view(loc[-2], serializer, model, actions=actions,
                              permissions=permissions, **kwargs)
         instance[self.ADAPTER_CONF] = view
+        self.serializers[loc[-2]] = serializer
+        self.views[loc[-2]] = view
         return instance
 
     def _classify_fields(self, field_schema):
