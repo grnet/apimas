@@ -10,6 +10,10 @@ from apimas.modeling.core.documents import ANY
 from apimas.modeling.adapters.drf import utils
 
 
+class AbortException(Exception):
+    pass
+
+
 def lookup_value(field_name, source, instance):
     """
     Similar to Python's built in `getattr(instance, attr)`,
@@ -103,8 +107,8 @@ class ContainerSerializer(serializers.BaseSerializer):
         self.ser = self._build_serializer(
             self.ser_cls, fields=fields, instance=self.instance)
 
-    def _build_serializer(self, cls, fields=None, instance=None):
-        if cls is None:
+    def _build_serializer(self, serializer_class, fields=None, instance=None):
+        if serializer_class is None:
             return None
         kwargs = {}
         if hasattr(self, 'initial_data'):
@@ -112,8 +116,8 @@ class ContainerSerializer(serializers.BaseSerializer):
             data = {k: v for k, v in initial_data.iteritems()
                     if k in fields}
             kwargs['data'] = data
-        return cls(context=self._context, partial=self.partial,
-                   **kwargs)
+        return serializer_class(
+            context=self._context, partial=self.partial, **kwargs)
 
     def is_valid(self, raise_exception=False):
         self._errors = {}
@@ -138,22 +142,24 @@ class ContainerSerializer(serializers.BaseSerializer):
             instance_b = self.model_ser.save(**model_kwargs)
         else:
             instance_b = None
-        return instance_a, instance_b
+        assert not (instance_a and instance_b), (
+            'Creation of multiple instances is not supported.')
+        return instance_a or instance_b
 
     def perform_action(self, validated_data, instance=None):
-        output = []
         method_name = 'update' if instance else 'create'
+        output = [None, None]
         for i, serializer in enumerate(self.contained_sers):
             if serializer is None:
-                output.append(None)
                 continue
 
             method = getattr(serializer, method_name)
             kwargs = {'validated_data': validated_data[i]}
             if instance:
                 kwargs['instance'] = instance
-            output.append(method(**kwargs))
-        return tuple(output)
+            output[i] = method(**kwargs)
+        assert not (output[0] and output[1])
+        return output[0] or output[1]
 
     def create(self, validated_data):
         return self.perform_action(validated_data)
@@ -163,12 +169,10 @@ class ContainerSerializer(serializers.BaseSerializer):
 
     def to_representation(self, instance):
         data = {}
-        if not isinstance(instance, tuple):
-            instance = (instance,)
         if self.ser:
-            data.update(self.ser.to_representation(instance[0]))
+            data.update(self.ser.to_representation(instance))
         if self.model_ser:
-            data.update(self.model_ser.to_representation(instance[-1]))
+            data.update(self.model_ser.to_representation(instance))
         return data
 
     def to_internal_value(self, data):
@@ -251,20 +255,35 @@ class ApimasSerializer(serializers.Serializer):
         except AttributeError:
             return instance
 
+    def save(self, **kwargs):
+        try:
+            return super(ApimasSerializer, self).save(**kwargs)
+        except AbortException:
+            return None
+
+    def _set_new_instance(self, new_instance, instance, drf_field, value):
+        out = drf_field.update(instance, value) if instance\
+            else drf_field.create(value)
+        if out and new_instance:
+            raise ex.ApimasException('Found multiple instances')
+        if not new_instance:
+            return out
+
     def perform_action(self, validated_data, instance=None):
-        data = {}
+        new_instance = None
         for k, v in validated_data.iteritems():
             drf_field = self.fields[k]
             if isinstance(drf_field, serializers.BaseSerializer):
-                instance = drf_field.update(instance, v) if instance\
-                    else drf_field.create(v)
+                new_instance = self._set_new_instance(
+                    new_instance, instance, drf_field, v)
+            elif instance:
+                self.update_non_model_field(drf_field, instance, v,
+                                            validated_data)
             else:
-                instance = self.create_non_model_field(
-                    drf_field, v, validated_data) if instance else\
-                        self.update_non_model_field(
-                            drf_field, instance, v, validated_data)
-            data[k] = instance
-        return data
+                self.create_non_model_field(drf_field, v, validated_data)
+        if new_instance is None:
+            raise AbortException
+        return new_instance
 
     def create(self, validated_data):
         return self.perform_action(validated_data)
@@ -284,7 +303,6 @@ class ApimasSerializer(serializers.Serializer):
         """
         ret = OrderedDict()
         fields = self._readable_fields
-
         for field in fields:
             try:
                 instance_sources = getattr(self, 'instance_sources', {})
