@@ -242,7 +242,7 @@ class DjangoRestAdapter(NaiveAdapter):
     def generate_nested_drf_field(self, instance, loc, predicate_type, model,
                                   **kwargs):
         field_schema = doc.doc_get(instance, (predicate_type,))
-        many = predicate_type == 'structarray'
+        many = predicate_type == '.structarray'
         model_serializers = kwargs.pop('model_serializers', [])
         extra_serializers = kwargs.pop('serializers', [])
         serializer = self.generate_serializer(
