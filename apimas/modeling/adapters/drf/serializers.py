@@ -265,9 +265,9 @@ class ApimasSerializer(serializers.Serializer):
 
     def save(self, **kwargs):
         model_data = self._get_model_data()
-        if model_data:
+        if model_data and kwargs:
             model_data.update(kwargs)
-        else:
+        elif not model_data and kwargs:
             raise ex.ApimasException('You cannot add extra to non model data')
         try:
             return super(ApimasSerializer, self).save()
@@ -417,6 +417,9 @@ class ApimasModelSerializer(serializers.HyperlinkedModelSerializer,
         fields.update(hidden_fields)
 
         return fields
+
+    def save(self, **kwargs):
+        return super(ApimasModelSerializer, self).save(**kwargs)
 
 
 def generate_container_serializer(model_fields, extra_fields, name,

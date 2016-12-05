@@ -9,7 +9,7 @@ from rest_framework.utils.field_mapping import get_relation_kwargs
 from apimas.modeling.core import documents as doc
 from apimas.modeling.adapters.drf import utils
 from apimas.modeling.adapters.drf.serializers import (
-    generate_container_serializer)
+    generate_container_serializer, generate_serializer)
 from apimas.modeling.adapters.drf.views import generate_view
 from apimas.modeling.adapters.cookbooks import NaiveAdapter
 from apimas.modeling.adapters.drf.utils import (
@@ -214,14 +214,22 @@ class DjangoRestAdapter(NaiveAdapter):
         return map((lambda x: x[1:]), matches)
 
     def generate_serializer(self, field_schema, name, model=None,
-                            model_serializers=None, extra_serializers=None):
+                            onmodel=False, model_serializers=None,
+                            extra_serializers=None):
         model_fields, extra_fields, sources = self._classify_fields(
             field_schema)
-        serializer = generate_container_serializer(
-            model_fields, extra_fields, name, model,
-            instance_sources=sources,
-            model_serializers=model_serializers,
-            extra_serializers=extra_serializers)
+        if onmodel:
+            assert model, ('You cannot create a model serializer without'
+                           ' specifying its model')
+            serializer = generate_serializer(
+                model_fields, name,
+                model=model, bases=model_serializers)
+        else:
+            serializer = generate_container_serializer(
+                model_fields, extra_fields, name, model,
+                instance_sources=sources,
+                model_serializers=model_serializers,
+                extra_serializers=extra_serializers)
         return serializer
 
     def construct_drf_collection(self, instance, spec, loc, context):
@@ -234,7 +242,7 @@ class DjangoRestAdapter(NaiveAdapter):
         if self.ADAPTER_CONF not in instance:
             raise doc.DeferConstructor
         field_schema = doc.doc_get(instance, ('*',))
-        actions = doc.doc_get(instance, ('ations', self.ADAPTER_CONF)) or []
+        actions = doc.doc_get(instance, ('actions', self.ADAPTER_CONF)) or []
         model = utils.import_object(spec.get('model'))
         model_serializers = spec.pop('model_serializers', [])
         extra_serializers = spec.pop('serializers', [])
@@ -257,6 +265,8 @@ class DjangoRestAdapter(NaiveAdapter):
         instance_sources = {}
         for field_name, properties in field_schema.iteritems():
             onmodel = doc.doc_get(properties, ('.drf_field', 'onmodel'))
+            if onmodel is None:
+                onmodel = True
             field_path = (self.ADAPTER_CONF, 'field')
             instance_path = (self.ADAPTER_CONF, 'source')
             if onmodel:
@@ -268,13 +278,13 @@ class DjangoRestAdapter(NaiveAdapter):
         return model_fields, extra_fields, instance_sources
 
     def generate_nested_drf_field(self, instance, loc, predicate_type, model,
-                                  **kwargs):
+                                  onmodel=True, **kwargs):
         field_schema = doc.doc_get(instance, (predicate_type,))
         many = predicate_type == '.structarray'
         model_serializers = kwargs.pop('model_serializers', [])
         extra_serializers = kwargs.pop('serializers', [])
         serializer = self.generate_serializer(
-            field_schema, loc[-2],
+            field_schema, loc[-2], onmodel=onmodel,
             model_serializers=model_serializers,
             extra_serializers=extra_serializers, model=model)
         return serializer(many=many, **kwargs)
@@ -308,9 +318,11 @@ class DjangoRestAdapter(NaiveAdapter):
                 self.get_extra_ref_kwargs(loc[-2], model, ref))
         field_kwargs.update(doc.doc_get(instance, path) or {})
         doc.doc_set(instance, (self.ADAPTER_CONF, 'source'), instance_source)
+        onmodel = spec.get('onmodel', True)
         if predicate_type in self.STRUCTURES:
             drf_field = self.generate_nested_drf_field(
-                instance, loc, predicate_type, model, **field_kwargs)
+                instance, loc, predicate_type, model, onmodel=onmodel,
+                **field_kwargs)
         else:
             drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
                 **field_kwargs)
@@ -325,14 +337,17 @@ class DjangoRestAdapter(NaiveAdapter):
         model_path = ('.drf_collection', 'model')
         model = utils.import_object(
             doc.doc_get(top_spec, loc[0:2] + model_path))
+        structures = {'.struct', '.structarray'}
         if onmodel:
             field_type = self.TYPE_MAPPING[predicate_type[1:]]
             if predicate_type == '.ref':
                 _, model, _ = self.validate_ref(
                     instance, spec, loc, top_spec, source)
             else:
-                _, model = self.validate_model_field(
+                model_field, model = self.validate_model_field(
                     top_spec, loc, field_type, source)
+                if predicate_type in structures:
+                    model = model_field.related_model
         return model
 
     def construct_drf_field(self, instance, spec, loc, context):
