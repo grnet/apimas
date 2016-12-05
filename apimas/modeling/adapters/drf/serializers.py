@@ -142,7 +142,8 @@ class ContainerSerializer(serializers.BaseSerializer):
             instance_b = None
         assert not (instance_a and instance_b), (
             'Creation of multiple instances is not supported.')
-        return instance_a or instance_b
+        self.instance = instance_a or instance_b
+        return self.instance
 
     def perform_action(self, validated_data, instance=None):
         method_name = 'update' if instance else 'create'
@@ -176,7 +177,7 @@ class ContainerSerializer(serializers.BaseSerializer):
     def to_internal_value(self, data):
         output = []
         for serializer in self.contained_sers:
-            output.append({} if serializer is None else
+            output.append(None if serializer is None else
                           serializer.to_internal_value(data))
         return tuple(output)
 
@@ -253,29 +254,31 @@ class ApimasSerializer(serializers.Serializer):
         except AttributeError:
             return instance
 
-    def _get_model_data(self, data=None):
-        data = data or self.validated_data
+    def _update_model_data(self, additional_data, data=None):
+        if data is None:
+            data = self.validated_data
         model_data = []
-        for k, v in data.iteritems():
+        for _, v in data.iteritems():
             if isinstance(v, dict):
                 model_data.append(v)
             if isinstance(v, tuple):
                 node_extra_data, node_model_data = v
-                if node_model_data:
+                if node_model_data is not None:
                     model_data.append(node_model_data)
                 else:
-                    model_data.append(self._get_model_data(node_extra_data))
+                    node_model_data = self._get_model_data(
+                        additional_data, node_extra_data)
+                    if node_model_data is not None:
+                        model_data.append(node_model_data)
         assert 0 <= len(model_data) <= 1, 'Diverse model_data found'
-        return model_data[0] if model_data else None
+        if model_data:
+            model_data[0].update(additional_data)
 
     def save(self, **kwargs):
-        model_data = self._get_model_data()
-        if model_data is not None and kwargs:
-            model_data.update(kwargs)
-        elif not model_data and kwargs:
-            raise ex.ApimasException('You cannot add extra to non model data')
+        self._update_model_data(kwargs)
         try:
-            return super(ApimasSerializer, self).save()
+            self.instance = super(ApimasSerializer, self).save()
+            return self.instance
         except AbortException:
             return None
 
@@ -292,8 +295,11 @@ class ApimasSerializer(serializers.Serializer):
         for k, v in validated_data.iteritems():
             drf_field = self.fields[k]
             if isinstance(drf_field, serializers.BaseSerializer):
-                new_instance = self._set_new_instance(
-                    new_instance, instance, drf_field, v)
+                try:
+                    new_instance = self._set_new_instance(
+                        new_instance, instance, drf_field, v)
+                except AbortException:
+                    pass
             elif instance:
                 self.update_non_model_field(drf_field, instance, v,
                                             validated_data)
