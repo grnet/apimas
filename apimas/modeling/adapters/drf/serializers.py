@@ -255,17 +255,22 @@ class ApimasSerializer(serializers.Serializer):
 
     def _get_model_data(self, data=None):
         data = data or self.validated_data
+        model_data = []
         for k, v in data.iteritems():
+            if isinstance(v, dict):
+                model_data.append(v)
             if isinstance(v, tuple):
-                extra, model = v
-                if model:
-                    return model
+                node_extra_data, node_model_data = v
+                if node_model_data:
+                    model_data.append(node_model_data)
                 else:
-                    return self._get_model_data(extra)
+                    model_data.append(self._get_model_data(node_extra_data))
+        assert 0 <= len(model_data) <= 1, 'Diverse model_data found'
+        return model_data[0] if model_data else None
 
     def save(self, **kwargs):
         model_data = self._get_model_data()
-        if model_data and kwargs:
+        if model_data is not None and kwargs:
             model_data.update(kwargs)
         elif not model_data and kwargs:
             raise ex.ApimasException('You cannot add extra to non model data')
