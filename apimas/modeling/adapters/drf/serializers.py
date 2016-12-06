@@ -118,7 +118,8 @@ class ContainerSerializer(serializers.BaseSerializer):
                     if k in fields}
             kwargs['data'] = data
         return serializer_class(
-            context=self._context, partial=self.partial, instance=instance, **kwargs)
+            context=self._context, partial=self.partial, instance=instance,
+            **kwargs)
 
     def is_valid(self, raise_exception=False):
         self._errors = {}
@@ -219,7 +220,6 @@ class ContainerSerializer(serializers.BaseSerializer):
         if isinstance(field, serializers.Serializer):
             return serializers.NestedBoundField(field, value, error)
         return serializers.BoundField(field, value, error)
-
 
 
 class ApimasSerializer(serializers.Serializer):
@@ -367,6 +367,7 @@ class ApimasSerializer(serializers.Serializer):
                 ret[field.field_name] = field.to_representation(attribute)
 
         return ret
+
 
 class ApimasModelSerializer(serializers.HyperlinkedModelSerializer,
                             ApimasSerializer):
