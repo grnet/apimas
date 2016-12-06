@@ -117,7 +117,7 @@ class ContainerSerializer(serializers.BaseSerializer):
                     if k in fields}
             kwargs['data'] = data
         return serializer_class(
-            context=self._context, partial=self.partial, **kwargs)
+            context=self._context, partial=self.partial, instance=instance, **kwargs)
 
     def is_valid(self, raise_exception=False):
         self._errors = {}
@@ -216,12 +216,12 @@ class ApimasSerializer(serializers.Serializer):
         self.adapt_fields_to_rules()
 
     def adapt_fields_to_rules(self):
-        request = self.context.get('request')
+        request = self._context.get('request')
         if not request:
             return
-        readonly_fields = self.context['request'].parser_context.get(
+        readonly_fields = self._context['request'].parser_context.get(
             'non_writable_fields', [])
-        permitted_fields = self.context['request'].parser_context.get(
+        permitted_fields = self._context['request'].parser_context.get(
             'permitted_fields', [])
         serializer_fields = self.fields
         for field in readonly_fields:
