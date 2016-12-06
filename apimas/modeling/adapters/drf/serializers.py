@@ -280,7 +280,7 @@ class ApimasSerializer(serializers.Serializer):
                 if node_model_data is not None:
                     model_data.append(node_model_data)
                 else:
-                    node_model_data = self._get_model_data(
+                    node_model_data = self._update_model_data(
                         additional_data, node_extra_data)
                     if node_model_data is not None:
                         model_data.append(node_model_data)
