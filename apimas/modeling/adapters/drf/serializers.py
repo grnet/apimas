@@ -5,6 +5,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.settings import api_settings
 from rest_framework.utils import model_meta
+from rest_framework.utils.serializer_helpers import ReturnDict
 from apimas.modeling.core import exceptions as ex
 from apimas.modeling.core.documents import ANY
 from apimas.modeling.adapters.drf import utils
@@ -199,13 +200,26 @@ class ContainerSerializer(serializers.BaseSerializer):
         for serializer in self.contained_sers:
             if serializer:
                 self._data.update(serializer.data)
-        return self._data
+        return ReturnDict(self._data, serializer=self)
 
     def get_attribute(self, instance):
         try:
             return super(ContainerSerializer, self).get_attribute(instance)
         except AttributeError:
             return instance
+
+    def __iter__(self):
+        for field in self.fields.values():
+            yield self[field.field_name]
+
+    def __getitem__(self, key):
+        field = self.fields[key]
+        value = self.data.get(key)
+        error = self.errors.get(key) if hasattr(self, '_errors') else None
+        if isinstance(field, serializers.Serializer):
+            return serializers.NestedBoundField(field, value, error)
+        return serializers.BoundField(field, value, error)
+
 
 
 class ApimasSerializer(serializers.Serializer):
@@ -353,7 +367,6 @@ class ApimasSerializer(serializers.Serializer):
                 ret[field.field_name] = field.to_representation(attribute)
 
         return ret
-
 
 class ApimasModelSerializer(serializers.HyperlinkedModelSerializer,
                             ApimasSerializer):
