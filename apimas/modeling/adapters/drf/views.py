@@ -24,7 +24,8 @@ MIXINS = {
 
 def generate_view(name, serializer, model, permissions=None,
                   authentication_classes=(), permission_classes=(),
-                  mixins=(), hook_class=None, searchable_fields=None,
+                  mixins=(), hook_class=None, filter_fields=None,
+                  ordering_fields=None, search_fields=None,
                   actions=()):
     """
     A function to generate a viewset according to the model given as
@@ -41,7 +42,6 @@ def generate_view(name, serializer, model, permissions=None,
     class.
     :return: A `ViewSet` class.
     """
-    searchable_fields = searchable_fields or {}
     permission_classes = map(utils.LOAD_CLASS, permission_classes)
     apimas_perm_cls = gen_apimas_permission_cls(model, permissions)
     permission_classes += [apimas_perm_cls] if apimas_perm_cls else []
@@ -52,14 +52,25 @@ def generate_view(name, serializer, model, permissions=None,
             utils.LOAD_CLASS, authentication_classes),
         'permission_classes': permission_classes
     }
-    attrs = {field: searchable_fields.get(field, default)
-             for field, default in VIEWSET_ATTRS}
-    filter_backends = get_filter_backends(searchable_fields)
-    dicts = [standard_content, attrs, filter_backends]
+    searchable_fields, filter_backends = get_filtering_options(
+        filter_fields, ordering_fields, search_fields)
+    dicts = [standard_content, searchable_fields, filter_backends]
     # Compose content i.e. standard content, attributes, methods.
     class_dict = dict(sum((list(content.items()) for content in dicts), []))
     bases = get_bases_classes(mixins, hook_class, actions)
     return type(name, bases, class_dict)
+
+
+def get_filtering_options(filter_fields, ordering_fields, search_fields):
+    searchable_fields = {
+        'filter_fields': filter_fields,
+        'ordering_fields': ordering_fields,
+        'search_fields': search_fields,
+    }
+    search_fields = {field: searchable_fields.get(field, default)
+                     for field, default in VIEWSET_ATTRS}
+    filter_backends = get_filter_backends(searchable_fields)
+    return searchable_fields, filter_backends
 
 
 def gen_apimas_permission_cls(model, permissions):
