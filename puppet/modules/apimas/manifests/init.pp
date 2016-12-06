@@ -41,44 +41,78 @@ class apimas (
     $ssl_cert,
     $ssl_key,
 ) {
-    apimas::pin {'nginx':
-        version => "1.6.*",
-        before => Nginx_site["${server_name}"],
+    #apimas::pin { 'nginx':
+    #    version => "1.6.*",
+    #    before => Nginx_site["${server_name}"],
+    #}
+
+    #package { 'nginx':
+    #    ensure => installed,
+    #    require => Apimas::Pin['nginx'],
+    #    before => Nginx_site["${server_name}"],
+    #}
+
+    apimas::pin { 'python-django':
+        version => "1.8.*",
+        before => Apimas::Apache_site["${server_name}"],
     }
 
-    package { 'nginx':
+    apimas::pin { 'python-django-common':
+        version => "1.8.*",
+        before => Package['python-django'],
+    }
+
+    package { 'python-django':
         ensure => installed,
-        require => Apimas::Pin['nginx'],
-        before => Nginx_site["${server_name}"],
+        require => Apimas::Pin['python-django'],
+        before => Apimas::Apache_site["${server_name}"],
     }
 
-    apimas::pin {'gunicorn':
-        version => "19.6.*",
-        before => Nginx_site["${server_name}"],
+    apimas::pin { 'apache2':
+        version => "2.4.*",
+        before => Apimas::Apache_site["${server_name}"],
+    }
+
+    package { 'apache2':
+        ensure => installed,
+        require => Apimas::Pin['apache2'],
+        before => Apimas::Apache_site["${server_name}"],
+    }
+
+    apimas::pin { 'gunicorn':
+        version => "19.0.*",
+        before => Apimas::Apache_site["${server_name}"],
     }
 
     package { 'gunicorn':
         ensure => installed,
         require => Apimas::Pin['gunicorn'],
-        before => Nginx_site["${server_name}"],
+        before => Apimas::Apache_site["${server_name}"],
     }
 
-    apimas::pin {'postgresql':
+    apimas::pin { 'postgresql':
         version => "9.4*",
-        before => Nginx_site["${server_name}"],
+        before => Apimas::Apache_site["${server_name}"],
     }
 
     package { 'postgresql':
         ensure => installed,
         require => Apimas::Pin['postgresql'],
-        before => Nginx_site["${server_name}"],
+        before => Apimas::Apache_site["${server_name}"],
     }
 
-    apimas::nginx_site { $server_name:
+    #apimas::nginx_site { $server_name:
+    #    server_name => $server_name,
+    #    ssl_cert => $ssl_cert,
+    #    ssl_key => $ssl_key,
+    #    notify => Service['nginx'],
+    #}
+
+    apimas::apache_site { $server_name:
         server_name => $server_name,
         ssl_cert => $ssl_cert,
         ssl_key => $ssl_key,
-        notify => Service['nginx'],
+        notify => Service['apache2'],
     }
 
     service { 'postgresql':
@@ -91,13 +125,23 @@ class apimas (
         require => Package['gunicorn'],
     }
 
-    service { 'nginx':
+    #service { 'nginx':
+    #    ensure => running,
+    #    require => Package['nginx'],
+    #}
+
+    #file { '/etc/nginx/sites-enabled/default':
+    #    ensure => absent,
+    #    notify => Service['nginx'],
+    #}
+
+    service { 'apache2':
         ensure => running,
-        require => Package['nginx'],
+        require => Package['apache2'],
     }
 
-    file {'/etc/nginx/sites-enabled/default':
+    file { '/etc/apache/sites-enabled/default':
         ensure => absent,
-        notify => Service['nginx'],
+        notify => Service['apache2'],
     }
 }

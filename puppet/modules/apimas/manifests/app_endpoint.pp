@@ -33,9 +33,9 @@ define apimas::app_endpoint (
 
     file { "${srv_root}/${api_name}/data":
         ensure => directory,
-        owner => "${api_name}",
+        owner => root,
         group => "${api_name}",
-        mode => "0750",
+        mode => "u=rwx,g=rwxs,o=",
         before => File["${etc_root}/${api_name}/settings.conf"],
         require => File["${srv_root}/${api_name}"],
     }
@@ -63,6 +63,7 @@ define apimas::app_endpoint (
         mode => "0640",
         content => $app_settings,
         require => File["${etc_root}/${api_name}"],
+        notify => Service["gunicorn"],
     }
 
     file { "/etc/gunicorn.d/${api_name}":
