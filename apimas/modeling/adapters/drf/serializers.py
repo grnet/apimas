@@ -475,10 +475,10 @@ def generate_container_serializer(model_fields, extra_fields, name,
                                   model, model_serializers=None,
                                   extra_serializers=None,
                                   instance_sources=None):
-    model_serializer = generate_serializer(
-        model_fields, name, model_serializers, model=model)
+    model_serializer = generate_model_serializer(
+        name, model, model_fields, bases=model_serializers)
     serializer = generate_serializer(
-        extra_fields, name, extra_serializers, model=None,
+        name, extra_fields, bases=extra_serializers,
         instance_sources=instance_sources)
     content = {'extra_fields': extra_fields.keys(),
                'model_fields': model_fields.keys()}
@@ -491,24 +491,53 @@ def generate_container_serializer(model_fields, extra_fields, name,
     return type(name, (ContainerSerializer,), content)
 
 
-def generate_serializer(field_properties, name, bases=None, model=None,
+def generate_model_serializer(name, model, model_field_properties, bases=None):
+    field_properties, drf_fields = classify_model_fields(
+        model_field_properties)
+    if not (field_properties or drf_fields):
+        return None
+    drf_fields = drf_fields or {}
+    meta_cls_content = {
+        'model': model,
+        'fields': drf_fields.keys() + field_properties.keys(),
+        'extra_kwargs': field_properties,
+    }
+    cls_content = {
+        field_name: serializer
+        for field_name, serializer in drf_fields.iteritems()
+    }
+    custom_bases = map(utils.LOAD_CLASS, bases or [])
+    base_cls = tuple(custom_bases) + (ApimasModelSerializer,)
+    meta_cls = type('Meta', (object,), meta_cls_content)
+    cls_content['Meta'] = meta_cls
+    return type(name, base_cls, cls_content)
+
+
+def generate_serializer(name, drf_fields, bases=None,
                         instance_sources=None):
-    if not field_properties:
+    if not drf_fields:
         return None
     content = {}
-    for field_name, properties in field_properties.iteritems():
-        content[field_name] = properties
-    meta_cls_content = {'fields': field_properties.keys()}
-    base_classes = {
-        True: ApimasModelSerializer,
-        False: ApimasSerializer,
-    }
-    if model:
-        meta_cls_content['model'] = model
-    else:
-        content['instance_sources'] = instance_sources
+    meta_cls_content = {'fields': drf_fields.keys()}
     custom_bases = map(utils.LOAD_CLASS, bases or [])
-    base_cls = tuple(custom_bases) + (base_classes[bool(model)],)
+    base_cls = tuple(custom_bases) + (ApimasSerializer,)
+    content = {
+        field_name: serializer
+        for field_name, serializer in drf_fields.iteritems()
+    }
+    content['instance_sources'] = instance_sources
     meta_cls = type('Meta', (object,), meta_cls_content)
     cls_content = dict({'Meta': meta_cls}, **content)
     return type(name, base_cls, cls_content)
+
+
+def classify_model_fields(model_fields):
+    drf_fields = {}
+    field_properties = {}
+    for field_name, value in model_fields.iteritems():
+        if isinstance(value, serializers.Field):
+            drf_fields[field_name] = value
+        else:
+            assert isinstance(value, dict)
+            field_properties[field_name] = value
+    return field_properties, drf_fields

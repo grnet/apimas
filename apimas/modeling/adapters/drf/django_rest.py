@@ -9,7 +9,7 @@ from rest_framework.utils.field_mapping import get_relation_kwargs
 from apimas.modeling.core import documents as doc
 from apimas.modeling.adapters.drf import utils
 from apimas.modeling.adapters.drf.serializers import (
-    generate_container_serializer, generate_serializer)
+    generate_container_serializer, generate_model_serializer)
 from apimas.modeling.adapters.drf.views import generate_view
 from apimas.modeling.adapters.cookbooks import NaiveAdapter
 from apimas.modeling.adapters.drf.utils import (
@@ -221,9 +221,8 @@ class DjangoRestAdapter(NaiveAdapter):
         if onmodel:
             assert model, ('You cannot create a model serializer without'
                            ' specifying its model')
-            serializer = generate_serializer(
-                model_fields, name,
-                model=model, bases=model_serializers)
+            serializer = generate_model_serializer(
+                name, model, model_fields, bases=model_serializers)
         else:
             serializer = generate_container_serializer(
                 model_fields, extra_fields, name, model,
@@ -269,10 +268,11 @@ class DjangoRestAdapter(NaiveAdapter):
                 onmodel = True
             field_path = (self.ADAPTER_CONF, 'field')
             instance_path = (self.ADAPTER_CONF, 'source')
+            field = doc.doc_get(properties, field_path)
             if onmodel:
-                model_fields[field_name] = doc.doc_get(properties, field_path)
+                model_fields[field_name] = field
             else:
-                extra_fields[field_name] = doc.doc_get(properties, field_path)
+                extra_fields[field_name] = field
             instance_sources[field_name] = doc.doc_get(properties,
                                                        instance_path)
         return model_fields, extra_fields, instance_sources
@@ -312,10 +312,6 @@ class DjangoRestAdapter(NaiveAdapter):
         path = (self.ADAPTER_CONF,)
         instance_source = spec.pop('instance_source', None)
         field_kwargs = {k: v for k, v in spec.iteritems() if k != 'onmodel'}
-        if predicate_type == '.ref':
-            ref = doc.doc_get(instance, ('.ref', 'to'))
-            field_kwargs.update(
-                self.get_extra_ref_kwargs(loc[-2], model, ref))
         field_kwargs.update(doc.doc_get(instance, path) or {})
         doc.doc_set(instance, (self.ADAPTER_CONF, 'source'), instance_source)
         onmodel = spec.get('onmodel', True)
@@ -324,8 +320,11 @@ class DjangoRestAdapter(NaiveAdapter):
                 instance, loc, predicate_type, model, onmodel=onmodel,
                 **field_kwargs)
         else:
-            drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
-                **field_kwargs)
+            if not onmodel:
+                drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
+                    **field_kwargs)
+            else:
+                drf_field = field_kwargs
         doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
         return instance
 
