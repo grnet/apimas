@@ -11,10 +11,6 @@ from apimas.modeling.core.documents import ANY
 from apimas.modeling.adapters.drf import utils
 
 
-class AbortException(Exception):
-    pass
-
-
 def lookup_value(field_name, source, instance):
     """
     Similar to Python's built in `getattr(instance, attr)`,
