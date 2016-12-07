@@ -218,7 +218,8 @@ class ApimasClient(object):
                      ' uploading files`')
         if any(len(path) > 1 for path in paths):
             raise ex.ApimasClientException(error_msg)
-        if paths and any(type(v) is dict for _, v in data.iteritems()):
+        if paths and any(isinstance(v, (list, dict))
+                         for _, v in data.iteritems()):
             raise ex.ApimasClientException(error_msg)
         return {path[-1]: doc.doc_pop(data, path) for path in paths}
 
