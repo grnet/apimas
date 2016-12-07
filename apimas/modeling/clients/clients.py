@@ -437,3 +437,6 @@ class ApimasClientAdapter(NaiveAdapter):
         instance[self.ADAPTER_CONF].update(
             bound_field[field_type](field_schema))
         return instance
+
+    def construct_writeonly(self, instance, spec, loc, context):
+        return instance
