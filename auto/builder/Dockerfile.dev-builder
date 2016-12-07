@@ -1,0 +1,30 @@
+FROM dev-builder-base
+
+COPY jessie_backports.list /etc/apt/sources.list.d/jessie_backports.list
+
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y \
+        net-tools \
+        bind9-host \
+        vim \
+        openssh-client \
+        git \
+        python \
+        python-all \
+        python-setuptools \
+        debhelper \
+        virtualenv \
+        npm \
+        nodejs \
+        nodejs-legacy
+
+COPY home/ /root/
+
+#RUN useradd -d /home/builder -m -U builder
+#RUN chown builder:builder -R /home/builder
+#RUN mkdir /build && chown builder:builder /build
+
+ENV PATH /root/bin:${PATH}
+
+CMD /root/bin/build.sh

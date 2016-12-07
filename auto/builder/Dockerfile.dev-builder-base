@@ -1,0 +1,18 @@
+FROM debian
+
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y \
+        net-tools \
+        bind9-host \
+        vim \
+        openssh-client \
+        git \
+        python \
+        python-all \
+        python-setuptools \
+        debhelper \
+        virtualenv \
+        npm \
+        nodejs \
+        nodejs-legacy

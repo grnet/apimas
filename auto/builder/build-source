@@ -1,0 +1,18 @@
+#!/bin/sh
+
+help () {
+    echo "Usage: $0 <app_name> <remote_git_url> [<commit_or_tag>]"
+}
+
+appname="$1"
+remote="$2"
+commit="$3"
+
+if [ -z "${remote}" ]; then
+    help
+    exit 1
+fi
+
+container_name="build_source_$(date +'%Y%m%d%H%M%S')"
+docker run --name "${container_name}" dev-builder /root/bin/build.sh "${appname}" "${remote}" "${commit}"
+docker cp ${container_name}:/root/build .
