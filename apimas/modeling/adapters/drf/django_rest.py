@@ -289,14 +289,6 @@ class DjangoRestAdapter(NaiveAdapter):
             extra_serializers=extra_serializers, model=model)
         return serializer(many=many, **kwargs)
 
-    def get_extra_ref_kwargs(self, name, model, ref):
-        model_info = model_meta.get_field_info(model)
-        relation_info = model_info.relations[name]
-        kwargs = get_relation_kwargs(name, relation_info)
-        kwargs['view_name'] = '%s-detail' % (ref)
-        kwargs.pop('to_field', None)
-        return kwargs
-
     def construct_identity_field(self, instance, spec, loc, context,
                                  predicate_type):
         collection_name = loc[-4]
@@ -312,6 +304,9 @@ class DjangoRestAdapter(NaiveAdapter):
         path = (self.ADAPTER_CONF,)
         instance_source = spec.pop('instance_source', None)
         field_kwargs = {k: v for k, v in spec.iteritems() if k != 'onmodel'}
+        if predicate_type == '.ref':
+            ref = doc.doc_get(instance, ('.ref', 'to'))
+            field_kwargs.update({'view_name': '%s-detail' % (ref)})
         field_kwargs.update(doc.doc_get(instance, path) or {})
         doc.doc_set(instance, (self.ADAPTER_CONF, 'source'), instance_source)
         onmodel = spec.get('onmodel', True)
