@@ -4,8 +4,6 @@ from django.conf.urls import url, include
 from django.core.exceptions import FieldDoesNotExist
 from rest_framework import serializers
 from rest_framework import routers
-from rest_framework.utils import model_meta
-from rest_framework.utils.field_mapping import get_relation_kwargs
 from apimas.modeling.core import documents as doc
 from apimas.modeling.adapters.drf import utils
 from apimas.modeling.adapters.drf.serializers import (
