@@ -111,9 +111,8 @@ pip_cache=".pip_cache"
 mkdir -p "${pip_cache}" || true
 
 "${venv}"/bin/pip install --upgrade pip
-"${venv}"/bin/pip install stdeb
-"${venv}"/bin/pip install -r requirements_build.txt
 #"${venv}"/bin/pip install -r requirements.txt
+"${venv}"/bin/pip install -r requirements_build.txt
 
 debian_deps="$(cat debian_dependencies.txt)"
 stdeb_cfg="mkdeb-stdeb.cfg"
