@@ -191,12 +191,6 @@ class NaiveAdapter(Adapter):
         if properties != set(['.readonly']):
             raise ex.ApimasException(
                 '.identity field `%s` is always a readonly field' % (loc[-2]))
-        paths = doc.doc_search(context.get('top_spec'), '.drf_collection')
-        collection_path = loc[:-3]
-        if collection_path not in [p[:-1] for p in paths]:
-            raise ex.ApimasException(
-                '.identity field `%s` must identify the whole collection' % (
-                    loc[-2]))
         return instance
 
     def construct_blankable(self, instance, spec, loc, context):
