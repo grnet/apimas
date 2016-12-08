@@ -63,6 +63,11 @@ class ContainerSerializer(serializers.BaseSerializer):
         self.model_ser = None
         self.ser = None
         self.build_serializers()
+        # Bind child serializers to the parent
+        if self.ser is not None:
+            self.ser.bind(field_name='', parent=self)
+        if self.model_ser is not None:
+            self.model_ser.bind(field_name='', parent=self)
         self.contained_sers = [self.ser, self.model_ser]
 
     def _validate_configuration(self):
