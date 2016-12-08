@@ -57,6 +57,6 @@ for source_name in "${source_vars}"; do
         fi
     done
 
-    cmd git_repo.sh -i ~/.ssh/builder_dev_grnet.key ${remote_opt} ${commit_opt} ${name_opt}
+    cmd git_repo.sh ${remote_opt} ${commit_opt} ${name_opt}
     (cmd cd ${name}; cmd mkdeb -b production; cmd cp deb_dist/*deb ../../../build)
 done
