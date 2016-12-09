@@ -2,14 +2,61 @@ import requests
 from requests.exceptions import HTTPError
 from requests.compat import urljoin, quote
 from apimas.modeling.core import documents as doc, exceptions as ex
-from apimas.modeling.adapters.cookbooks import (
-    NaiveAdapter, default_constructor)
+from apimas.modeling.adapters.cookbooks import NaiveAdapter
 from apimas.modeling.clients.auth import ApimasClientAuth
 from apimas.modeling.clients.extensions import (
     RefNormalizer, DateNormalizer, DateTimeNormalizer, ApimasValidator)
 
 
 TRAILING_SLASH = '/'
+
+
+def get_subdocuments(document):
+    """ Get documents that are elements of lists of a parent document. """
+    subdocs = {}
+    for k, v in document.iteritems():
+        if isinstance(v, list):
+            subdocs[k] = filter((lambda x: isinstance(x, dict)), v)
+        elif isinstance(v, dict):
+            for key, value in get_subdocuments(v).iteritems():
+                subdocs[k + '/' + key] = value
+    return subdocs
+
+
+def to_cerberus_paths(data):
+    """
+    This utility function creates the corresponding paths of a cerberus
+    validation schema which are respondible for validating the given data.
+
+    Example:
+    data = {
+        'foo': {
+            'bar': 'value'
+        },
+        'bar': 'value'
+    }
+
+    paths = ['foo/schema/bar', 'bar']
+
+    :param data: Dictionary of data.
+
+    :returns: A list of paths.
+    """
+    if not data:
+        return []
+    cerberus_paths = []
+    for k, v in data.iteritems():
+        cerberus_nodes = [k]
+        if isinstance(v, list):
+            continue
+        if isinstance(v, dict):
+            nodes = to_cerberus_paths(v)
+            for node in nodes:
+                cerberus_paths.append(
+                    '/'.join((cerberus_nodes + ['schema', node])))
+        else:
+            cerberus_paths.append('/'.join(cerberus_nodes))
+    return cerberus_paths
 
 
 def handle_exception(func):
@@ -162,7 +209,48 @@ class ApimasClient(object):
         return urljoin(self.endpoint, quote(
             str(resource_id))) + TRAILING_SLASH
 
-    def partial_validate(self, data, raise_exception=True):
+    def _validate_subdata(self, data, schema, raise_exception):
+        """
+        This function partially validates subdata of request.
+
+        Subdata are considered nested data which are elements of lists.
+
+        Example:
+
+        data = {
+            'foo': [
+                {'foo': 'value'},
+                {'bar': 'value'},
+            ]
+        }
+
+        This function partial validates them according to their specified
+        fields.
+
+        :returns: A dictionary of validated subdata, with the path of their
+        location to the parent document as keys.
+        """
+        subdocs = get_subdocuments(data)
+        validated = {}
+        for k, v in subdocs.iteritems():
+            path = k.split('/')
+            cerberus_path = []
+            for u in path:
+                cerberus_path.extend([u, 'schema'])
+            subdata = doc.doc_pop(data, path)
+            subschema = doc.doc_pop(schema, cerberus_path[:-1]) or {}
+            subschema = subschema.get('schema', {}).get('schema', {})
+            if not subschema:
+                raise ex.ApimasClientException(
+                    'Field `%s` cannot be validated' % (str(tuple(path))))
+            validated_docs = []
+            for subdoc in subdata:
+                validated_docs.append(self.partial_validate(
+                    subdoc, raise_exception, subschema))
+            validated[tuple(path)] = validated_docs
+        return validated
+
+    def partial_validate(self, data, raise_exception=True, schema=None):
         """
         Validates data that are going to be sent for a partial update of a
         resource.
@@ -173,12 +261,20 @@ class ApimasClient(object):
         :param raise_exception: True if an exception should be raised when
         validation fails.
         """
-        partial_schema = {k: v for k, v in self.validation_schema.iteritems()
-                          if k in data}
+        schema = schema or self.validation_schema
+        cerberus_paths = to_cerberus_paths(data)
+        validated_subdocs = self._validate_subdata(
+            data, schema, raise_exception)
+        partial_schema_paths = {
+            path: doc.doc_get(schema, path.split('/'))
+            for path in cerberus_paths}
+        partial_schema = doc.doc_from_ns(partial_schema_paths)
         validator = ApimasValidator(partial_schema)
         is_valid = validator.validate(data)
         if raise_exception and not is_valid:
             raise ex.ApimasClientException(validator.errors)
+        for k, v in validated_subdocs.iteritems():
+            doc.doc_set(validator.document, k, v)
         return validator.document
 
     def validate(self, data, raise_exception=True):

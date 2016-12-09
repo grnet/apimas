@@ -2,9 +2,10 @@ import unittest
 import mock
 from requests.exceptions import HTTPError
 from apimas.modeling.clients import (
-    ApimasClient, requests)
+    ApimasClient, requests, get_subdocuments, to_cerberus_paths)
 from apimas.modeling.clients.auth import HTTPTokenAuth, ApimasClientAuth
 from apimas.modeling.core.exceptions import ApimasClientException
+from apimas.modeling.tests.helpers import create_mock_object
 
 
 class TestClients(unittest.TestCase):
@@ -41,6 +42,15 @@ class TestClients(unittest.TestCase):
             'field2': {
                 'type': 'string',
                 'required': True
+            },
+            'field3': {
+                'type': 'dict',
+                'schema': {
+                    'field4': {
+                        'type': 'string',
+                        'required': True,
+                    }
+                }
             }
         }
         self.client = ApimasClient('http://endpoint/', {})
@@ -54,6 +64,49 @@ class TestClients(unittest.TestCase):
                 raise_exception=True, data={'field1': 'foo'})
         except ApimasClientException:
             self.fail()
+
+        data['field3'] = {'field4': 10}
+        self.assertRaises(ApimasClientException, self.client.partial_validate,
+                          raise_exception=True, data=data)
+
+    def test_partial_validate_sub(self):
+        mock_client = create_mock_object(
+            ApimasClient, ['_validate_subdata'])
+        nested_schema = {
+            'type': 'dict',
+            'schema': {
+                'field2': {
+                    'type': 'string',
+                    'required': True,
+                },
+                'field3': {
+                    'type': 'string',
+                    'required': True,
+                }
+            }
+        }
+        validation_schema = {
+            'field': {
+                'type': 'list',
+                'schema': nested_schema
+            },
+            'field2': {
+                'type': 'list',
+                'schema': nested_schema,
+            }
+        }
+        sub = {'field1': 'foo'}
+        data = {'unknown': [sub]}
+        self.assertRaises(ApimasClientException, mock_client._validate_subdata,
+                          mock_client, data, validation_schema, False)
+        mock_client.partial_validate.assert_not_called
+
+        data = {'field': [sub], 'field2': [sub]}
+        mock_client.partial_validate.return_value = sub
+        validated = mock_client._validate_subdata(
+            mock_client, data, validation_schema, raise_exception=False)
+        self.assertEquals(validated, {('field',): [sub], ('field2',): [sub]})
+        mock_client.partial_validate.assert_called
 
     def test_extract_files(self):
         mock_file = mock.MagicMock(spec=file)
@@ -95,6 +148,28 @@ class TestClients(unittest.TestCase):
         self.assertEqual(len(data), 2)
         self.assertIsNotNone(data['files'])
         self.assertIsNotNone(data['data'])
+
+    def test_get_subdocuments(self):
+        doc = {'foo': 'bar'}
+        self.assertEquals(get_subdocuments(doc), {})
+        doc_b = {'a': {'b': {'c': [doc, doc]}, 'd': [doc]}}
+        output = {
+            'a/b/c': [doc, doc],
+            'a/d': [doc],
+        }
+        self.assertEquals(get_subdocuments(doc_b), output)
+
+    def test_to_cerberus_paths(self):
+        doc = {'a': {'b': {'c': {'foo': 1, 'bar': 2}}, 'd': 1}, 'b': []}
+        output = [
+            'a/schema/b/schema/c/schema/foo',
+            'a/schema/b/schema/c/schema/bar',
+            'a/schema/d'
+        ]
+        self.assertEquals(to_cerberus_paths(doc), output)
+
+        doc = {}
+        self.assertEquals(to_cerberus_paths(doc), [])
 
 
 class TestAuth(unittest.TestCase):
