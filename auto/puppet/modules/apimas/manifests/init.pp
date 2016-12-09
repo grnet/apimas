@@ -57,6 +57,17 @@ class apimas (
         before => Apimas::Apache_site["${server_name}"],
     }
 
+    apimas::pin {
+        version => "2.5.*",
+        before => Apimas::Apache_site["${server_name}"],
+    }
+
+    package { 'python-psycopg2':
+        ensure => installed,
+        require => Apimas::Pin['python-psycopg2'],
+        before => Apimas::Apache_site["${server_name}"],
+    }
+
     #apimas::pin { 'nginx':
     #    version => "1.6.*",
     #    before => Nginx_site["${server_name}"],
