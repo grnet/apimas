@@ -140,7 +140,7 @@ class apimas (
         require => Package['apache2'],
     }
 
-    file { '/etc/apache/sites-enabled/default':
+    file { '/etc/apache/sites-enabled/000-default.conf':
         ensure => absent,
         notify => Service['apache2'],
     }
