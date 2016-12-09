@@ -41,17 +41,6 @@ class apimas (
     $ssl_cert,
     $ssl_key,
 ) {
-    #apimas::pin { 'nginx':
-    #    version => "1.6.*",
-    #    before => Nginx_site["${server_name}"],
-    #}
-
-    #package { 'nginx':
-    #    ensure => installed,
-    #    require => Apimas::Pin['nginx'],
-    #    before => Nginx_site["${server_name}"],
-    #}
-
     apimas::pin { 'python-django':
         version => "1.8.*",
         before => Apimas::Apache_site["${server_name}"],
@@ -67,6 +56,17 @@ class apimas (
         require => Apimas::Pin['python-django'],
         before => Apimas::Apache_site["${server_name}"],
     }
+
+    #apimas::pin { 'nginx':
+    #    version => "1.6.*",
+    #    before => Nginx_site["${server_name}"],
+    #}
+
+    #package { 'nginx':
+    #    ensure => installed,
+    #    require => Apimas::Pin['nginx'],
+    #    before => Nginx_site["${server_name}"],
+    #}
 
     apimas::pin { 'apache2':
         version => "2.4.*",
@@ -130,18 +130,8 @@ class apimas (
     #    require => Package['nginx'],
     #}
 
-    #file { '/etc/nginx/sites-enabled/default':
-    #    ensure => absent,
-    #    notify => Service['nginx'],
-    #}
-
     service { 'apache2':
         ensure => running,
         require => Package['apache2'],
-    }
-
-    file { '/etc/apache/sites-enabled/000-default.conf':
-        ensure => absent,
-        notify => Service['apache2'],
     }
 }

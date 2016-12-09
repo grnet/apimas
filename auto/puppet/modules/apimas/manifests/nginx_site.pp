@@ -32,6 +32,11 @@ define apimas::nginx_site (
         notify => Service['nginx'],
     }
 
+    #file { '/etc/nginx/sites-enabled/default':
+    #    ensure => absent,
+    #    notify => Service['nginx'],
+    #}
+
     file { "/etc/ssl/certs/${server_name}.pem":
         ensure => file,
         owner => "root",

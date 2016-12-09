@@ -5,7 +5,6 @@ define apimas::apache_site (
     $apache_root = "/etc/apache2",
     $srv_root = "/var/www",
 ) {
-
     exec { "${apache_root}/sites-available/apimas.conf-a2enmod-alias":
         command => "/usr/sbin/a2enmod alias",
         before => File["${apache_root}/sites-available/apimas.conf"],
@@ -61,6 +60,11 @@ define apimas::apache_site (
     file { "${apache_root}/sites-enabled/apimas.conf":
         ensure => link,
         target => "../sites-available/apimas.conf",
+        notify => Service['apache2'],
+    }
+
+    file { '/etc/apache2/sites-enabled/000-default.conf':
+        ensure => absent,
         notify => Service['apache2'],
     }
 
