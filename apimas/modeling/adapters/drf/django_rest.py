@@ -93,12 +93,18 @@ class DjangoRestAdapter(NaiveAdapter):
         self.views = {}
 
     def get_views(self):
+        """ Get `ViewSet`classes for every collection. """
         return self.views
 
     def get_serializers(self):
+        """ Get `Serializer`classes for every collection. """
         return self.serializers
 
     def get_class(self, class_container, collection):
+        """
+        Utitily method for getting the generated class based on the given
+        collection.
+        """
         if not class_container:
             raise utils.DRFAdapterException(
                 'Classes have not been constructed yet. Run %s.construct()' % (
@@ -109,9 +115,11 @@ class DjangoRestAdapter(NaiveAdapter):
         return class_container[collection]
 
     def get_serializer(self, collection):
+        """ Get `Serializer` class based on the given collection. """
         return self.get_class(self.serializers, collection)
 
     def get_view(self, collection):
+        """ Get `ViewSet` class based on the given collection. """
         return self.get_class(self.views, collection)
 
     def apply(self):
@@ -187,12 +195,8 @@ class DjangoRestAdapter(NaiveAdapter):
 
         Typically, permission rules are provided at a global scope. Then,
         this method, actually matches all permissions rules which are applied
-        to a specific collection and then it routes all matches to the
-        corresponding path.
-
-        For instance, permission rules applied to collection named
-        `mycollection`, they are carried to the path:
-        path = (`api`, `mycollection`, `conf`,` permissions`)
+        to a specific collection and then it returns all permissions that
+        are compatible and apply on the collection.
         """
         permission_path = ('.endpoint', 'permissions')
         nu_columns = 6
@@ -214,6 +218,17 @@ class DjangoRestAdapter(NaiveAdapter):
     def generate_serializer(self, field_schema, name, model=None,
                             onmodel=False, model_serializers=None,
                             extra_serializers=None):
+        """
+        Generate a `Serializer` class to serve the given `field_schema`.
+
+        There are two scenarios:
+
+        * If `field_schema` only consists of model fields and `onmodel` flag
+          is specified as True, then a `ModelSerializer` class is generated.
+        * If `field_schema` consists of non-model fields or a mixture of
+          model fields and non-model fields, then a `ContainerSerializer` class
+          is created.
+        """
         model_fields, extra_fields, sources = self._classify_fields(
             field_schema)
         if onmodel:
@@ -233,8 +248,9 @@ class DjangoRestAdapter(NaiveAdapter):
         """
         Constructor for `.drf_collection` predicate.
 
-        Aggregates constructed field schema and actions in order to form
-        schema of a specific resource.
+        It generates the required, `Serializer` class, and `ViewSet` class
+        based on the field schema, actions, permissions and additional
+        configuation (filter_fields, mixins) as specified on spec.
         """
         if self.ADAPTER_CONF not in instance:
             raise doc.DeferConstructor
@@ -257,6 +273,12 @@ class DjangoRestAdapter(NaiveAdapter):
         return instance
 
     def _classify_fields(self, field_schema):
+        """
+        Seperates the model fields fro the non-model fields.
+
+        It also returns a dictionary of instance sources (if they are exist)
+        for the non-model fields.
+        """
         model_fields = {}
         extra_fields = {}
         instance_sources = {}
@@ -277,6 +299,9 @@ class DjangoRestAdapter(NaiveAdapter):
 
     def generate_nested_drf_field(self, instance, loc, predicate_type, model,
                                   onmodel=True, **kwargs):
+        """
+        Generate a nested drf field, which is actually a `Serializer` class.
+        """
         field_schema = doc.doc_get(instance, (predicate_type,))
         many = predicate_type == '.structarray'
         model_serializers = kwargs.pop('model_serializers', [])
@@ -289,6 +314,7 @@ class DjangoRestAdapter(NaiveAdapter):
 
     def construct_identity_field(self, instance, spec, loc, context,
                                  predicate_type):
+        """ Construct an `.identity` field. """
         collection_name = loc[-4]
         drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
             view_name='%s-detail' % (collection_name))
@@ -297,6 +323,20 @@ class DjangoRestAdapter(NaiveAdapter):
 
     def default_field_constructor(self, instance, spec, loc, context,
                                   predicate_type):
+        """
+        A common constructor for the drf fields.
+
+        There are two cases:
+        * If the field is a model field, then it does not initialize a
+          `serializers.Field` object, but it stores all its properties in
+          dictionary in order to be initialized later from the serializer.
+        * If the field is a non-model field or its type is either `.struct`
+          or `.structarry`, then the corresponding `serializers.Field` is
+          contructed.
+
+        Moreover, this method checks if the field conforms to the model
+        configuations before being constructed.
+        """
         model = self.validate_model_configuration(
             instance, spec, loc, context, predicate_type)
         path = (self.ADAPTER_CONF,)
@@ -323,6 +363,12 @@ class DjangoRestAdapter(NaiveAdapter):
 
     def validate_model_configuration(self, instance, spec, loc, context,
                                      predicate_type):
+        """
+        Validates that the instance, that is a field, conforms to the
+        model configuration.
+
+        For instance, a model field must correspond to a django model field.
+        """
         onmodel = spec.get('onmodel', True)
         source = spec.get('source')
         top_spec = context.get('top_spec')
