@@ -13,9 +13,14 @@ from apimas.modeling.adapters.drf import utils
 
 def lookup_value(field_name, source, instance):
     """
-    Similar to Python's built in `getattr(instance, attr)`,
-    but takes a list of nested attributes, instead of a single attribute.
-    Also accepts either attribute lookup on objects or dictionary lookups.
+    Get the actual value of a non-model field from the specified source.
+
+    The `source` is expected to be a string that indicates the location of
+    a callable.
+
+    Subsequently, this function imports this callable. This callable takes
+    the instance a parameter and it must return the python value of this
+    field.
     """
     if instance is None:
         return instance
@@ -54,6 +59,18 @@ def get_paths(serializer_fields):
 
 
 class ContainerSerializer(serializers.BaseSerializer):
+    """
+    This class represents a `ContainerSerializer`.
+
+    A `ContainerSerializer` consists of two child serializer, that is an
+    `ModelSerializer` for saving model data, and a `Serializer` which is
+    responsible for non-model data.
+
+    This class is not actually responsible for the saving, serializing,
+    deserializing and validation of data. This is responsibility of child
+    serializers. The `ContainerSerializer`, however, it combines the output of
+    child serializers.
+    """
     model_ser_cls = None
 
     ser_cls = None
@@ -114,6 +131,8 @@ class ContainerSerializer(serializers.BaseSerializer):
             return None
         kwargs = {}
         if hasattr(self, 'initial_data'):
+            # Route initial data to the corresponding child serializer, e.g.
+            # model data --> ModelSerializer.
             initial_data = self.initial_data or {}
             data = {k: v for k, v in initial_data.iteritems()
                     if k in fields}
@@ -480,6 +499,10 @@ def generate_container_serializer(model_fields, extra_fields, name,
                                   model, model_serializers=None,
                                   extra_serializers=None,
                                   instance_sources=None):
+    """
+    Generates a `ContainerSerializer`. It also generates the required
+    child serializer based on the given `model_fields` and `extra_fields`.
+    """
     model_serializer = generate_model_serializer(
         name, model, model_fields, bases=model_serializers)
     serializer = generate_serializer(
@@ -496,9 +519,17 @@ def generate_container_serializer(model_fields, extra_fields, name,
     return type(name, (ContainerSerializer,), content)
 
 
-def generate_model_serializer(name, model, model_field_properties, bases=None):
+def generate_model_serializer(name, model, model_fields, bases=None):
+    """
+    Generates a `ModelSerializer` given the model_fields.
+
+    The specified `model_fields` is a tuple of model fields properties and
+    the already created drf_fields. The former are passed to the `Meta` class
+    of serializer in order to be created afterwards, whereas the latter are
+    specified directly to the serializer class.
+    """
     field_properties, drf_fields = classify_model_fields(
-        model_field_properties)
+        model_fields)
     if not (field_properties or drf_fields):
         return None
     drf_fields = drf_fields or {}
@@ -524,19 +555,20 @@ def generate_serializer(name, drf_fields, bases=None,
         return None
     content = {}
     meta_cls_content = {'fields': drf_fields.keys()}
-    custom_bases = map(utils.LOAD_CLASS, bases or [])
-    base_cls = tuple(custom_bases) + (ApimasSerializer,)
     content = {
         field_name: serializer
         for field_name, serializer in drf_fields.iteritems()
     }
     content['instance_sources'] = instance_sources
+    custom_bases = map(utils.LOAD_CLASS, bases or [])
+    base_cls = tuple(custom_bases) + (ApimasSerializer,)
     meta_cls = type('Meta', (object,), meta_cls_content)
     cls_content = dict({'Meta': meta_cls}, **content)
     return type(name, base_cls, cls_content)
 
 
 def classify_model_fields(model_fields):
+    """ Seperate already initialized drf_fields from the rest. """
     drf_fields = {}
     field_properties = {}
     for field_name, value in model_fields.iteritems():
