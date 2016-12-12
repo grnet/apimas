@@ -1,0 +1,14 @@
+<% @app_endpoints.each do |app_endpoint| -%>
+ProxyPass               /<%= @api_name %>/api/  http://<%= app_endpoint %>/<%= @api_name %>/api/ retry=0
+ProxyPassReverse        /                       http://<%= app_endpoint %>/<%= @api_name %>/api/
+<% end -%>
+
+Alias /<%= @api_name %>/static/ <%= @lib_root %>/<%= @api_name %>/resources/www/static/
+<Directory <%= @lib_root %>/<%= @api_name %>/resources/www/ui/>
+    DirectoryIndex index.html
+    AllowOverride None
+    Order allow,deny
+    Allow from all
+    Require all granted
+</Directory>
+Alias /<%= @api_name %>/ui/ <%= @lib_root %>/<%= @api_name %>/resources/www/ui/

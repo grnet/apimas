@@ -1,0 +1,16 @@
+CONFIG = {
+    'mode': 'wsgi',
+    'working_dir': '<%= @etc_root %>/<%= @api_name %>/',
+    'user': '<%= @api_name %>',
+    'group': '<%= @api_name %>',
+    'args': (
+        '--log-level=<%= @debug_level %>',
+        '--log-file=<%= @srv_root %>/<%= @api_name %>/data/gunicorn.log',
+        '--bind=<%= @app_address %>',
+        '--workers=<%= @app_workers %>',
+        '--reload',
+        #'--worker-class=egg:gunicorn#sync',
+        # '--timeout=30',
+        '<%= @wsgi_app %>',
+    ),
+}

@@ -1,0 +1,33 @@
+#!/usr/bin/env python
+import json
+import sys
+
+with open('<%= @source_path %>/package_requirements_debian.json') as f:
+    packages = json.load(f)
+
+out = sys.stdout
+
+pin_template = """apimas::pin {'%s':
+    version => '%s',
+}
+"""
+
+package_template_pin = """package {'%s':
+    ensure => installed,
+    require => Apimas::Pin['%s'],
+}
+"""
+
+package_template_nopin = """package {'%s':
+    ensure => installed,
+}
+"""
+
+
+for name, version in packages.iteritems():
+    if version:
+        out.write(pin_template % (name, version))
+        out.write(package_template_pin % (name, name))
+    else:
+        out.write(package_template_nopin % (name))
+    out.write('\n')

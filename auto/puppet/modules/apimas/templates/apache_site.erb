@@ -1,0 +1,65 @@
+<VirtualHost  *:80>
+    ServerName              <%= @server_name %>
+    ServerAdmin             webmaster@<%= @server_name %>
+    ServerSignature         Off
+
+    DocumentRoot <%= @srv_root %>/<%= @server_name %>
+
+    <Directory <%= @srv_root %>/<%= @server_name %>>
+            Options none
+            AllowOverride None
+            Allow from all
+            Require all granted
+    </Directory>
+
+    CustomLog /var/log/apache2/<%= @server_name %>-access.log combined
+    ErrorLog /var/log/apache2/<%= @server_name %>-error.log
+
+    LogLevel warn
+
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/server-status.* [NC]
+    RewriteCond %{HTTPS} off
+    RewriteRule ^/(.*) https://<%= @server_name %>/$1 [L,R]
+</VirtualHost>
+
+<VirtualHost _default_:443>
+    ServerName              <%= @server_name %>
+    ServerAdmin             webmaster@<%= @server_name %>
+    ServerSignature         Off
+
+    DocumentRoot <%= @srv_root %>/<%= @server_name %>
+
+    <Directory <%= @srv_root %>/<%= @server_name %>>
+            Options none
+            AllowOverride None
+            Allow from all
+            Require all granted
+    </Directory>
+
+    CustomLog /var/log/apache2/<%= @server_name %>-access.log combined
+    ErrorLog /var/log/apache2/<%= @server_name %>-error.log
+
+    LogLevel debug
+
+    SSLEngine on
+    <FilesMatch "\.(cgi|shtml|phtml|php)$">
+                    SSLOptions +StdEnvVars
+    </FilesMatch>
+    <Directory /usr/lib/cgi-bin>
+                    SSLOptions +StdEnvVars
+    </Directory>
+
+    BrowserMatch "MSIE [2-6]" \
+                    nokeepalive ssl-unclean-shutdown \
+                    downgrade-1.0 force-response-1.0
+    # MSIE 7 and newer should be able to use keepalive
+    BrowserMatch "MSIE [17-9]" ssl-unclean-shutdown
+
+    SSLCACertificatePath    /etc/ssl/certs/
+    SSLCertificateFile      /etc/ssl/certs/<%= @server_name %>.pem
+    SSLCertificateKeyFile   /etc/ssl/private/<%= @server_name %>.key
+    #SSLCertificateChainFile /etc/ssl/<%= @server_name %>.chain
+
+    IncludeOptional apimas-locations/*.conf
+</VirtualHost>

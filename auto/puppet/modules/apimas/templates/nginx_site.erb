@@ -1,0 +1,24 @@
+server {
+        listen 80;
+        server_name <%= @server_name %>;
+        root /srv/nossl;
+        return 302 https://$host$request_uri;
+}
+
+include /etc/nginx/apimas-upstreams/*.conf;
+
+server {
+        listen 443 ssl;
+        server_name <%= @server_name %>;
+
+        root /srv/<%= @server_name %>;
+        index index.html index.htm;
+
+        ssl_certificate /etc/ssl/certs/<%= @server_name %>.pem;
+        ssl_certificate_key /etc/ssl/private/<%= @server_name %>.key;
+
+        location = /favicon.ico { access_log off; log_not_found off; }
+
+        include /etc/nginx/apimas-locations/*.conf;
+}
+
