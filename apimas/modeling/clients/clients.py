@@ -389,17 +389,17 @@ class ApimasClientAdapter(NaiveAdapter):
     def get_clients(self):
         return self.clients
 
-    def get_client(self, resource):
+    def get_client(self, collection):
         """
         Retrieve client according to resource name.
 
         :raises: ApimasException if client is not found for the selected
         resource.
         """
-        if resource not in self.clients:
+        if collection not in self.clients:
             raise ex.ApimasException(
-                'Client not found for resource `%s`' % (resource))
-        return self.clients[resource]
+                'Client not found for resource `%s`' % (collection))
+        return self.clients[collection]
 
     def apply(self):
         """
@@ -428,6 +428,8 @@ class ApimasClientAdapter(NaiveAdapter):
         This constructor aims to aggregate the cerberus validation schemas
         for every single field defined by the collection.
         """
+        instance = super(self.__class__, self).construct_collection(
+            instance, spec, loc, context)
         self.init_adapter_conf(instance)
         schema = {field_name: schema.get(self.ADAPTER_CONF, {})
                   for field_name, schema in doc.doc_get(
@@ -451,10 +453,9 @@ class ApimasClientAdapter(NaiveAdapter):
             raise ex.ApimasException(
                 'You have to specify field type for field `%s`' % (loc[-2]))
         self.init_adapter_conf(instance)
-        for k in nested_structures:
-            if k in instance:
-                return self.construct_nested_field(
-                    instance, spec, loc, context, k)
+        if field_type in nested_structures:
+            return self.construct_nested_field(
+                instance, spec, loc, context, field_type)
         method_name = '_add_' + field_type[1:] + '_params'
         params = doc.doc_get(instance, (field_type,))
         return getattr(self, method_name, default)(

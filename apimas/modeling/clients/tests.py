@@ -1,11 +1,16 @@
+import datetime
 import unittest
 import mock
 from requests.exceptions import HTTPError
+from apimas.modeling.clients import extensions as ext
 from apimas.modeling.clients import (
-    ApimasClient, requests, get_subdocuments, to_cerberus_paths)
+    ApimasClient, ApimasClientAdapter, requests, get_subdocuments,
+    to_cerberus_paths, TRAILING_SLASH)
 from apimas.modeling.clients.auth import HTTPTokenAuth, ApimasClientAuth
-from apimas.modeling.core.exceptions import ApimasClientException
+from apimas.modeling.core.exceptions import (
+    ApimasException, ApimasClientException)
 from apimas.modeling.tests.helpers import create_mock_object
+from apimas.modeling.adapters.cookbooks import NaiveAdapter
 
 
 class TestClients(unittest.TestCase):
@@ -170,6 +175,176 @@ class TestClients(unittest.TestCase):
 
         doc = {}
         self.assertEquals(to_cerberus_paths(doc), [])
+
+
+class TestClientAdapter(unittest.TestCase):
+    def setUp(self):
+        self.adapter_conf = ApimasClientAdapter.ADAPTER_CONF
+
+    def test_get_client(self):
+        mock_client = create_mock_object(ApimasClientAdapter, ['get_client'])
+        mock_client.clients = {}
+        self.assertRaises(ApimasException, mock_client.get_client,
+                          mock_client, 'collection')
+        mock_clients = {'collection': 'value'}
+        mock_client.clients = mock_clients
+        value = mock_client.get_client(mock_client, 'collection')
+        self.assertEquals(value, mock_clients['collection'])
+
+    @mock.patch(
+        'apimas.modeling.adapters.cookbooks.NaiveAdapter.construct_collection')
+    def test_construct_collection(self, mock_constructor):
+        mock_client = create_mock_object(
+            ApimasClientAdapter, ['construct_collection', 'ADAPTER_CONF'],
+            ismagic=True)
+        mock_client.__class__.__bases__ = (NaiveAdapter,)
+        mock_instance = {
+            '*': {
+                'field1': {
+                    self.adapter_conf: {'foo': 'bar'},
+                    'another': {},
+                },
+                'field2': {
+                    self.adapter_conf: {'bar': 'foo'},
+                }
+            }
+        }
+        loc = ('api', 'collection', '.collection')
+        mock_constructor.return_value = mock_instance
+        instance = mock_client.construct_collection(
+            mock_client, mock_instance, {}, loc, context={})
+        self.assertEqual(len(instance), 2)
+        instance_conf = instance.get(mock_client.ADAPTER_CONF)
+        self.assertIsNotNone(instance_conf)
+        self.assertEqual(instance_conf['field1'], {'foo': 'bar'})
+        self.assertEqual(instance_conf['field2'], {'bar': 'foo'})
+        mock_constructor.assert_called_once
+
+    def test_construct_field(self):
+        mock_instance = {'foo': {'bar': {}}}
+        mock_loc = ('foo', 'bar')
+        mock_client = create_mock_object(ApimasClientAdapter,
+                                         ['construct_field', 'ADAPTER_CONF'])
+        mock_client.init_adapter_conf.return_value = mock_instance
+        mock_client.extract_type.return_value = None
+        self.assertRaises(ApimasException, mock_client.construct_field,
+                          mock_client, mock_instance, {}, mock_loc, {})
+        mock_client.extract_type.assert_called_once_with(mock_instance)
+
+        nested_structures = {'.struct', '.structarray'}
+        expected = {'foo'}
+        mock_client.construct_nested_field.return_value = expected
+        for structure in nested_structures:
+            mock_client.extract_type.return_value = structure
+            instance = mock_client.construct_field(
+                mock_client, mock_instance, {}, mock_loc, {})
+            self.assertEqual(instance, expected)
+            mock_client.construct_nested_field.assert_called
+            mock_client.init_adapter_conf.assert_called_with(mock_instance)
+            mock_client.extract_type.assert_called_with(mock_instance)
+
+        mock_client.extract_type.return_value = 'foo'
+        instance = mock_client.construct_field(
+            mock_client, mock_instance, {}, mock_loc, {})
+        mock_client.init_adapter_conf.assert_called_with(mock_instance)
+        mock_client.extract_type.assert_called_with(mock_instance)
+
+    @mock.patch('apimas.modeling.clients.clients.RefNormalizer')
+    @mock.patch(
+        'apimas.modeling.adapters.cookbooks.NaiveAdapter.construct_ref')
+    def test_construct_ref(self, mock_constructor, mock_normalizer):
+        mock_root_url = 'mock'
+        mock_client = create_mock_object(ApimasClientAdapter,
+                                         ['construct_ref', 'ADAPTER_CONF'])
+        mock_client.__class__.__bases__ = (NaiveAdapter,)
+        mock_client.root_url = mock_root_url
+        mock_loc = ('foo', 'bar')
+        mock_instance = {self.adapter_conf: {}}
+        mock_constructor.return_value = mock_instance
+        spec = {'to': 'foo'}
+        instance = mock_client.construct_ref(
+            mock_client, mock_instance, spec, mock_loc, {})
+        self.assertEqual(len(instance), 1)
+        instance_conf = instance.get(mock_client.ADAPTER_CONF)
+        self.assertIsNotNone(instance_conf)
+        self.assertTrue(isinstance(instance_conf['coerce'], mock.MagicMock))
+        mock_normalizer.assert_called_once_with(
+            TRAILING_SLASH.join((mock_root_url, mock_loc[0], 'foo', '')))
+
+        spec['many'] = True
+        instance = mock_client.construct_ref(
+            mock_client, mock_instance, spec, mock_loc, {})
+        self.assertEqual(len(instance), 1)
+        instance_conf = instance.get(mock_client.ADAPTER_CONF)
+        self.assertIsNotNone(instance_conf)
+        self.assertEqual(len(instance_conf), 2)
+        self.assertEqual(instance_conf['type'], 'list')
+        self.assertTrue(isinstance(instance_conf['schema']['coerce'],
+                        mock.MagicMock))
+        mock_normalizer.assert_called_with(
+            TRAILING_SLASH.join((mock_root_url, mock_loc[0], 'foo', '')))
+
+    def test_construct_nested_field(self):
+        mock_loc = ('foo', 'bar')
+        mock_client = create_mock_object(
+            ApimasClientAdapter, ['construct_nested_field', 'ADAPTER_CONF'])
+        schema = {
+            'field1': {
+                self.adapter_conf: {'foo': 'bar'},
+                'another': {},
+            },
+            'field2': {
+                self.adapter_conf: {'bar': 'foo'},
+            }
+        }
+        mock_instance = {'.struct': schema, self.adapter_conf: {}}
+        instance = mock_client.construct_nested_field(
+            mock_client, mock_instance, {}, mock_loc, {}, '.struct')
+        self.assertEqual(len(instance), 2)
+        instance_conf = instance.get(mock_client.ADAPTER_CONF)
+        self.assertIsNotNone(instance_conf)
+        self.assertEqual(instance_conf['type'], 'dict')
+        self.assertEqual(instance_conf['schema'], {'field1': {'foo': 'bar'},
+                                                   'field2': {'bar': 'foo'}})
+
+        mock_instance = {'.structarray': schema, self.adapter_conf: {}}
+        instance = mock_client.construct_nested_field(
+            mock_client, mock_instance, {}, mock_loc, {}, '.structarray')
+        self.assertEqual(len(instance), 2)
+        instance_conf = instance.get(mock_client.ADAPTER_CONF)
+        self.assertIsNotNone(instance_conf)
+        self.assertEqual(instance_conf['type'], 'list')
+
+        schema = instance_conf['schema']
+        self.assertEqual(schema['type'], 'dict')
+        self.assertEqual(schema['schema'], {'field1': {'foo': 'bar'},
+                                            'field2': {'bar': 'foo'}})
+
+
+class TestExtensions(unittest.TestCase):
+    def test_ref_normalizer(self):
+        normalizer = ext.RefNormalizer('http://root.com')
+        url = normalizer('value')
+        self.assertEqual(url, 'http://root.com/value/')
+
+        self.assertIsNone(normalizer(None))
+
+    def test_datetime_normalizer(self):
+        now = datetime.datetime.now()
+        now_date = now.date()
+
+        now_str = '%s-%s-%s %s:%s' % (
+            now.year, now.month, now.day, now.hour, now.minute)
+        now_date_str = '%s-%s-%s 00:00' % (now.year, now.month, now.day)
+
+        normalizer = ext.DateNormalizer('%Y-%m-%d %H:%M')
+        self.assertEqual(normalizer(now), now_str)
+        self.assertEqual(normalizer(now_date), now_date_str)
+
+        self.assertEqual(normalizer(now_str), now_str)
+        self.assertEqual(normalizer(now_date_str), now_date_str)
+
+        self.assertRaises(ValueError, normalizer, 'invalid str')
 
 
 class TestAuth(unittest.TestCase):
