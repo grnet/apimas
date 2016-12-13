@@ -11,7 +11,7 @@ class Json(click.ParamType):
         try:
             return json.loads(value)
         except ValueError as e:
-            self.fail(e)
+            self.fail(e.message)
 
 
 class DateTime(click.ParamType):
