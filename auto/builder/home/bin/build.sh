@@ -2,19 +2,18 @@
 
 set -e
 
-cd /root
-mkdir workspace
-mkdir build
-cd workspace
+BASE="${HOME}"
+mkdir -p "${BASE}/workspace" || true
+mkdir -p "${BASE}/build" || true
 
-#if [ "$(id -u)" = "0" ]; then
-#    exec su - builder -c "$0 $*"
-#fi
+export PATH="${BASE}/bin:${PATH}"
 
-export PATH="$(pwd):${PATH}"
-
-if ! [ -d sources ]; then
-    mkdir sources
+if ! [ -d "${BASE}/workspace/sources" ]; then
+    if [ -d "${BASE}/sources" ]; then
+        ln -s "${BASE}/sources" "${BASE}/workspace/sources"
+    else
+        mkdir "${BASE}/workspace/sources"
+    fi
 fi
 
 cmd () {
@@ -46,7 +45,7 @@ for source_name in "${source_vars}"; do
 
     for var in ${source}; do
         if [ -z "${name}" ]; then
-            name="sources/${var}"
+            name="${BASE}/workspace/sources/${var}"
             name_opt="-p ${name}"
         elif [ -z "${remote}" ]; then
             remote="${var}"
@@ -57,6 +56,15 @@ for source_name in "${source_vars}"; do
         fi
     done
 
-    cmd git_repo.sh ${remote_opt} ${commit_opt} ${name_opt}
-    (cmd cd ${name}; cmd mkdeb -b production; cmd cp deb_dist/*deb ../../../build)
+    if [ -d "${name}" ]; then
+        if [ "${remote}" = "local+fetch" ]; then
+            (cmd cd "${name}"; for git_remote in $(git remote); do cmd git fetch "${git_remote}"; done)
+        elif [ "${remote}" != "local" ]; then
+            echo "${name} exists yet remote is not either 'local' or 'local+fetch'"
+            exit 2
+        fi
+    else
+        cmd git_repo.sh ${remote_opt} ${commit_opt} ${name_opt}
+    fi
+    (cmd cd "${name}"; cmd mkdeb -b production; cmd cp deb_dist/*deb "${BASE}/build")
 done

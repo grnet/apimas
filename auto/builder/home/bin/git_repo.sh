@@ -1,4 +1,5 @@
 #!/bin/sh
+set -x
 
 help () {
     echo "Usage: $0 [options]"
@@ -34,8 +35,8 @@ repo_path=
 repo_remote=
 repo_commit=
 repo_identity=
-repo_git_ssh=
 
+set -e
 
 while [ -n "$1" ]; do
     opt="$1"
@@ -70,14 +71,6 @@ while [ -n "$1" ]; do
 done
 
 
-if [ -n "${repo_git_ssh}" ]; then
-    if [ -n "${repo_identity}" ]; then
-        exec ssh -i "${repo_identity}" "$@"
-    else
-        exec ssh "$@"
-    fi
-fi
-
 if [ -z "${repo_path}" ] || [ -z "${repo_remote}" ]; then
     echo '  -p and -r are both necessary parameters. Try -h.'
     exit 4
@@ -91,22 +84,24 @@ if [ -e "${repo_path}" ]; then
     mv -f "${repo_path}" "${repo_path}-${now}"
 fi
 
-git_ssh_temp="$(mktemp -p /tmp git-ssh-XXXXXXXX)"
-chmod 700 "${git_ssh_temp}"
 if [ -n "${repo_identity}" ]; then
+    git_ssh_temp="$(mktemp -p /tmp git-ssh-XXXXXXXX)"
+    chmod 700 "${git_ssh_temp}"
     git_ssh_temp_identity="-i '${repo_identity}'"
+
+    cat << EOF > "${git_ssh_temp}"
+#!/bin/sh
+exec ssh -i '${repo_identity}' "\$@"
+EOF
+    export GIT_SSH="${git_ssh_temp}"
 else
-    git_ssh_temp_identity=""
+    export GIT_SSH="/usr/bin/ssh"
 fi
 
-cat << EOF > "${git_ssh_temp}"
-#!/bin/sh
-exec ssh ${git_ssh_temp_identity} "\$@"
-EOF
-
-export GIT_SSH="${git_ssh_temp}"
 git clone "${repo_remote}" "${repo_path}"
-rm "${git_ssh_temp}"
+if [ -n "${repo_identity}" ]; then
+    rm "${git_ssh_temp}"
+fi
 
 if [ -n "${repo_commit}" ]; then
     (cd "${repo_path}"; git checkout "${repo_commit}")
