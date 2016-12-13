@@ -263,18 +263,6 @@ class ApimasCliAdapter(NaiveAdapter):
         """
         return self.commands
 
-    def apply(self):
-        """
-        Apply generated cerberus specification and create `ApimasClient`
-        objects for every resource defined in the specification.
-        """
-        structural_elements = self.get_structural_elements(self.adapter_spec)
-        assert len(structural_elements) == 1
-        for collection, spec in doc.doc_get(
-                self.adapter_spec, (structural_elements[0],)).iteritems():
-            self.commands.extend(
-                doc.doc_get(spec, (self.ADAPTER_CONF, 'actions')))
-
     def option_allowed(self, action, spec, option_constructor):
         """
         Check if an option should be attached to a specific command.
