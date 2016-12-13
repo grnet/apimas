@@ -217,6 +217,15 @@ class ContainerSerializer(serializers.BaseSerializer):
         return self._fields
 
     @property
+    def validated_data(self):
+        self._validated_data = {}
+        for serializer in self.contained_sers:
+            if serializer is None:
+                continue
+            self._validated_data.update(serializer.validated_data)
+        return self._validated_data
+
+    @property
     def data(self):
         self._data = {}
         if self.instance is not None:
