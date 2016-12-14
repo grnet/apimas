@@ -57,7 +57,7 @@ class apimas (
         before => Apimas::Apache_site["${server_name}"],
     }
 
-    apimas::pin {
+    apimas::pin { 'python-psycopg2':
         version => "2.5.*",
         before => Apimas::Apache_site["${server_name}"],
     }
