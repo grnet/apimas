@@ -318,6 +318,8 @@ class ApimasCliAdapter(NaiveAdapter):
             schema = doc.doc_get(spec, (auth_mode,))
             auth_schema[auth_mode] = schema
         commands = doc.doc_get(instance, (self.ADAPTER_CONF, 'actions'))
+        assert commands, (
+            'Loc: %s, commands have not been constructed yet.' % (str(loc)))
         credential_option = click.option(
             '--credentials', required=True, type=Credentials(
                 schema=auth_schema, file_type=auth_format))
@@ -336,7 +338,7 @@ class ApimasCliAdapter(NaiveAdapter):
         Gets all commands corresponding to actions and attaches the
         appropriate options to them based on field schema.
         """
-        self.init_adapter_conf(instance, initial={'actions': set()})
+        instance = self.init_adapter_conf(instance, initial={'actions': set()})
         commands = doc.doc_get(instance, ('actions', self.ADAPTER_CONF)) or {}
         for action, command in commands.iteritems():
             command = self.construct_command(
@@ -349,6 +351,7 @@ class ApimasCliAdapter(NaiveAdapter):
         Construct a command based on a specific actions, e.g. list,
         create, etc.
         """
+        assert len(loc) == 4
         self.init_adapter_conf(instance)
         command = self.COMMANDS[action](self.clients.get(loc[-3]))
         if action in self.RESOURCE_ACTIONS:
@@ -443,8 +446,10 @@ class ApimasCliAdapter(NaiveAdapter):
         """
         option_kwargs = {}
         self.init_adapter_conf(instance)
-        for field_name, schema in doc.doc_get(
+        for _, schema in doc.doc_get(
                 instance, ('.struct',)).iteritems():
+            if schema == SKIP:
+                continue
             for nested, params in schema.get(self.ADAPTER_CONF).iteritems():
                 option_kwargs.update({option_name + '-' + nested: params})
                 self.struct_map[option_name + '-' + nested] = (
@@ -458,12 +463,12 @@ class ApimasCliAdapter(NaiveAdapter):
             '.date': self._add_date_params,
             '.datetime': self._add_date_params,
         }
-        predicate_type = self.extract_type(instance)
-        if predicate_type in self.SKIP_FIELDS:
-            return None
 
         def default(instance, spec, loc, context):
             return {}
+
+        if predicate_type in self.SKIP_FIELDS:
+            return None
 
         kwargs = constructors.get(predicate_type, default)(
             instance, spec, loc, context)
@@ -490,7 +495,7 @@ class ApimasCliAdapter(NaiveAdapter):
         if predicate_type == '.struct':
             return self.construct_struct_option(instance, spec, loc,
                                                 option_name)
-        self.init_adapter_conf(instance, initial={option_name: {}})
+        instance = self.init_adapter_conf(instance, initial={option_name: {}})
         kwargs = {'type': self.construct_option_type(
             instance, spec, loc, context, predicate_type)}
         extra = extra_params.get(predicate_type)
