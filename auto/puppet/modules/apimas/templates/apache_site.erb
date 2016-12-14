@@ -61,5 +61,7 @@
     SSLCertificateKeyFile   /etc/ssl/private/<%= @server_name %>.key
     #SSLCertificateChainFile /etc/ssl/<%= @server_name %>.chain
 
+    RequestHeader set X-Forwarded-Proto "https" env=HTTPS
+
     IncludeOptional apimas-locations/*.conf
 </VirtualHost>

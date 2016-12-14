@@ -35,6 +35,11 @@ define apimas::apache_site (
         before => File["${apache_root}/sites-available/apimas.conf"],
     }
 
+    exec { "${apache_root}/sites-available/apimas.conf-a2enmod-headers":
+        command => "/usr/sbin/a2enmod headers",
+        before => File["${apache_root}/sites-available/apimas.conf"],
+    }
+
     file { "${srv_root}/${server_name}":
         ensure => directory,
         owner => "root",
