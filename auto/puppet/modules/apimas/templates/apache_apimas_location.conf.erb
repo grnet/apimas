@@ -11,4 +11,7 @@ Alias /<%= @api_name %>/static/ <%= @lib_root %>/<%= @api_name %>/resources/www/
     Allow from all
     Require all granted
 </Directory>
-Alias /<%= @api_name %>/ui/ <%= @lib_root %>/<%= @api_name %>/resources/www/ui/
+
+Alias /<%= @api_name %>/ui/crossdomain.xml <%= @lib_root %>/<%= @api_name %>/resources/www/ui/crossdomain.xml
+AliasMatch "^/<%= @api_name %>/ui/assets/(.*)" "<%= @lib_root %>/<%= @api_name %>/resources/www/ui/assets/$1"
+AliasMatch "^/<%= @api_name %>/ui/(.*)" "<%= @lib_root %>/<%= @api_name %>/resources/www/ui/index.html"
