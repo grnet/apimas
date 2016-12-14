@@ -280,3 +280,4 @@ class NaiveAdapter(Adapter):
         if self.ADAPTER_CONF not in instance:
             instance[self.ADAPTER_CONF] = initial if initial is not None\
                 else {}
+        return instance
