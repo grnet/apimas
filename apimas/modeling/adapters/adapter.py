@@ -19,7 +19,7 @@ class Adapter(object):
         '.ref',
         '.serial',
         '.integer',
-        '.big_integer',
+        '.biginteger',
         '.string',
         '.boolean',
         '.datetime',
@@ -40,7 +40,7 @@ class Adapter(object):
         '.ref',
         '.serial',
         '.integer',
-        '.big_integer',
+        '.biginteger',
         '.string',
         '.boolean',
         '.datetime',
@@ -55,7 +55,6 @@ class Adapter(object):
         '.nullable',
         '.readonly',
         '.writeonly',
-        '.indexable',
     ])
 
     def construct(self, spec):
@@ -65,7 +64,7 @@ class Adapter(object):
         raise NotImplementedError('`apply()` must be implemeneted')
 
     def get_constructors(self):
-        return {predicate: getattr(
+        return {predicate[1:]: getattr(
             self, self.CONSTRUCTOR_PREFIX + '_' + predicate[1:],
             utils.default_constructor(predicate))
                 for predicate in self.PREDICATES}
