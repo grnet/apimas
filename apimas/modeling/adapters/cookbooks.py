@@ -66,7 +66,10 @@ class NaiveAdapter(Adapter):
         defining the type of a field according given mapping.
         """
         self.init_adapter_conf(instance)
-        field_schema = {'type': self.TYPE_MAPPING.get(field_type, field_type)}
+        if field_type not in self.TYPE_MAPPING:
+            raise ex.ApimasException(
+                'Unknown field type: `%s`' % (field_type))
+        field_schema = {'type': self.TYPE_MAPPING[field_type]}
         instance[self.ADAPTER_CONF].update(field_schema)
         return instance
 
@@ -75,6 +78,11 @@ class NaiveAdapter(Adapter):
             raise ex.ApimasException(
                 'A structure must define its field schema.'
                 ' Empty structure found: %s' % (loc[-2]))
+        for k, v in spec.iteritems():
+            if not isinstance(v, dict):
+                raise ex.ApimasException(
+                    'Not known properties for field `%s` of struct `%s`' % (
+                        k, loc[-2]))
 
     def construct_struct(self, instance, spec, loc, context):
         """
@@ -107,7 +115,7 @@ class NaiveAdapter(Adapter):
             raise ex.ApimasException('You have to specify `to` parameter')
         root_loc = loc[0]
         top_spec = context.get('top_spec', {})
-        if ref not in doc.doc_get(top_spec, (root_loc,)):
+        if ref not in top_spec[root_loc]:
             raise ex.ApimasException(
                 'Reference collection `%s` does not exist' % (ref))
         return self.construct_type(instance, spec, loc, context, 'ref')
@@ -247,6 +255,9 @@ class NaiveAdapter(Adapter):
         it requires field to be initialized, otherwise, construction is
         defered.
         """
+        if property_name not in self.PROPERTY_MAPPING:
+            raise ex.ApimasException(
+                'Unknown property name %s' % (property_name))
         constructed = context.get('constructed')
         predicate_type = self.extract_type(instance)
         if predicate_type not in constructed:
@@ -264,14 +275,11 @@ class NaiveAdapter(Adapter):
         Method for extracting a predicate whose semantic refers to a type of
         a field from the given instance.
         """
-        types = []
-        for predicate in self.TYPES:
-            if predicate in instance:
-                types.append(predicate)
+        types = self.TYPES.intersection(instance.keys())
         if len(types) > 1:
             raise ex.ApimasException('Type is ambiguous. %s found: %s' % (
                 len(types), str(types)))
-        return None if not types else types[0]
+        return None if not types else types.pop()
 
     def init_adapter_conf(self, instance, initial=None):
         """
