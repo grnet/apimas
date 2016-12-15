@@ -18,4 +18,5 @@ def create_mock_object(cls, isolated_attrs, ismagic=False):
             raise AttributeError('Attribute %s cannot found on class %s' % (
                 attr, cls.__name__))
         kwargs[attr] = cls_attr
-    return mock.Mock(**kwargs) if not ismagic else mock.MagicMock(**kwargs)
+    return mock.Mock(spec=cls, **kwargs) if not ismagic else\
+        mock.MagicMock(spec=cls, **kwargs)
