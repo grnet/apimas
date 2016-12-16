@@ -1,5 +1,4 @@
 import importlib
-from collections import defaultdict
 from apimas.modeling.core.exceptions import ApimasException
 
 
@@ -64,40 +63,3 @@ def get_package_module(module_name, raise_exception=False):
         if raise_exception:
             raise
         return None
-
-
-def build_field_properties(field, config, extra_kwargs):
-    """
-    This functions sets properties for a specific field.
-
-    :param field: Field name.
-    :param config: Dictionary used as a pool to retrieve field configuration
-    implicitly.
-    :param extra_kwargs: Extra field properties
-    """
-    properties = dict(extra_kwargs)
-    for attr, prop in PROPERTIES.iteritems():
-        if field in config.get(attr, []):
-            properties[prop] = True
-    return properties
-
-
-def build_properties(exposed_fields, config):
-    """
-    This functions builds a dictionary with the exposed fields to API and their
-    attributes.
-
-    It actually maps each field to a property according to its specified
-    category. For example, fields which are included in the category of
-    `required_fields`, they have property `required` as `True`.
-
-    :param exposed_fields: Iterable with the fields exposed to API.
-    :param config: Dictionary with the field configuration.
-
-    :returns: A dictionary of exposed fields along with their properties.
-    """
-    extra_kwargs = config.get(EXTRA_KWARGS_LOOKUP_FIELD, {})
-    field_properties = defaultdict(dict, extra_kwargs or {})
-    return {field: build_field_properties(
-        field, config, field_properties.get(field, {}))
-            for field in exposed_fields}
