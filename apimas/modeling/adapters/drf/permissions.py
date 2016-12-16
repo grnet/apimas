@@ -10,12 +10,12 @@ class ApimasPermissions(BasePermission):
     OBJECT_CHECK_PREFIX = 'check_resource_state'
 
     message = None
+    COLUMNS = ('action', 'role', 'field', 'state', 'comment')
 
     ANONYMOUS_ROLES = ['anonymous']
 
     def __init__(self, rules, model):
-        self.permissions = Tabmatch(
-            ('action', 'role', 'field', 'state', 'comment'))
+        self.permissions = Tabmatch(self.COLUMNS)
         self.permissions.update(
             map((lambda x: self.permissions.Row(*x)), rules))
         self.model = model
@@ -105,9 +105,9 @@ class ApimasPermissions(BasePermission):
 
         If any matched state is statisfied then, the permission is given.
         """
+        if any(isinstance(row.state, AnyPattern) for row in matches):
+            return True
         for row in matches:
-            if isinstance(row.state, AnyPattern):
-                return True
             prefix = self.OBJECT_CHECK_PREFIX if obj is not None\
                 else self.COLLECTION_CHECK_PREFIX
             method_name = prefix + '_' + row.state
