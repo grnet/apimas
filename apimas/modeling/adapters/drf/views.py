@@ -67,8 +67,6 @@ def get_filtering_options(filter_fields, ordering_fields, search_fields):
         'ordering_fields': ordering_fields,
         'search_fields': search_fields,
     }
-    search_fields = {field: searchable_fields.get(field, default)
-                     for field, default in VIEWSET_ATTRS}
     filter_backends = get_filter_backends(searchable_fields)
     return searchable_fields, filter_backends
 
