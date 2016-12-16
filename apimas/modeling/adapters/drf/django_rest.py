@@ -302,6 +302,7 @@ class DjangoRestAdapter(NaiveAdapter):
         """
         Generate a nested drf field, which is actually a `Serializer` class.
         """
+        kwargs.update(self.get_default_properties(predicate_type, kwargs))
         field_schema = doc.doc_get(instance, (predicate_type,))
         many = predicate_type == '.structarray'
         model_serializers = kwargs.pop('model_serializers', [])
@@ -320,6 +321,15 @@ class DjangoRestAdapter(NaiveAdapter):
             view_name='%s-detail' % (collection_name))
         doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
         return instance
+
+    def get_default_properties(self, predicate_type, field_kwargs):
+        default = {}
+        for prop in self.PROPERTY_MAPPING.itervalues():
+            if predicate_type != '.string' and prop == 'allow_blank':
+                continue
+            if prop not in field_kwargs:
+                default[prop] = False
+        return default
 
     def default_field_constructor(self, instance, spec, loc, context,
                                   predicate_type):
@@ -354,6 +364,8 @@ class DjangoRestAdapter(NaiveAdapter):
                 **field_kwargs)
         else:
             if not onmodel:
+                field_kwargs.update(self.get_default_properties(
+                    predicate_type, field_kwargs))
                 drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
                     **field_kwargs)
             else:
