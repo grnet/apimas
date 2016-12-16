@@ -38,7 +38,7 @@ def import_object(obj_path):
         raise DRFAdapterException('Cannot import NoneType object')
     try:
         module_name, obj_name = obj_path.rsplit('.', 1)
-        mod = importlib.import_module(module_name)
+        mod = get_package_module(module_name, raise_exception=True)
     except (ValueError, ImportError) as e:
         raise DRFAdapterException(e)
     obj = getattr(mod, obj_name, None)
@@ -48,7 +48,7 @@ def import_object(obj_path):
     return obj
 
 
-def get_package_module(module_name):
+def get_package_module(module_name, raise_exception=False):
     """
     This function loads programtically the desired module which is located in
     the default package. In case, it can't find such a module, it returns
@@ -61,6 +61,8 @@ def get_package_module(module_name):
     try:
         return importlib.import_module(module_name)
     except ImportError:
+        if raise_exception:
+            raise
         return None
 
 
