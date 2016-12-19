@@ -3,46 +3,7 @@ import unittest
 from apimas.modeling.core import documents as doc
 from apimas.modeling.adapters.drf import utils
 from apimas.modeling.adapters.drf.django_rest import DjangoRestAdapter
-from apimas.modeling.adapters.drf.serializers import (
-    get_paths)
 from apimas.modeling.tests.helpers import create_mock_object
-
-
-def create_mock_DRF(method_name):
-    non_mock_attrs = [
-        method_name,
-        'ADAPTER_CONF',
-        'NESTED_CONF_KEY',
-        'PROPERTIES_CONF_KEY'
-    ]
-    return create_mock_object(DjangoRestAdapter, non_mock_attrs)
-
-
-class TestSerializers(unittest.TestCase):
-    def setUp(self):
-        self.mock_field = mock.MagicMock()
-        self.mock_meta = mock.MagicMock()
-        self.mock_meta.get_field.return_value = self.mock_field
-        self.mock_model = mock.MagicMock(_meta=self.mock_meta)
-
-    def test_get_paths(self):
-        fields = {'field1': 'value', 'field2': 'value'}
-        mock_sera = mock.MagicMock(fields=fields)
-        paths = get_paths(mock_sera.fields)
-        self.assertEqual(set(paths), {'field1', 'field2'})
-
-        nested_fields = {'field': mock_sera}
-        mock_serb = mock.MagicMock(fields=nested_fields)
-        paths = get_paths(mock_serb.fields)
-        self.assertEqual(set(paths), {'field/field1', 'field/field2'})
-
-        # Test a 3-level serializer
-        nested_fields = {'field1': 'a value', 'nested': mock_serb}
-        mock_serc = mock.MagicMock(child=nested_fields)
-        paths = get_paths(mock_serc.child)
-        self.assertEqual(set(paths),
-                         {'field1', 'nested/field/field1',
-                          'nested/field/field2'})
 
 
 class TestDjangoRestAdapter(unittest.TestCase):
@@ -372,7 +333,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertTrue(instance_conf['foo_mapping'])
 
     def test_validate_model_field(self):
-        mock_adapter = create_mock_DRF('validate_model_field')
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter, ['validate_model_field', 'ADAPTER_CONF'])
         mock_adapter.TYPE_MAPPING = self.mock_type_mapping
         mock_cls = type('mock', (object,), {})
         mock_cls2 = type('mock2', (object,), {})
@@ -430,7 +392,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_meta = mock.Mock()
         mock_meta.get_field.return_value = output
         mock_model = mock.Mock(_meta=mock_meta)
-        mock_adapter = create_mock_DRF('extract_related_model')
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter, ['extract_related_model', 'ADAPTER_CONF'])
         mock_adapter.extract_model.return_value = mock_model
         self.assertRaises(utils.DRFAdapterException,
                           mock_adapter.extract_related_model,
