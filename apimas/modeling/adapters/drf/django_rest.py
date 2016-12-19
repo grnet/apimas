@@ -520,27 +520,6 @@ class DjangoRestAdapter(NaiveAdapter):
                         'Field `%s` cannot be both %s and %s' % (
                             field_name, u, v))
 
-    def construct_field_schema(self, instance, field_properties, **kwargs):
-        """ Aggregates propeties of all fields to form a field schema. """
-        adapter_key = 'field_schema'
-        self.init_adapter_conf(instance)
-        attrs = {self.PROPERTIES_CONF_KEY: {}, self.NESTED_CONF_KEY: {}}
-        serializers = kwargs.get('serializers', [])
-        for field_name, field_spec in field_properties.iteritems():
-            for k, v in attrs.iteritems():
-                if k in field_spec[self.ADAPTER_CONF]:
-                    v[field_name] = field_spec[self.ADAPTER_CONF][k]
-        self.validate_intersectional_pairs(attrs[self.PROPERTIES_CONF_KEY])
-        fields = [field_name for field_name, _ in field_properties.iteritems()]
-        field_schema = {adapter_key: {
-            'fields': fields,
-            'serializers': serializers,
-        }}
-        for k, v in attrs.iteritems():
-            if v:
-                field_schema[adapter_key].update({k: v})
-        return field_schema
-
     def get_constructor_params(self, spec, loc, params):
         """
         Get constructor params for all the constructors that represent a
@@ -587,11 +566,3 @@ class DjangoRestAdapter(NaiveAdapter):
                 'Field %s is not related with another model' % (
                     repr(related_field)))
         return related_field.related_model
-
-    def construct_resource_schema(self, instance):
-        adapter_key = 'filter_fields'
-        field_properties = doc.doc_get(instance, ('*',))
-        filter_fields = [
-            field_name for field_name, spec in field_properties.iteritems()
-            if spec.get('.indexable', None) is not None]
-        return {adapter_key: filter_fields}
