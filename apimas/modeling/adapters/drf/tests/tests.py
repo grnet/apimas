@@ -1,12 +1,11 @@
 import mock
 import unittest
-from apimas.modeling.tests import helpers
 from apimas.modeling.core import documents as doc
 from apimas.modeling.adapters.drf import utils
 from apimas.modeling.adapters.drf.django_rest import DjangoRestAdapter
-from apimas.modeling.adapters.drf import serializers
 from apimas.modeling.adapters.drf.serializers import (
-    get_paths, validate, generate)
+    get_paths)
+from apimas.modeling.tests.helpers import create_mock_object
 
 
 def create_mock_DRF(method_name):
@@ -16,7 +15,7 @@ def create_mock_DRF(method_name):
         'NESTED_CONF_KEY',
         'PROPERTIES_CONF_KEY'
     ]
-    return helpers.create_mock_object(DjangoRestAdapter, non_mock_attrs)
+    return create_mock_object(DjangoRestAdapter, non_mock_attrs)
 
 
 class TestSerializers(unittest.TestCase):
@@ -30,70 +29,20 @@ class TestSerializers(unittest.TestCase):
         fields = {'field1': 'value', 'field2': 'value'}
         mock_sera = mock.MagicMock(fields=fields)
         paths = get_paths(mock_sera.fields)
-        self.assertEqual(len(paths), 2)
-        for p in ['field1', 'field2']:
-            self.assertIn(p, paths)
+        self.assertEqual(set(paths), {'field1', 'field2'})
 
         nested_fields = {'field': mock_sera}
         mock_serb = mock.MagicMock(fields=nested_fields)
         paths = get_paths(mock_serb.fields)
-        self.assertEqual(len(paths), 3)
-        for p in ['field', 'field/field1', 'field/field2']:
-            self.assertIn(p, paths)
+        self.assertEqual(set(paths), {'field/field1', 'field/field2'})
 
         # Test a 3-level serializer
         nested_fields = {'field1': 'a value', 'nested': mock_serb}
         mock_serc = mock.MagicMock(child=nested_fields)
         paths = get_paths(mock_serc.child)
-        self.assertEqual(len(paths), 5)
-        for p in ['field1', 'nested/field',
-                  'nested/field/field1', 'nested/field/field2']:
-            self.assertIn(p, paths)
-
-    def test_validate(self):
-        non_intersectional_pairs = [('prop_a', 'prop_c')]
-        serializers.NON_INTERSECTIONAL_PAIRS = non_intersectional_pairs
-        field_properties = {
-            'field1': {
-                'prop_a': True,
-                'prop_c': True,
-            }
-        }
-        self.assertRaises(utils.DRFAdapterException, validate, self.mock_model,
-                          field_properties)
-
-        field_properties['field1']['prop_a'] = False
-        validate(self.mock_model, field_properties)
-
-        self.mock_field.get_internal_type.return_value = 'non_string'
-        field_properties['field1']['allow_blank'] = True
-        self.assertRaises(utils.DRFAdapterException, validate, self.mock_model,
-                          field_properties)
-
-    def test_generate(self):
-        config = {
-            'fields': ['field1', 'field2'],
-            'read_only_fields': ['field1'],
-            'required_fields': ['field2'],
-            'nullable_fields': ['field2'],
-            'write_only_fields': ['field2'],
-        }
-        self.mock_model.__name__ = 'Mock'
-        serializer_cls = generate(self.mock_model, config)
-        meta = serializer_cls.Meta
-        self.assertIsNotNone(meta)
-        self.assertEqual(meta.fields, ['field1', 'field2'])
-        extra_kwargs = {
-            'field1': {
-                'read_only': True,
-            },
-            'field2': {
-                'required': True,
-                'allow_null': True,
-                'write_only': True,
-            }
-        }
-        self.assertEqual(meta.extra_kwargs, extra_kwargs)
+        self.assertEqual(set(paths),
+                         {'field1', 'nested/field/field1',
+                          'nested/field/field2'})
 
 
 class TestDjangoRestAdapter(unittest.TestCase):
@@ -105,181 +54,322 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.adapter = DjangoRestAdapter()
         self.adapter_conf = self.adapter.ADAPTER_CONF
 
+    def test_get_class(self):
+        empty = {}
+        self.assertRaises(utils.DRFAdapterException, self.adapter.get_class,
+                          empty, 'something')
+        container = {'foo': 'bar'}
+        self.assertRaises(utils.DRFAdapterException, self.adapter.get_class,
+                          container, 'something')
+        self.assertEqual(self.adapter.get_class(container, 'foo'), 'bar')
+
+    #def test_get_permissions(self):
+    #    rules = [
+    #        ('foo', 'a', 'b', 'c', 'd', 'e'),
+    #        ('foo', 'a', 'b', 'c', 'f', 'k'),
+    #        ('*', 'a', 'b', 'c', 'p', 'l'),
+    #        ('bar', 'z', 'l', 'm', '*', '*')
+    #    ]
+    #    top_spec = {}
+    #    self.assertIsNone(self.adapter.get_permissions('foo', top_spec))
+
+    #    top_spec = {'.endpoint': {'permissions': rules}}
+    #    permissions = self.adapter.get_permissions('foo', top_spec)
+    #    self.assertEqual(len(permissions), 3)
+
     def test_construct_CRUD_action(self):
         instance = {}
         action = 'myaction'
         instance = self.adapter.construct_CRUD_action(
-                instance, None, None, None, action)
-        allowable_actions = {'allowable_operations': [action]}
+            instance, None, None, None, action)
+        allowable_actions = [action]
         self.assertEqual(instance, {
             self.adapter_conf: allowable_actions})
         instance = self.adapter.construct_CRUD_action(
-                instance, None, None, None, action)
-        instance_actions = instance[self.adapter_conf][
-            'allowable_operations']
+            instance, None, None, None, action)
+        instance_actions = instance[self.adapter_conf]
         self.assertEqual(instance_actions, [action, action])
 
-    def test_construct_endpoint(self):
-        spec = {
-            'api': {
-                'resource1': {
-                    self.adapter_conf: {
-                        'k1': 'v1'
-                    }
-                },
-                'resource2': {
-                    self.adapter_conf: {
-                        'k2': 'v2'
-                    }
-                }
-            }
-        }
-        instance = self.adapter.construct_endpoint(spec, spec, None, None)
-        instance_conf = instance.get(self.adapter_conf)
-        self.assertIsNotNone(instance_conf)
-        self.assertEqual(len(instance_conf), 1)
-        for k, v in instance_conf['resources'].iteritems():
-            self.assertIn(k, spec['api'])
-            self.assertEqual(v, spec['api'][k][self.adapter_conf])
+    @mock.patch(
+        'apimas.modeling.adapters.drf.django_rest.generate_container_serializer',
+        return_value='mock_container')
+    @mock.patch(
+        'apimas.modeling.adapters.drf.django_rest.generate_model_serializer',
+        return_value='mock_model')
+    def test_generate_serializer(self, mock_model_ser, mock_container_ser):
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter, ['generate_serializer'])
+        model_fields = {'model_fields': 'value'}
+        extra_fields = {'extra_fields': 'value'}
+        instance_sources = {'instance_source': 'value'}
+        mock_adapter._classify_fields.return_value = (
+            model_fields, extra_fields, instance_sources)
+        field_schema = {'foo', 'bar'}
+        name = 'mock_serializer'
+        serializer = mock_adapter.generate_serializer(
+            mock_adapter, field_schema, name)
+        self.assertEqual(serializer, 'mock_container')
+        mock_container_ser.assert_called_once_with(
+            model_fields, extra_fields, name, None,
+            instance_sources=instance_sources,
+            model_serializers=None,
+            extra_serializers=None)
+        mock_model_ser.assert_not_called
 
-    def test_construct_collection(self):
-        spec = {'a': 'value', 'b': 'value'}
-        instance = {}
-        self.assertRaises(doc.DeferConstructor,
-                          self.adapter.construct_collection, instance, spec,
-                          None, None)
-        instance = {self.adapter_conf: {}}
-        instance = self.adapter.construct_collection(instance, spec, None,
-                                                     None)
-        self.assertEqual(len(instance), 1)
-        instance_conf = instance.get(self.adapter_conf)
-        self.assertIsNotNone(instance_conf)
-        self.assertEqual(instance_conf, spec)
+        mock_model = mock.Mock()
+        serializer = mock_adapter.generate_serializer(
+            mock_adapter, field_schema, name, model=mock_model,
+            onmodel=True)
+        self.assertEqual(serializer, 'mock_model')
+        mock_model_ser.assert_called_once_with(
+            name, mock_model, model_fields,
+            bases=None)
+        mock_container_ser.assert_called_once
 
-    def test_construct_drf_collection(self):
-        self.assertRaises(utils.DRFAdapterException,
-                          self.adapter.construct_drf_collection,
-                          {}, {}, self.loc, None)
-        instance = {
+    @mock.patch(
+        'apimas.modeling.adapters.drf.django_rest.generate_view',
+        return_value='mock_view')
+    @mock.patch.object(utils, 'import_object', return_value='model_imported')
+    def test_contruct_drf_collection(self, mock_import, mock_view_gen):
+        mock_loc = ('api', 'collection', '.drf_collection')
+        mock_instance = {
             '*': {
-                'field1': {},
+                'foo': {},
+                'bar': {},
             },
-            self.adapter_conf: {}
+            'actions': {
+                self.adapter_conf: ['a', 'b']
+            },
+            self.adapter_conf: {},
         }
-        mock_adapter = create_mock_DRF('construct_drf_collection')
-        field_schema = {'field_schema': {}}
-        resource_schema = {'resource_schema': {}}
-        mock_adapter.construct_field_schema.return_value = field_schema
-        mock_adapter.construct_resource_schema.return_value = resource_schema
+        mock_spec = {
+            'serializers': ['ser_cls'],
+            'model_serializers': ['model_ser_cls'],
+            'model': 'model_cls',
+        }
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter, ['construct_drf_collection', 'ADAPTER_CONF'])
+        mock_adapter.views = {}
+        mock_adapter.serializers = {}
+        mock_adapter.generate_serializer.return_value = 'mock_serializer'
+        mock_adapter.get_permissions.return_value = 'permissions'
+        context = {'constructed': ['.a_constructor']}
+        self.assertRaises(doc.DeferConstructor,
+                          mock_adapter.construct_drf_collection, mock_adapter,
+                          instance=mock_instance, spec=mock_spec, loc=mock_loc,
+                          context=context)
+
+        context = {'constructed': ['.collection']}
         instance = mock_adapter.construct_drf_collection(
-            mock_adapter, instance, {}, self.loc, None)
+            mock_adapter, instance=mock_instance, spec=mock_spec,
+            loc=mock_loc, context=context)
+        self.assertEqual(len(instance), 3)
+        self.assertIn('*', instance)
+        self.assertIn('actions', instance)
         instance_conf = instance.get(self.adapter_conf)
         self.assertIsNotNone(instance_conf)
-        self.assertEqual(instance_conf, dict(field_schema, **resource_schema))
-        mock_adapter.construct_field_schema.assert_called_once
-        mock_adapter.construct_resource_schema.assert_called_once
+        self.assertEqual(instance_conf, 'mock_view')
+        self.assertEqual(mock_adapter.views['collection'], 'mock_view')
+        self.assertEqual(mock_adapter.serializers['collection'],
+                         'mock_serializer')
+        mock_import.assert_called_once_with('model_cls')
+        mock_view_gen.assert_called_once_with(
+            'collection', 'mock_serializer', 'model_imported',
+            actions=['a', 'b'], permissions='permissions')
 
-    def test_construct_nested_drf_field(self):
-        mock_adapter = create_mock_DRF('construct_nested_drf_field')
-        mock_adapter.TYPE_MAPPING = self.mock_type_mapping
-        self.assertRaises(utils.DRFAdapterException,
-                          mock_adapter.construct_nested_drf_field,
-                          mock_adapter, {}, {}, self.loc, None, '.type')
-        instance = {
-            self.adapter_conf: {mock_adapter.PROPERTIES_CONF_KEY: {}},
-            '.type': {
-                'field': {}
+    def test_classify_fields(self):
+        field_schema = {
+            'foo': {
+                self.adapter_conf: {'field': 'foo_field'},
+                '.drf_field': {},
+            },
+            'bar': {
+                self.adapter_conf: {'field': 'bar_field'},
+                '.drf_field': {'onmodel': False, 'instance_source': 'mock'}
             }
         }
-        field_schema = {'field_schema': {}}
-        source = 'source'
-        spec = {'a': 'value', 'source': source}
-        mock_adapter.construct_field_schema.return_value = field_schema
-        instance = mock_adapter.construct_nested_drf_field(
-            mock_adapter, instance, spec, self.loc, self.context, '.type')
-        instance_conf = instance.get(self.adapter_conf)
-        self.assertIsNotNone(instance_conf)
-        properties = instance_conf.get(mock_adapter.PROPERTIES_CONF_KEY)
-        self.assertIsNotNone(properties)
-        self.assertEqual(properties, spec)
-        mock_adapter.validate_model_field.assert_called_once_with(
-            {}, self.loc, 'value', source)
+        model_fields, extra_fields, instance_sources = self.adapter\
+            ._classify_fields(field_schema)
+        self.assertEqual(len(model_fields), 1)
+        self.assertEqual(model_fields['foo'], 'foo_field')
 
-        nested = instance_conf.get(mock_adapter.NESTED_CONF_KEY)
-        self.assertIsNotNone(nested)
-        self.assertEqual(nested, dict(field_schema, **{'source': source}))
-        self.assertEqual(mock_adapter.construct_field_schema.call_count, 1)
+        self.assertEqual(len(extra_fields), 1)
+        self.assertEqual(extra_fields['bar'], 'bar_field')
+
+    def test_get_default_paremeters(self):
+        kwargs = {'required': True}
+        predicate_type = '.string'
+        default = self.adapter.get_default_properties(predicate_type,
+                                                      kwargs)
+        self.assertEqual(len(default), len(self.adapter.PROPERTY_MAPPING) - 1)
+        for prop in self.adapter.PROPERTY_MAPPING.itervalues():
+            self.assertFalse(default.get(prop))
+        predicate_type = '.integer'
+        default = self.adapter.get_default_properties(predicate_type,
+                                                      kwargs)
+        self.assertEqual(len(default), len(self.adapter.PROPERTY_MAPPING) - 2)
+        for prop in self.adapter.PROPERTY_MAPPING.itervalues():
+            if prop == 'allow_blank':
+                self.assertIsNone(default.get(prop))
+                continue
+            self.assertFalse(default.get(prop))
+
+    def test_generate_field(self):
+        mock_a = mock.Mock(return_value='foo_field')
+        mock_b = mock.Mock(return_value='bar_field')
+        mock_serializer_mapping = {
+            'foo': mock_a,
+            'bar': mock_b,
+        }
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter,
+            ['_generate_field', 'ADAPTER_CONF', 'STRUCTURES'])
+        mock_adapter.SERILIZERS_TYPE_MAPPING = mock_serializer_mapping
+        mock_adapter.generate_nested_drf_field.return_value = 'nested_field'
+        self.assertIn('.struct', mock_adapter.STRUCTURES)
+        self.assertIn('.structarray', mock_adapter.STRUCTURES)
+
+        for predicate_type in ['.struct', '.structarray']:
+            field = mock_adapter._generate_field(
+                mock_adapter, instance={}, loc=(),
+                predicate_type=predicate_type, model=None, onmodel=True)
+            self.assertEqual(field, 'nested_field')
+            mock_adapter.generate_nested_drf_field.assert_called_with(
+                {}, (), predicate_type, None, onmodel=True)
+
+        predicate_type = '.foo'
+        mock_adapter.get_default_properties.return_value = {}
+        self.assertNotIn(predicate_type, mock_adapter.STRUCTURES)
+        field = mock_adapter._generate_field(
+            mock_adapter, instance={}, loc=(),
+            predicate_type=predicate_type, model=None, onmodel=False)
+        self.assertEqual(field, 'foo_field')
+        mock_a.assert_called_with()
+        mock_b.assert_not_called
+
+        field = mock_adapter._generate_field(
+            mock_adapter, instance={}, loc=(),
+            predicate_type=predicate_type, model=None, onmodel=True)
+        self.assertEqual(field, {})
 
     def test_default_field_constructor(self):
-        spec = {'key': 'value'}
-        mock_adapter = create_mock_DRF(
-            'default_field_constructor')
-        mock_type_mapping = dict(self.mock_type_mapping, **{'ref': 'value'})
-        mock_adapter.TYPE_MAPPING = mock_type_mapping
-        instance = {
-            self.adapter_conf: {mock_adapter.PROPERTIES_CONF_KEY: {}},
+        mock_instance = {
+            '.string': {},
+            self.adapter_conf: {},
         }
-        instance = mock_adapter.default_field_constructor(
-            mock_adapter, instance, spec, self.loc, self.context, '.type')
-        instance_conf = instance.get(mock_adapter.ADAPTER_CONF)
-        mock_adapter.validate_model_field.assert_called_once_with(
-            {}, self.loc, 'value', None)
-        mock_adapter.validate_ref.assert_not_called
-        self.assertIsNotNone(instance_conf)
-        self.assertEqual(len(instance_conf), 1)
-        properties = instance_conf.get(mock_adapter.PROPERTIES_CONF_KEY)
-        self.assertIsNotNone(properties)
-        self.assertEqual(properties, spec)
+        mock_spec = {
+            'onmodel': True,
+            'extra': 'value',
+            'foo': 'bar',
+            'instance_source': 'instance_mock',
+        }
+        mock_loc = ('api', 'foo', '*', 'field', '.drf_field')
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter, ['default_field_constructor', 'ADAPTER_CONF'])
+        mock_adapter._generate_field.return_value = 'drf field'
+        self.assertRaises(
+            utils.DRFAdapterException, mock_adapter.default_field_constructor,
+            mock_adapter, instance=mock_instance, spec=mock_spec,
+            loc=mock_loc, context={}, predicate_type='.string')
+        mock_spec['onmodel'] = False
+        mock_spec['instance_source'] = 'instance_mock'
 
         instance = mock_adapter.default_field_constructor(
-            mock_adapter, instance, spec, self.loc, self.context, '.ref')
-        mock_adapter.validate_ref.assert_called_once
+            mock_adapter, instance=mock_instance, spec=mock_spec,
+            loc=mock_loc, context={}, predicate_type='.string')
+        instance_conf = instance.get(mock_adapter.ADAPTER_CONF)
+        self.assertIsNotNone(instance_conf)
+        self.assertEqual(len(instance_conf), 2)
+        self.assertEqual(instance_conf['field'], 'drf field')
+        self.assertEqual(instance_conf['source'], 'instance_mock')
+        field_kwargs = {'extra': 'value', 'foo': 'bar'}
+        mock_adapter._generate_field.assert_called_with(
+            mock_instance, mock_loc, '.string', mock.ANY, False,
+            **field_kwargs)
+
+        mock_instance = {
+            '.ref': {'to': 'bar'},
+            self.adapter_conf: {},
+        }
+        mock_spec['instance_source'] = 'instance_mock'
+        instance = mock_adapter.default_field_constructor(
+            mock_adapter, instance=mock_instance, spec=mock_spec,
+            loc=mock_loc, context={}, predicate_type='.ref')
+        instance_conf = instance.get(mock_adapter.ADAPTER_CONF)
+        self.assertIsNotNone(instance_conf)
+        self.assertEqual(len(instance_conf), 2)
+        self.assertEqual(instance_conf['field'], 'drf field')
+        self.assertEqual(instance_conf['source'], 'instance_mock')
+        field_kwargs = {'extra': 'value', 'foo': 'bar',
+                        'view_name': 'bar-detail'}
+        mock_adapter._generate_field.assert_called_with(
+            mock_instance, mock_loc, '.ref', mock.ANY, False,
+            **field_kwargs)
 
     def test_construct_drf_field(self):
-        context = {'top_spec': {}}
-        mock_adapter = create_mock_DRF('construct_drf_field')
-        mock_adapter.TYPE_MAPPING = self.mock_type_mapping
+        mock_loc = ('api', 'foo', '*', 'field', '.drf_field')
+        mock_instance = {
+            '.drf_field': {},
+            '.foo': {},
+        }
+        all_constructors = {'.drf_field', '.foo'}
+        mock_context = {'constructed': set(),
+                        'all_constructors': all_constructors}
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter, ['construct_drf_field'])
         self.assertRaises(doc.DeferConstructor,
-                          mock_adapter.construct_drf_field,
-                          mock_adapter, {}, {}, self.loc, context)
-        instance = {self.adapter_conf: {}}
-        mock_adapter.extract_type.return_value = 'value'
-        output = mock_adapter.construct_drf_field(
-            mock_adapter, instance, {}, self.loc, context)
-        instance_conf = output.get(mock_adapter.ADAPTER_CONF)
-        self.assertIsNotNone(instance_conf)
-        properties = instance_conf.get(mock_adapter.PROPERTIES_CONF_KEY)
-        self.assertIsNotNone(properties)
-        mock_adapter.default_field_constructor.assert_called_once
-        mock_adapter.construct_nested_drf_field.assert_not_called
-        mock_adapter.extract_type.assert_called_once_with
+                          mock_adapter.construct_drf_field, mock_adapter,
+                          instance=mock_instance, spec={}, loc=mock_loc,
+                          context=mock_context)
+        mock_context['constructed'] = {'.foo'}
 
-        structures = {'.struct', '.structarray'}
-        for i, structure in enumerate(structures, 1):
-            mock_adapter.extract_type.return_value = structure
-            mock_adapter.construct_drf_field(
-                mock_adapter, instance, {}, self.loc, context)
-            self.assertEqual(
-                mock_adapter.default_field_constructor.call_count, 1)
-            self.assertEqual(
-                mock_adapter.construct_nested_drf_field.call_count, i)
-            self.assertEqual(mock_adapter.extract_type.call_count, i + 1)
+        mock_adapter.extract_type.return_value = None
+        self.assertRaises(utils.DRFAdapterException,
+                          mock_adapter.construct_drf_field, mock_adapter,
+                          instance=mock_instance, spec={}, loc=mock_loc,
+                          context=mock_context)
+
+        mock_adapter.extract_type.return_value = '.identity'
+        mock_adapter.construct_identity_field.return_value = 'identity field'
+        mock_adapter.default_field_constructor.return_value = 'drf field'
+
+        instance = mock_adapter.construct_drf_field(
+            mock_adapter, instance=mock_instance, spec={}, loc=mock_loc,
+            context=mock_context)
+        self.assertEqual(instance, 'identity field')
+        mock_adapter.construct_identity_field.assert_called_once_with(
+            mock_instance, {}, mock_loc, mock_context, '.identity')
+        mock_adapter.default_field_constructor.assert_not_called
+
+        mock_adapter.extract_type.return_value = '.foo'
+        instance = mock_adapter.construct_drf_field(
+            mock_adapter, instance=mock_instance, spec={}, loc=mock_loc,
+            context=mock_context)
+        self.assertEqual(instance, 'drf field')
+        mock_adapter.default_field_constructor.assert_called_once_with(
+            mock_instance, {}, mock_loc, mock_context, '.foo')
 
     def test_construct_property(self):
-        self.assertRaises(doc.DeferConstructor,
-                          self.adapter.construct_property,
-                          {}, {}, None, None, None)
-        instance = {self.adapter_conf: {}}
-        property_name = 'property'
-        self.adapter.PROPERTY_MAPPING = {property_name: property_name}
-        instance = self.adapter.construct_property(instance, {}, None, None,
-                                                   property_name)
-        instance_conf = instance.get(self.adapter_conf)
-        self.assertIsNotNone(instance_conf)
-        properties = instance_conf.get(self.adapter.PROPERTIES_CONF_KEY)
-        self.assertIsNotNone(properties)
-        self.assertEqual(len(properties), 1)
-        self.assertTrue(properties[property_name])
+        mock_properties = {
+            'foo': 'foo_mapping',
+            'bar': 'bar_mapping',
+        }
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter, ['construct_property', 'ADAPTER_CONF'])
+        mock_adapter.PROPERTY_MAPPING = mock_properties
+        mock_instance = {self.adapter_conf: {}}
+        self.assertRaises(utils.DRFAdapterException,
+                          mock_adapter.construct_property, mock_adapter,
+                          instance=mock_instance, spec={}, loc=(),
+                          context={}, property_name='unknown')
+
+        instance = mock_adapter.construct_property(
+            mock_adapter, instance=mock_instance, spec={},
+            loc=(), context={}, property_name='foo')
+        self.assertEqual(len(instance), 1)
+        instance_conf = instance.get(mock_adapter.ADAPTER_CONF)
+        self.assertEqual(len(instance_conf), 1)
+        self.assertTrue(instance_conf['foo_mapping'])
 
     def test_validate_model_field(self):
         mock_adapter = create_mock_DRF('validate_model_field')
@@ -307,87 +397,33 @@ class TestDjangoRestAdapter(unittest.TestCase):
                           mock_adapter.validate_model_field,
                           mock_adapter, None, self.loc, mock_cls2, source)
 
-    def tests_validate_intersectional_pairs(self):
-        mock_pairs = [
-            ('a', 'b')
-        ]
-        self.adapter.NON_INTERSECTIONAL_PAIRS = mock_pairs
-        properties = {
-            'field1': {
-                'a': True,
-                'b': True
-            },
-            'field2': {
-                'c': True
-            }
-        }
-        self.assertRaises(utils.DRFAdapterException,
-                          self.adapter.validate_intersectional_pairs,
-                          properties)
-        properties['field1']['a'] = False
-        self.adapter.validate_intersectional_pairs(properties)
-
-    def test_construct_field_schema(self):
-        mock_type_mapping = {'type': 'value', 'ref': 'value'}
-        mock_adapter = create_mock_DRF('construct_field_schema')
-        mock_adapter.TYPE_MAPPING = mock_type_mapping
-        mock_properties = {
-            'field1': {
-                self.adapter_conf: {
-                    mock_adapter.PROPERTIES_CONF_KEY: {
-                        'key': 'value',
-                    }
-                }
-            },
-            'field2': {
-                self.adapter_conf: {
-                    mock_adapter.NESTED_CONF_KEY: {
-                        'key2': 'value2',
-                    }
-                }
-            }
-        }
-        instance = {self.adapter_conf: {}}
-        serializers = ['myserializer']
-        instance = mock_adapter.construct_field_schema(
-            mock_adapter, instance, mock_properties, serializers=serializers)
-        self.assertEqual(len(instance), 1)
-        field_schema = instance.get('field_schema')
-        self.assertIsNotNone(field_schema)
-        self.assertEqual(len(field_schema), 4)
-        self.assertEqual(field_schema['fields'], mock_properties.keys())
-        self.assertEqual(field_schema['serializers'], serializers)
-        self.assertEqual(
-            field_schema[mock_adapter.PROPERTIES_CONF_KEY],
-            {'field1': {'key': 'value'}})
-        self.assertEqual(
-            field_schema[mock_adapter.NESTED_CONF_KEY],
-            {'field2': {'key2': 'value2'}})
-
     def test_get_constructor_params(self):
         mock_structures = {
             'a': 'b',
             'b': 'a',
+            '.collection': '.collection'
         }
         self.adapter.STRUCTURES = mock_structures
         mock_spec = {
-            'a': {'a1': 'va1'},
-            'key': {
-                'b': {'b1': 'vb1'},
+            '.collection': {'a1': 'va1'},
+            'key1': {
+                'b': {'b1': 'vb1', 'source': 'foo'},
                 'a': {'a2': 'va2'},
-                'key': {
-                    'key': {
+                'key2': {
+                    'key3': {
                         'b': {'b2': 'vb2'},
                         'one_more': {},
                     }
                 }
             }
         }
-        loc = ('key', 'key', 'key', 'one_more')
+        loc = ('key1', 'key2', 'key3', 'one_more')
         output = self.adapter.get_constructor_params(mock_spec, loc, [])
-        self.assertEqual(len(output), 2)
-        self.assertEqual(output[0], ('a', {'b1': 'vb1'}))
-        self.assertEqual(output[1], ('b', {'a2': 'va2'}))
+        self.assertEqual(len(output), 4)
+        self.assertEqual(output[0], ('b', {'source': 'key3'}))
+        self.assertEqual(output[1], ('a', {'source': 'foo'}))
+        self.assertEqual(output[2], ('b', {'source': 'key1'}))
+        self.assertEqual(output[3], ('.collection', {'a1': 'va1'}))
 
     def test_extract_related_model(self):
         output = mock.Mock(related_model=None)
