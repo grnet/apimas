@@ -13,6 +13,4 @@ RUN apt-get update && \
         python-setuptools \
         debhelper \
         virtualenv \
-        npm \
-        nodejs \
-        nodejs-legacy
+        apt-transport-https
