@@ -252,7 +252,8 @@ class DjangoRestAdapter(NaiveAdapter):
         based on the field schema, actions, permissions and additional
         configuation (filter_fields, mixins) as specified on spec.
         """
-        if self.ADAPTER_CONF not in instance:
+        constructed = context.get('constructed')
+        if '.collection' not in constructed:
             raise doc.DeferConstructor
         field_schema = doc.doc_get(instance, ('*',))
         actions = doc.doc_get(instance, ('actions', self.ADAPTER_CONF)) or []
@@ -327,9 +328,25 @@ class DjangoRestAdapter(NaiveAdapter):
         for prop in self.PROPERTY_MAPPING.itervalues():
             if predicate_type != '.string' and prop == 'allow_blank':
                 continue
-            if prop not in field_kwargs:
+            if not field_kwargs.get(prop):
                 default[prop] = False
         return default
+
+    def _generate_field(self, instance, loc, predicate_type, model,
+                        onmodel, **field_kwargs):
+        if predicate_type in self.STRUCTURES:
+            drf_field = self.generate_nested_drf_field(
+                instance, loc, predicate_type, model, onmodel=onmodel,
+                **field_kwargs)
+        else:
+            if not onmodel:
+                field_kwargs.update(self.get_default_properties(
+                    predicate_type, field_kwargs))
+                drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
+                    **field_kwargs)
+            else:
+                drf_field = field_kwargs
+        return drf_field
 
     def default_field_constructor(self, instance, spec, loc, context,
                                   predicate_type):
@@ -351,25 +368,19 @@ class DjangoRestAdapter(NaiveAdapter):
             instance, spec, loc, context, predicate_type)
         path = (self.ADAPTER_CONF,)
         instance_source = spec.pop('instance_source', None)
+        onmodel = spec.get('onmodel', True)
+        if instance_source and onmodel:
+            raise utils.DRFAdapterException(
+                'You don\'t have to specify `instance_source` if'
+                ' `onmodel` is set')
         field_kwargs = {k: v for k, v in spec.iteritems() if k != 'onmodel'}
         if predicate_type == '.ref':
             ref = doc.doc_get(instance, ('.ref', 'to'))
             field_kwargs.update({'view_name': '%s-detail' % (ref)})
         field_kwargs.update(doc.doc_get(instance, path) or {})
         doc.doc_set(instance, (self.ADAPTER_CONF, 'source'), instance_source)
-        onmodel = spec.get('onmodel', True)
-        if predicate_type in self.STRUCTURES:
-            drf_field = self.generate_nested_drf_field(
-                instance, loc, predicate_type, model, onmodel=onmodel,
-                **field_kwargs)
-        else:
-            if not onmodel:
-                field_kwargs.update(self.get_default_properties(
-                    predicate_type, field_kwargs))
-                drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
-                    **field_kwargs)
-            else:
-                drf_field = field_kwargs
+        drf_field = self._generate_field(instance, loc, predicate_type, model,
+                                         onmodel, **field_kwargs)
         doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
         return instance
 
@@ -463,6 +474,9 @@ class DjangoRestAdapter(NaiveAdapter):
         it requires field to be initialized, otherwise, construction is
         defered.
         """
+        if property_name not in self.PROPERTY_MAPPING:
+            raise utils.DRFAdapterException(
+                'Unknown property `%s`' % (property_name))
         self.init_adapter_conf(instance)
         instance[self.ADAPTER_CONF].update(
             {self.PROPERTY_MAPPING[property_name]: True})
