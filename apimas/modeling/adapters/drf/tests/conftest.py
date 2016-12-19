@@ -39,15 +39,11 @@ def pytest_configure():
             'django.contrib.staticfiles',
             'rest_framework',
             'rest_framework.authtoken',
-            'tests',
+            'apimas.modeling.adapters.drf.tests.apps.TestApp',
         ),
         PASSWORD_HASHERS=(
             'django.contrib.auth.hashers.MD5PasswordHasher',
         ),
     )
-
-    try:
-        import django
-        django.setup()
-    except AttributeError:
-        pass
+    import django
+    django.setup()
