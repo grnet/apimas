@@ -14,5 +14,11 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ -z "${appname}" ] || [ -z "${remo
 fi
 
 container_name="build_${appname}_$(date +'%Y%m%d%H%M%S')"
-docker run --name "${container_name}" dev-builder /root/bin/build.sh "${appname}" "${remote}" "${commit}"
+
+docker run \
+        -v "$(pwd)/sources:/root/sources:ro" \
+        -v "$(pwd)/node_modules:/root/node_modules" \
+        --name "${container_name}" dev-builder \
+        /root/bin/build.sh "${appname}" "${remote}" "${commit}"
+
 docker cp ${container_name}:/root/build .

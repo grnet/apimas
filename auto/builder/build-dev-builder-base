@@ -1,3 +1,3 @@
 #!/bin/sh
 
-exec docker build -t dev-builder-base -f Dockerfile.dev-builder-base .
+exec docker build -t dev-builder-base -f docker/Dockerfile.dev-builder-base docker

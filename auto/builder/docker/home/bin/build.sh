@@ -10,7 +10,7 @@ export PATH="${BASE}/bin:${PATH}"
 
 if ! [ -d "${BASE}/workspace/sources" ]; then
     if [ -d "${BASE}/sources" ]; then
-        ln -s "${BASE}/sources" "${BASE}/workspace/sources"
+        cp -r "${BASE}/sources" "${BASE}/workspace/"
     else
         mkdir "${BASE}/workspace/sources"
     fi
