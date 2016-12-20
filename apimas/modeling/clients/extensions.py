@@ -16,7 +16,7 @@ class RefNormalizer(object):
     def __call__(self, value):
         if value is None:
             return value
-        return urljoin(self.ref_endpoint, value) + '/'
+        return urljoin(self.ref_endpoint, value).rstrip('/') + '/'
 
 
 class DateTimeNormalizer(object):
