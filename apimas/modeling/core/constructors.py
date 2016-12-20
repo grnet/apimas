@@ -178,7 +178,7 @@ def construct_text(instance, spec, loc, context):
     if not blankable and not text:
         m = "{loc}: text cannot be blank"
         m = m.format(loc=loc)
-        raise ValidatorError(m)
+        raise ValidationError(m)
 
     if regex is not None:
         flags = re.UNICODE
