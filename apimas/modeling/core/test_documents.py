@@ -1,6 +1,6 @@
 from documents import (
-    random_doc, doc_pop, doc_match_levels, doc_iter, doc_construct, doc_set,
-    Prefix)
+    random_doc, doc_pop, doc_match_levels, doc_iter, doc_construct,
+    doc_set, doc_get, Prefix)
 
 
 def test():
@@ -16,6 +16,7 @@ def test():
     def constructor(instance, spec, loc, context):
         assert '.one' in instance
         assert '.three' in instance
+        assert context['parent_spec'] == doc_get(context['top_spec'], loc[:-1])
         return instance
 
     spec = {'.one': 'two', '.three': 'four'}
