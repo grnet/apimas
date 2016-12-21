@@ -90,8 +90,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
     @mock.patch(
         'apimas.modeling.adapters.drf.django_rest.generate_view',
         return_value='mock_view')
-    @mock.patch.object(utils, 'import_object', return_value='model_imported')
-    def test_contruct_drf_collection(self, mock_import, mock_view_gen):
+    def test_contruct_drf_collection(self, mock_view_gen):
         mock_loc = ('api', 'collection', '.drf_collection')
         mock_instance = {
             '*': {
@@ -110,6 +109,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         }
         mock_adapter = create_mock_object(
             DjangoRestAdapter, ['construct_drf_collection', 'ADAPTER_CONF'])
+        mock_adapter._get_or_import_model.return_value = 'model_imported'
         mock_adapter.views = {}
         mock_adapter.serializers = {}
         mock_adapter.generate_serializer.return_value = 'mock_serializer'
@@ -133,7 +133,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(mock_adapter.views['collection'], 'mock_view')
         self.assertEqual(mock_adapter.serializers['collection'],
                          'mock_serializer')
-        mock_import.assert_called_once_with('model_cls')
+        mock_adapter._get_or_import_model.assert_called_once_with(
+            'collection', mock_loc + ('model',), None)
         mock_view_gen.assert_called_once_with(
             'collection', 'mock_serializer', 'model_imported',
             actions=['a', 'b'], permissions='permissions')
@@ -365,27 +366,32 @@ class TestDjangoRestAdapter(unittest.TestCase):
             'b': 'a',
             '.collection': '.collection'
         }
+        mock_model = mock.Mock()
+        models = {'key': mock_model}
         self.adapter.STRUCTURES = mock_structures
+        self.adapter.models = models
         mock_spec = {
-            '.collection': {'a1': 'va1'},
-            'key1': {
-                'b': {'b1': 'vb1', 'source': 'foo'},
-                'a': {'a2': 'va2'},
-                'key2': {
-                    'key3': {
-                        'b': {'b2': 'vb2'},
-                        'one_more': {},
+            'key': {
+                '.collection': {'a1': 'va1'},
+                'key1': {
+                    'b': {'b1': 'vb1', 'source': 'foo'},
+                    'a': {'a2': 'va2'},
+                    'key2': {
+                        'key3': {
+                            'b': {'b2': 'vb2'},
+                            'one_more': {},
+                        }
                     }
                 }
             }
         }
-        loc = ('key1', 'key2', 'key3', 'one_more')
+        loc = ('key', 'key1', 'key2', 'key3', 'one_more')
         output = self.adapter.get_constructor_params(mock_spec, loc, [])
         self.assertEqual(len(output), 4)
         self.assertEqual(output[0], ('b', {'source': 'key3'}))
         self.assertEqual(output[1], ('a', {'source': 'foo'}))
         self.assertEqual(output[2], ('b', {'source': 'key1'}))
-        self.assertEqual(output[3], ('.collection', {'a1': 'va1'}))
+        self.assertEqual(output[3], ('.collection', {'model': mock_model}))
 
     def test_extract_related_model(self):
         output = mock.Mock(related_model=None)
@@ -404,3 +410,36 @@ class TestDjangoRestAdapter(unittest.TestCase):
         output = mock_adapter.extract_related_model(
             mock_adapter, None, None)
         self.assertEqual(output, 'value')
+
+    @mock.patch.object(utils, 'import_object')
+    def test_get_or_import_model(self, mock_import):
+        side_effect = lambda x: x + '_imported'
+        mock_import.side_effect = side_effect
+        spec = {
+            'foo': {
+                'model': 'a',
+            },
+            'bar': {
+                'model': 'b'
+            }
+        }
+        self.assertEqual(self.adapter.models, {})
+        model = self.adapter._get_or_import_model(
+            'foo', ('foo', 'model'), spec)
+        self.assertEqual(model, 'a_imported')
+        self.assertEqual(self.adapter.models, {'foo': 'a_imported'})
+        mock_import.assert_called_once_with('a')
+
+        model = self.adapter._get_or_import_model(
+            'foo', ('foo', 'model'), spec)
+        self.assertEqual(model, 'a_imported')
+        self.assertEqual(self.adapter.models, {'foo': 'a_imported'})
+        self.assertEqual(mock_import.call_count, 1)
+
+        model = self.adapter._get_or_import_model(
+            'bar', ('bar', 'model'), spec)
+        self.assertEqual(model, 'b_imported')
+        self.assertEqual(self.adapter.models,
+                         {'foo': 'a_imported', 'bar': 'b_imported'})
+        mock_import.assert_called_with('b')
+        self.assertEqual(mock_import.call_count, 2)

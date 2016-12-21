@@ -89,6 +89,7 @@ class DjangoRestAdapter(NaiveAdapter):
     def __init__(self):
         self.gen_adapter_spec = {}
         self.urls = None
+        self.models = {}
         self.serializers = {}
         self.views = {}
 
@@ -257,7 +258,8 @@ class DjangoRestAdapter(NaiveAdapter):
             raise doc.DeferConstructor
         field_schema = doc.doc_get(instance, ('*',))
         actions = doc.doc_get(instance, ('actions', self.ADAPTER_CONF)) or []
-        model = utils.import_object(spec.get('model'))
+        model = self._get_or_import_model(loc[-2], loc + ('model',),
+                                          context.get('top_spec'))
         model_serializers = spec.pop('model_serializers', [])
         extra_serializers = spec.pop('serializers', [])
         serializer = self.generate_serializer(
@@ -384,6 +386,20 @@ class DjangoRestAdapter(NaiveAdapter):
         doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
         return instance
 
+    def _get_or_import_model(self, collection, model_path, top_spec):
+        """
+        This function checks if a model of a collection is already specified
+        and imported and retrieves it. If this is not the case, then it
+        imports it and retrieves it.
+        """
+        if collection not in self.models:
+            model = utils.import_object(
+                doc.doc_get(top_spec, model_path))
+            self.models[collection] = model
+        else:
+            model = self.models[collection]
+        return model
+
     def validate_model_configuration(self, instance, spec, loc, context,
                                      predicate_type):
         """
@@ -395,9 +411,9 @@ class DjangoRestAdapter(NaiveAdapter):
         onmodel = spec.get('onmodel', True)
         source = spec.get('source')
         top_spec = context.get('top_spec')
-        model_path = ('.drf_collection', 'model')
-        model = utils.import_object(
-            doc.doc_get(top_spec, loc[0:2] + model_path))
+        model_path = loc[:2] + ('.drf_collection', 'model')
+        collection = loc[1]
+        model = self._get_or_import_model(collection, model_path, top_spec)
         structures = {'.struct', '.structarray'}
         if onmodel:
             field_type = self.TYPE_MAPPING[predicate_type[1:]]
@@ -449,7 +465,7 @@ class DjangoRestAdapter(NaiveAdapter):
         model = self.extract_model(source or loc[-2], django_conf)
         model_field = model._meta.get_field(source or loc[-2])
         path = root_loc + (ref, '.drf_collection', 'model')
-        ref_model = import_object(doc.doc_get(top_spec, path))
+        ref_model = self._get_or_import_model(ref, path, top_spec)
         if model_field.related_model is not ref_model:
             raise DRFAdapterException(
                 'Model field of %s is not related to %s. Loc: %s' % (
@@ -532,7 +548,7 @@ class DjangoRestAdapter(NaiveAdapter):
             onmodel = structure_params.get('onmodel', True)
             if structure in struct_doc and onmodel:
                 if structure == '.collection':
-                    params.append((structure, structure_params))
+                    params.append((structure, {'model': self.models[loc[-2]]}))
                     continue
                 source = structure_params.get('source')
                 params.append((structure, {'source': source or loc[-2]}))
@@ -551,7 +567,7 @@ class DjangoRestAdapter(NaiveAdapter):
         if len(django_conf) > 1:
             return self.extract_related_model(
                 params.get('source'), django_conf[1:])
-        return import_object(params.get('model', None))
+        return params.get('model', None)
 
     @handle_exception
     def extract_related_model(self, related_field, django_conf):
