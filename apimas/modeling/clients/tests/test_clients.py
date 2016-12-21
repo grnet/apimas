@@ -1,12 +1,9 @@
-import datetime
 import unittest
 import mock
 from requests.exceptions import HTTPError
-from apimas.modeling.clients import extensions as ext
 from apimas.modeling.clients import (
     ApimasClient, ApimasClientAdapter, requests, get_subdocuments,
     to_cerberus_paths, TRAILING_SLASH)
-from apimas.modeling.clients.auth import HTTPTokenAuth, ApimasClientAuth
 from apimas.modeling.core.exceptions import (
     ApimasException, ApimasClientException)
 from apimas.modeling.tests.helpers import create_mock_object
@@ -319,57 +316,3 @@ class TestClientAdapter(unittest.TestCase):
         self.assertEqual(schema['type'], 'dict')
         self.assertEqual(schema['schema'], {'field1': {'foo': 'bar'},
                                             'field2': {'bar': 'foo'}})
-
-
-class TestExtensions(unittest.TestCase):
-    def test_ref_normalizer(self):
-        normalizer = ext.RefNormalizer('http://root.com')
-        url = normalizer('value')
-        self.assertEqual(url, 'http://root.com/value/')
-
-        self.assertIsNone(normalizer(None))
-
-    def test_datetime_normalizer(self):
-        now = datetime.datetime.now()
-        now_date = now.date()
-
-        now_str = '%s-%s-%s %s:%s' % (
-            now.year, now.month, now.day, now.hour, now.minute)
-        now_date_str = '%s-%s-%s 00:00' % (now.year, now.month, now.day)
-
-        normalizer = ext.DateNormalizer('%Y-%m-%d %H:%M')
-        self.assertEqual(normalizer(now), now_str)
-        self.assertEqual(normalizer(now_date), now_date_str)
-
-        self.assertEqual(normalizer(now_str), now_str)
-        self.assertEqual(normalizer(now_date_str), now_date_str)
-
-        self.assertRaises(ValueError, normalizer, 'invalid str')
-
-
-class TestAuth(unittest.TestCase):
-    def test_token_auth(self):
-        mock_token = 'my token'
-        token_auth = HTTPTokenAuth(mock_token)
-        mock_request = mock.Mock()
-        mock_request.headers = {}
-        token_auth(mock_request)
-        self.assertEqual(mock_request.headers,
-                         {'Authorization': 'Token ' + mock_token})
-
-    def test_apimas_auth(self):
-        mock_auth = mock.Mock()
-        auth = ApimasClientAuth(None, **{})
-        auth.AUTHENTICATION_BACKENDS = {'mock': mock_auth}
-        mock_request = mock.Mock()
-        mock_request.headers = {}
-        auth(mock_request)
-
-        self.assertEqual(mock_auth.call_count, 0)
-
-        auth.auth_type = 'mock'
-        auth(mock_request)
-        self.assertEqual(mock_auth.call_count, 1)
-
-        auth.auth_type = 'invalid'
-        self.assertRaises(ApimasClientException, auth, mock_request)

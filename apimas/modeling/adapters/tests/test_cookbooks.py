@@ -2,33 +2,8 @@ import mock
 import unittest
 from apimas.modeling.core import documents as doc
 from apimas.modeling.core.exceptions import ApimasException
-from apimas.modeling.adapters import Adapter, utils
 from apimas.modeling.adapters.cookbooks import NaiveAdapter
 from apimas.modeling.tests.helpers import create_mock_object
-
-
-class TestAdapter(unittest.TestCase):
-    def setUp(self):
-        self.adapter = Adapter()
-
-    def test_construct(self):
-        self.assertRaises(NotImplementedError, self.adapter.construct, {})
-
-    def test_apply(self):
-        self.assertRaises(NotImplementedError, self.adapter.apply)
-
-    @mock.patch('apimas.modeling.adapters.utils.default_constructor')
-    def test_get_constructors(self, mock_constructor):
-        mock_method = mock.Mock()
-        predicates = {'.foo', '.bar'}
-        self.adapter.PREDICATES = predicates
-        self.adapter.CONSTRUCTOR_PREFIX = 'mock'
-        setattr(self.adapter, 'mock_bar', mock_method)
-        mock_constructor.return_value = 'test'
-        constructors = self.adapter.get_constructors()
-        self.assertEqual(len(constructors), 2)
-        self.assertEqual(constructors['bar'], mock_method)
-        self.assertEqual(constructors['foo'], 'test')
 
 
 class TestNaiveAdapter(unittest.TestCase):
@@ -225,11 +200,3 @@ class TestNaiveAdapter(unittest.TestCase):
                     mock_func.assert_called_with(
                         mock_instance, mock_instance, mock_loc, {},
                         predicate_type[1:])
-
-
-class TestUtils(unittest.TestCase):
-    def test_default_constructor(self):
-        predicate = '.mock'
-        func = utils.default_constructor(predicate)
-        self.assertRaises(NotImplementedError, func, instance={}, spec={},
-                          loc=(), context={})
