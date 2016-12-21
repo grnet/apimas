@@ -234,6 +234,7 @@ class TestCliAdapter(unittest.TestCase):
     def test_construct_action(self, mock_argument, mock_option):
         mock_cli = create_mock_object(
             ApimasCliAdapter, ['construct_action', 'ADAPTER_CONF'])
+        mock_cli.clients = {}
         actions = {'foo'}
         mock_loc = ('foo', 'bar', 'actions', 'action')
         mock_cli.CRITICAL_ACTIONS = actions
