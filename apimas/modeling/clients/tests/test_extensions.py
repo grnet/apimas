@@ -16,8 +16,10 @@ class TestExtensions(unittest.TestCase):
         now_date = now.date()
 
         now_str = '%s-%s-%s %s:%s' % (
-            now.year, now.month, now.day, now.hour, now.minute)
-        now_date_str = '%s-%s-%s 00:00' % (now.year, now.month, now.day)
+            now.year, str(now.month).zfill(2), str(now.day).zfill(2),
+            str(now.hour).zfill(2), str(now.minute).zfill(2))
+        now_date_str = '%s-%s-%s 00:00' % (
+            now.year, str(now.month).zfill(2), str(now.day).zfill(2))
 
         normalizer = ext.DateNormalizer('%Y-%m-%d %H:%M')
         self.assertEqual(normalizer(now), now_str)
