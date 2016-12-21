@@ -449,11 +449,13 @@ class ApimasClientAdapter(NaiveAdapter):
         def default(instance, spec, loc, context, **kwargs):
             return instance
 
+        parent_name = context.get('parent_name')
         nested_structures = {'.struct', '.structarray'}
         field_type = self.extract_type(instance)
         if not field_type:
             raise ex.ApimasException(
-                'You have to specify field type for field `%s`' % (loc[-2]))
+                'You have to specify field type for field `%s`' % (
+                    parent_name))
         self.init_adapter_conf(instance)
         if field_type in nested_structures:
             return self.construct_nested_field(

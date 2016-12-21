@@ -251,26 +251,27 @@ class DjangoRestAdapter(NaiveAdapter):
         based on the field schema, actions, permissions and additional
         configuation (filter_fields, mixins) as specified on spec.
         """
+        parent = context.get('parent_name')
         constructed = context.get('constructed')
         if '.collection' not in constructed:
             raise doc.DeferConstructor
         field_schema = doc.doc_get(instance, ('*',))
         actions = doc.doc_get(instance, ('actions', self.ADAPTER_CONF)) or []
-        model = self._get_or_import_model(loc[-2], loc + ('model',),
+        model = self._get_or_import_model(parent, loc + ('model',),
                                           context.get('top_spec'))
         model_serializers = spec.pop('model_serializers', [])
         extra_serializers = spec.pop('serializers', [])
         serializer = self.generate_serializer(
-            field_schema, loc[-2], model=model,
+            field_schema, parent, model=model,
             model_serializers=model_serializers,
             extra_serializers=extra_serializers)
         kwargs = {k: v for k, v in spec.iteritems() if k != 'model'}
-        permissions = self.get_permissions(loc[-2], context.get('top_spec'))
-        view = generate_view(loc[-2], serializer, model, actions=actions,
+        permissions = self.get_permissions(parent, context.get('top_spec'))
+        view = generate_view(parent, serializer, model, actions=actions,
                              permissions=permissions, **kwargs)
         instance[self.ADAPTER_CONF] = view
-        self.serializers[loc[-2]] = serializer
-        self.views[loc[-2]] = view
+        self.serializers[parent] = serializer
+        self.views[parent] = view
         return instance
 
     def _classify_fields(self, field_schema):
@@ -298,7 +299,7 @@ class DjangoRestAdapter(NaiveAdapter):
                                                        instance_path)
         return model_fields, extra_fields, instance_sources
 
-    def generate_nested_drf_field(self, instance, loc, predicate_type, model,
+    def generate_nested_drf_field(self, instance, name, predicate_type, model,
                                   onmodel=True, **kwargs):
         """
         Generate a nested drf field, which is actually a `Serializer` class.
@@ -309,7 +310,7 @@ class DjangoRestAdapter(NaiveAdapter):
         model_serializers = kwargs.pop('model_serializers', [])
         extra_serializers = kwargs.pop('serializers', [])
         serializer = self.generate_serializer(
-            field_schema, loc[-2], onmodel=onmodel,
+            field_schema, name, onmodel=onmodel,
             model_serializers=model_serializers,
             extra_serializers=extra_serializers, model=model)
         return serializer(many=many, **kwargs)
@@ -408,6 +409,7 @@ class DjangoRestAdapter(NaiveAdapter):
         """
         onmodel = spec.get('onmodel', True)
         source = spec.get('source')
+        parent_name = context.get('parent_name')
         top_spec = context.get('top_spec')
         model_path = loc[:2] + ('.drf_collection', 'model')
         collection = loc[1]
@@ -417,10 +419,10 @@ class DjangoRestAdapter(NaiveAdapter):
             field_type = self.TYPE_MAPPING[predicate_type[1:]]
             if predicate_type == '.ref':
                 _, model, _ = self.validate_ref(
-                    instance, spec, loc, top_spec, source)
+                    instance, parent_name, loc, top_spec, source)
             else:
                 model_field, model = self.validate_model_field(
-                    top_spec, loc, field_type, source)
+                    top_spec, parent_name, loc, field_type, source)
                 if predicate_type in structures:
                     model = model_field.related_model
         return model
@@ -435,6 +437,7 @@ class DjangoRestAdapter(NaiveAdapter):
         In case of nested fields, e.g. `.struct`, `.structarray`, the field
         should be related to another model.
         """
+        parent = context.get('parent_name')
         field_constructors = {
             '.identity': self.construct_identity_field,
         }
@@ -446,12 +449,12 @@ class DjangoRestAdapter(NaiveAdapter):
         if type_predicate is None:
             raise utils.DRFAdapterException(
                 'Cannot construct drf field `%s` without specifying its'
-                ' type' % (loc[-2]))
+                ' type' % (parent))
         return field_constructors.get(
             type_predicate, self.default_field_constructor)(
                 instance, spec, loc, context, type_predicate)
 
-    def validate_ref(self, instance, spec, loc, top_spec, source):
+    def validate_ref(self, instance, name, loc, top_spec, source):
         """
         Validates that the referenced field is a foreign key to the same
         django model table as the model defined in the referenced collection
@@ -460,14 +463,14 @@ class DjangoRestAdapter(NaiveAdapter):
         root_loc = loc[0:1]
         ref = doc.doc_get(instance, ('.ref', 'to'))
         django_conf = self.get_constructor_params(top_spec, loc, [])
-        model = self.extract_model(source or loc[-2], django_conf)
-        model_field = model._meta.get_field(source or loc[-2])
+        model = self.extract_model(source or name, django_conf)
+        model_field = model._meta.get_field(source or name)
         path = root_loc + (ref, '.drf_collection', 'model')
         ref_model = self._get_or_import_model(ref, path, top_spec)
         if model_field.related_model is not ref_model:
             raise utils.DRFAdapterException(
                 'Model field of %s is not related to %s. Loc: %s' % (
-                    source or loc[-2], ref_model, str(loc)))
+                    source or name, ref_model, str(loc)))
         return model_field, model, ref_model
 
     def construct_type(self, instance, spec, loc, context, field_type=None):
@@ -497,17 +500,18 @@ class DjangoRestAdapter(NaiveAdapter):
         return instance
 
     @handle_exception
-    def validate_model_field(self, spec, loc, django_field_type, source=None):
+    def validate_model_field(self, spec, name, loc, django_field_type,
+                             source=None):
         """
         Validate that a field specified in spec is field of the model
         given as input.
         """
         django_conf = self.get_constructor_params(spec, loc[:-1], [])
-        model = self.extract_model(source or loc[-2], django_conf)
+        model = self.extract_model(source or name, django_conf)
         if model is None:
             raise utils.DRFAdapterException(
                 'Invalid argument, model cannot be `None`')
-        model_field = model._meta.get_field(source or loc[-2])
+        model_field = model._meta.get_field(source or name)
         if isinstance(django_field_type, Iterable):
             matches = any(isinstance(model_field, d_field)
                           for d_field in django_field_type)
@@ -516,7 +520,7 @@ class DjangoRestAdapter(NaiveAdapter):
         if not matches:
             raise utils.DRFAdapterException(
                 'Field %s is not %s type in your django model' % (
-                    repr(loc[-2]), repr(django_field_type)))
+                    repr(name), repr(django_field_type)))
         return model_field, model
 
     def validate_intersectional_pairs(self, properties):

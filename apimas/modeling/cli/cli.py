@@ -338,11 +338,12 @@ class ApimasCliAdapter(NaiveAdapter):
         Gets all commands corresponding to actions and attaches the
         appropriate options to them based on field schema.
         """
+        parent_name = context.get('parent_name')
         instance = self.init_adapter_conf(instance, initial={'actions': set()})
         commands = doc.doc_get(instance, ('actions', self.ADAPTER_CONF)) or {}
         for action, command in commands.iteritems():
             command = self.construct_command(
-                instance, spec, loc, action, command)
+                instance, parent_name, spec, loc, action, command)
             instance[self.ADAPTER_CONF]['actions'].add(command)
         return instance
 
@@ -366,7 +367,8 @@ class ApimasCliAdapter(NaiveAdapter):
         instance[self.ADAPTER_CONF][action] = command
         return instance
 
-    def construct_command(self, instance, spec, loc, action, command):
+    def construct_command(self, instance, command_name, spec, loc, action,
+                          command):
         """
         Construct command's options for a specific collection according to the
         `APIMAS` specification.
@@ -428,7 +430,8 @@ class ApimasCliAdapter(NaiveAdapter):
         """
         return self.construct_action(instance, spec, loc, context, 'retrieve')
 
-    def construct_struct_option(self, instance, spec, loc, option_name):
+    def construct_struct_option(self, instance, parent_name, spec, loc,
+                                option_name):
         """
         Constructor for `.struct` predicate.
 
@@ -453,7 +456,7 @@ class ApimasCliAdapter(NaiveAdapter):
             for nested, params in schema.get(self.ADAPTER_CONF).iteritems():
                 option_kwargs.update({option_name + '-' + nested: params})
                 self.struct_map[option_name + '-' + nested] = (
-                    loc[-2],) + self.struct_map.get(nested, (nested,))
+                    parent_name,) + self.struct_map.get(nested, (nested,))
         instance[self.ADAPTER_CONF].update(option_kwargs)
         return instance
 
@@ -486,15 +489,16 @@ class ApimasCliAdapter(NaiveAdapter):
         It constructs a dictionary keyed by option name which contains
         all required keyword arguments for `click.option()` constructor.
         """
+        parent_name = context.get('parent_name')
         extra_params = {'.ref': self._add_ref_params}
         if instance == SKIP:
             return instance
         predicate_type = self.extract_type(instance)
         option_name = doc.doc_get(
-            spec, ('option_name',)) or loc[-2]
+            spec, ('option_name',)) or parent_name
         if predicate_type == '.struct':
-            return self.construct_struct_option(instance, spec, loc,
-                                                option_name)
+            return self.construct_struct_option(instance, parent_name, spec,
+                                                loc, option_name)
         instance = self.init_adapter_conf(instance, initial={option_name: {}})
         kwargs = {'type': self.construct_option_type(
             instance, spec, loc, context, predicate_type)}

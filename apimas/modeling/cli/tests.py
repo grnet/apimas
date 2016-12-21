@@ -194,9 +194,10 @@ class TestCliAdapter(unittest.TestCase):
         mock_instance = {
             self.adapter_conf: {'actions': set()}
         }
+        mock_context = {'parent_name': 'foo'}
         mock_cli.init_adapter_conf.return_value = mock_instance
         instance = mock_cli.construct_cli_commands(
-            mock_cli, instance={}, spec={}, loc=(), context={})
+            mock_cli, instance={}, spec={}, loc=(), context=mock_context)
         self.assertEqual(instance, mock_instance)
         mock_cli.init_adapter_conf.assert_called_once_with(
             {}, initial={'actions': set()})
@@ -214,7 +215,8 @@ class TestCliAdapter(unittest.TestCase):
         mock_cli.init_adapter_conf.return_value = instance_and_conf
         mock_cli.construct_command.return_value = 'foo_bar'
         instance = mock_cli.construct_cli_commands(
-            mock_cli, instance=initial_instance, spec={}, loc=(), context={})
+            mock_cli, instance=initial_instance, spec={}, loc=(),
+            context=mock_context)
         self.assertEqual(len(instance), 2)
         instance_conf = instance.get(mock_cli.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)
@@ -225,9 +227,9 @@ class TestCliAdapter(unittest.TestCase):
             initial_instance, initial={'actions': set()})
         self.assertEqual(mock_cli.construct_command.call_count, 2)
         mock_cli.construct_command.assert_any_call(
-            instance_and_conf, {}, (), 'a', 'foo')
+            instance_and_conf, 'foo', {}, (), 'a', 'foo')
         mock_cli.construct_command.assert_any_call(
-            instance_and_conf, {}, (), 'b', 'bar')
+            instance_and_conf, 'foo', {}, (), 'b', 'bar')
 
     @mock.patch('click.option')
     @mock.patch('click.argument')
@@ -311,6 +313,7 @@ class TestCliAdapter(unittest.TestCase):
             }
         }
 
+        command_name = 'foo'
         mock_obj = mock.MagicMock()
         mock_obj.return_value = 'test'
         mock_group.command.return_value = mock_obj
@@ -318,7 +321,8 @@ class TestCliAdapter(unittest.TestCase):
             mock_cli.option_allowed.return_value = action != 'delete'
             with mock.patch('click.option') as mock_option:
                 command = mock_cli.construct_command(
-                    mock_cli, instance=mock_instance, spec={}, loc=mock_loc,
+                    mock_cli, instance=mock_instance,
+                    command_name=command_name, spec={}, loc=mock_loc,
                     action=action, command='foo')
                 self.assertEqual(command, 'test')
                 if action == 'create':
@@ -353,9 +357,10 @@ class TestCliAdapter(unittest.TestCase):
             },
             self.adapter_conf: {},
         }
+        parent_name = 'foo'
         instance = mock_cli.construct_struct_option(
-            mock_cli, instance=mock_instance, spec={}, loc=mock_loc,
-            option_name='test')
+            mock_cli, instance=mock_instance, parent_name=parent_name, spec={},
+            loc=mock_loc, option_name='test')
         self.assertEqual(len(instance), 2)
         instance_conf = instance.get(mock_cli.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)
@@ -393,30 +398,32 @@ class TestCliAdapter(unittest.TestCase):
             instance={}, spec={}, loc=(), context={}), SKIP)
 
     def test_construct_cli_option(self):
+        context = {'parent_name': 'foo'}
         mock_loc = ('foo', 'bar', '*', 'field', 'type')
         mock_cli = create_mock_object(
             ApimasCliAdapter, ['construct_cli_option', 'ADAPTER_CONF'])
         mock_cli.construct_option_type.return_value = 'option type'
 
         self.assertEqual(mock_cli.construct_cli_option(
-            mock_cli, instance=SKIP, spec={}, loc=mock_loc, context={}), SKIP)
+            mock_cli, instance=SKIP, spec={}, loc=mock_loc, context=context),
+                         SKIP)
         mock_cli.extract_type.assert_not_called
 
         mock_cli.extract_type.return_value = '.struct'
         spec = {'option_name': 'my'}
         mock_cli.construct_struct_option.return_value = 'struct_option'
         instance = mock_cli.construct_cli_option(
-            mock_cli, instance={}, spec=spec, loc=mock_loc, context={})
+            mock_cli, instance={}, spec=spec, loc=mock_loc, context=context)
         self.assertEqual(instance, 'struct_option')
         mock_cli.extract_type.assert_called_with({})
         mock_cli.construct_struct_option.assert_called_once_with(
-            {}, spec, mock_loc, 'my')
+            {}, 'foo', spec, mock_loc, 'my')
 
         mock_cli.extract_type.return_value = 'foo'
         mock_cli.init_adapter_conf.return_value = {
             self.adapter_conf: {'my': {}}}
         instance = mock_cli.construct_cli_option(
-            mock_cli, instance={}, spec=spec, loc=mock_loc, context={})
+            mock_cli, instance={}, spec=spec, loc=mock_loc, context=context)
         self.assertEqual(instance[self.adapter_conf]['my'],
                          {'type': 'option type'})
         mock_cli.construct_option_type.assert_called_once
@@ -424,7 +431,7 @@ class TestCliAdapter(unittest.TestCase):
         mock_cli.init_adapter_conf.return_value = {
             self.adapter_conf: {'my': {}}, '.required': {}}
         instance = mock_cli.construct_cli_option(
-            mock_cli, instance={}, spec=spec, loc=mock_loc, context={})
+            mock_cli, instance={}, spec=spec, loc=mock_loc, context=context)
         self.assertEqual(instance[self.adapter_conf]['my'],
                          {'type': 'option type', 'required': True})
 

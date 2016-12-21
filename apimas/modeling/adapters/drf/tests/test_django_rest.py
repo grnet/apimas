@@ -114,13 +114,14 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_adapter.serializers = {}
         mock_adapter.generate_serializer.return_value = 'mock_serializer'
         mock_adapter.get_permissions.return_value = 'permissions'
-        context = {'constructed': ['.a_constructor']}
+        context = {'constructed': ['.a_constructor'],
+                   'parent_name': 'collection'}
         self.assertRaises(doc.DeferConstructor,
                           mock_adapter.construct_drf_collection, mock_adapter,
                           instance=mock_instance, spec=mock_spec, loc=mock_loc,
                           context=context)
 
-        context = {'constructed': ['.collection']}
+        context['constructed'] = ['.collection']
         instance = mock_adapter.construct_drf_collection(
             mock_adapter, instance=mock_instance, spec=mock_spec,
             loc=mock_loc, context=context)
@@ -347,18 +348,19 @@ class TestDjangoRestAdapter(unittest.TestCase):
 
         self.assertRaises(utils.DRFAdapterException,
                           mock_adapter.validate_model_field, mock_adapter,
-                          None, self.loc, field_type, None)
+                          None, 'foo', self.loc, field_type, None)
         mock_meta.get_field.assert_not_called
 
         source = 'myvalue'
         mock_adapter.extract_model.return_value = mock_model
-        mock_adapter.validate_model_field(mock_adapter, None, self.loc,
+        mock_adapter.validate_model_field(mock_adapter, None, 'foo', self.loc,
                                           field_type, source)
         mock_meta.get_field.assert_called_once_with(source)
 
         self.assertRaises(utils.DRFAdapterException,
                           mock_adapter.validate_model_field,
-                          mock_adapter, None, self.loc, mock_cls2, source)
+                          mock_adapter, None, 'foo', self.loc, mock_cls2,
+                          source)
 
     def test_get_constructor_params(self):
         mock_structures = {
