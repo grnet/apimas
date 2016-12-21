@@ -333,11 +333,11 @@ class DjangoRestAdapter(NaiveAdapter):
                 default[prop] = False
         return default
 
-    def _generate_field(self, instance, loc, predicate_type, model,
+    def _generate_field(self, instance, name, predicate_type, model,
                         onmodel, **field_kwargs):
         if predicate_type in self.STRUCTURES:
             drf_field = self.generate_nested_drf_field(
-                instance, loc, predicate_type, model, onmodel=onmodel,
+                instance, name, predicate_type, model, onmodel=onmodel,
                 **field_kwargs)
         else:
             if not onmodel:
@@ -380,8 +380,9 @@ class DjangoRestAdapter(NaiveAdapter):
             field_kwargs.update({'view_name': '%s-detail' % (ref)})
         field_kwargs.update(doc.doc_get(instance, path) or {})
         doc.doc_set(instance, (self.ADAPTER_CONF, 'source'), instance_source)
-        drf_field = self._generate_field(instance, loc, predicate_type, model,
-                                         onmodel, **field_kwargs)
+        drf_field = self._generate_field(
+            instance, context.get('parent_name'), predicate_type, model,
+            onmodel, **field_kwargs)
         doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
         return instance
 

@@ -194,24 +194,24 @@ class TestDjangoRestAdapter(unittest.TestCase):
 
         for predicate_type in ['.struct', '.structarray']:
             field = mock_adapter._generate_field(
-                mock_adapter, instance={}, loc=(),
+                mock_adapter, instance={}, name=None,
                 predicate_type=predicate_type, model=None, onmodel=True)
             self.assertEqual(field, 'nested_field')
             mock_adapter.generate_nested_drf_field.assert_called_with(
-                {}, (), predicate_type, None, onmodel=True)
+                {}, None, predicate_type, None, onmodel=True)
 
         predicate_type = '.foo'
         mock_adapter.get_default_properties.return_value = {}
         self.assertNotIn(predicate_type, mock_adapter.STRUCTURES)
         field = mock_adapter._generate_field(
-            mock_adapter, instance={}, loc=(),
+            mock_adapter, instance={}, name=None,
             predicate_type=predicate_type, model=None, onmodel=False)
         self.assertEqual(field, 'foo_field')
         mock_a.assert_called_with()
         mock_b.assert_not_called
 
         field = mock_adapter._generate_field(
-            mock_adapter, instance={}, loc=(),
+            mock_adapter, instance={}, name=None,
             predicate_type=predicate_type, model=None, onmodel=True)
         self.assertEqual(field, {})
 
@@ -226,6 +226,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
             'foo': 'bar',
             'instance_source': 'instance_mock',
         }
+        mock_context = {'parent_name': 'foo'}
         mock_loc = ('api', 'foo', '*', 'field', '.drf_field')
         mock_adapter = create_mock_object(
             DjangoRestAdapter, ['default_field_constructor', 'ADAPTER_CONF'])
@@ -233,13 +234,13 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertRaises(
             utils.DRFAdapterException, mock_adapter.default_field_constructor,
             mock_adapter, instance=mock_instance, spec=mock_spec,
-            loc=mock_loc, context={}, predicate_type='.string')
+            loc=mock_loc, context=mock_context, predicate_type='.string')
         mock_spec['onmodel'] = False
         mock_spec['instance_source'] = 'instance_mock'
 
         instance = mock_adapter.default_field_constructor(
             mock_adapter, instance=mock_instance, spec=mock_spec,
-            loc=mock_loc, context={}, predicate_type='.string')
+            loc=mock_loc, context=mock_context, predicate_type='.string')
         instance_conf = instance.get(mock_adapter.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)
         self.assertEqual(len(instance_conf), 2)
@@ -247,8 +248,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(instance_conf['source'], 'instance_mock')
         field_kwargs = {'extra': 'value', 'foo': 'bar'}
         mock_adapter._generate_field.assert_called_with(
-            mock_instance, mock_loc, '.string', mock.ANY, False,
-            **field_kwargs)
+            mock_instance, mock_context.get('parent_name'), '.string',
+            mock.ANY, False, **field_kwargs)
 
         mock_instance = {
             '.ref': {'to': 'bar'},
@@ -257,7 +258,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_spec['instance_source'] = 'instance_mock'
         instance = mock_adapter.default_field_constructor(
             mock_adapter, instance=mock_instance, spec=mock_spec,
-            loc=mock_loc, context={}, predicate_type='.ref')
+            loc=mock_loc, context=mock_context, predicate_type='.ref')
         instance_conf = instance.get(mock_adapter.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)
         self.assertEqual(len(instance_conf), 2)
@@ -266,8 +267,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         field_kwargs = {'extra': 'value', 'foo': 'bar',
                         'view_name': 'bar-detail'}
         mock_adapter._generate_field.assert_called_with(
-            mock_instance, mock_loc, '.ref', mock.ANY, False,
-            **field_kwargs)
+            mock_instance, mock_context.get('parent_name'), '.ref', mock.ANY,
+            False, **field_kwargs)
 
     def test_construct_drf_field(self):
         mock_loc = ('api', 'foo', '*', 'field', '.drf_field')
