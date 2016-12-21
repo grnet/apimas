@@ -87,9 +87,9 @@ fi
 compatible_version="$(echo ${version} | sed -e 's/\([^.]*[.][^.]*\).*$/\1/g')"
 
 if [ -z "${release}" ]; then
-    git_commit="$(basename $(git describe --all --exact-match HEAD | head -1))"
+    git_commit="$(git rev-parse --verify --short HEAD)"
     git_commit="$(echo ${git_commit} | tr 'A-Z' 'a-z')"
-    git_tag="$(git rev-parse --abbrev-ref HEAD)"
+    git_tag="$(basename $(git describe --all --exact-match --abbrev=0 HEAD))"
     git_tag="$(echo ${git_tag} | tr 'A-Z' 'a-z')"
     extra_version="+${git_tag}+${git_commit}"
 fi
