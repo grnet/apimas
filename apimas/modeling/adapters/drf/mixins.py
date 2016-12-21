@@ -12,7 +12,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 StashedObj = namedtuple(
-    'StashedObj', ['instance', 'data', 'extra', 'response'])
+    'StashedObj', ['instance', 'data', 'extra', 'response', 'validated_data'])
 
 
 class HookMixin(object):
@@ -50,7 +50,8 @@ class HookMixin(object):
         func = getattr(self, 'finalize_' + action, self.mock)
         func()
 
-    def stash(self, instance=None, data=None, extra=None, response=None):
+    def stash(self, instance=None, data=None, extra=None, response=None,
+              validated_data=None):
         """
         Method to stash data for later use.
 
@@ -68,6 +69,8 @@ class HookMixin(object):
             self.request.parser_context['extra'] = extra
         if response:
             self.request.parser_context['response'] = response
+        if validated_data:
+            self.request.parser_context['validated_data'] = validated_data
 
     def unstash(self):
         """
@@ -80,8 +83,10 @@ class HookMixin(object):
         data = self.request.parser_context.get('data', self.request.data)
         extra = self.request.parser_context.get('extra', {})
         response = self.request.parser_context.get('response', None)
+        validated_data = self.request.parser_context.get('validated_data',
+                                                         None)
         return StashedObj(instance=instance, data=data, extra=extra,
-                          response=response)
+                          response=response, validated_data=validated_data)
 
 
 class CreateModelMixin(mixins.CreateModelMixin):
@@ -91,6 +96,7 @@ class CreateModelMixin(mixins.CreateModelMixin):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=self.request.data)
         serializer.is_valid(raise_exception=True)
+        self.stash(validated_data=serializer.validated_data)
         self.preprocess('create')
         unstashed = self.unstash()
         serializer.save(**unstashed.extra)
@@ -139,10 +145,10 @@ class UpdateModelMixin(mixins.UpdateModelMixin):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        self.stash(instance=instance)
         serializer = self.get_serializer(
             instance, data=self.request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
+        self.stash(instance=instance, validated_data=serializer.validated_data)
         self.preprocess('update')
         unstashed = self.unstash()
         serializer.save(**unstashed.extra)
