@@ -16,7 +16,9 @@ def get_subdocuments(document):
     subdocs = {}
     for k, v in document.iteritems():
         if isinstance(v, list):
-            subdocs[k] = filter((lambda x: isinstance(x, dict)), v)
+            subs = filter((lambda x: isinstance(x, dict)), v)
+            if subs:
+                subdocs[k] = subs
         elif isinstance(v, dict):
             for key, value in get_subdocuments(v).iteritems():
                 subdocs[k + '/' + key] = value

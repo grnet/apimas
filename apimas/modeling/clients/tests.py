@@ -157,7 +157,7 @@ class TestClients(unittest.TestCase):
     def test_get_subdocuments(self):
         doc = {'foo': 'bar'}
         self.assertEquals(get_subdocuments(doc), {})
-        doc_b = {'a': {'b': {'c': [doc, doc]}, 'd': [doc]}}
+        doc_b = {'a': {'b': {'c': [doc, doc]}, 'd': [doc], 'c': [1, 2]}}
         output = {
             'a/b/c': [doc, doc],
             'a/d': [doc],
