@@ -555,6 +555,7 @@ def _construct_doc_call_constructors(
         context['all_constructors'] = constructor_names
         context['constructed'] = constructed
         context['cons_round'] = cons_round
+        context['parent_name'] = loc and loc[-1]
         context['parent_spec'] = spec
 
         deferred_constructor_names = []
