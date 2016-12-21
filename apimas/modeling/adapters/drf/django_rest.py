@@ -10,8 +10,6 @@ from apimas.modeling.adapters.drf.serializers import (
     generate_container_serializer, generate_model_serializer)
 from apimas.modeling.adapters.drf.views import generate_view
 from apimas.modeling.adapters.cookbooks import NaiveAdapter
-from apimas.modeling.adapters.drf.utils import (
-    DRFAdapterException, import_object)
 
 
 def handle_exception(func):
@@ -19,7 +17,7 @@ def handle_exception(func):
         try:
             return func(*args, **kwargs)
         except FieldDoesNotExist as e:
-            raise DRFAdapterException(e)
+            raise utils.DRFAdapterException(e)
     return wrapper
 
 
@@ -128,7 +126,7 @@ class DjangoRestAdapter(NaiveAdapter):
         Create django rest views based on the constructed adapter spec.
         """
         if not self.adapter_spec:
-            raise DRFAdapterException(
+            raise utils.DRFAdapterException(
                 'Cannot apply an empty adapter specification')
         structural_elements = self.get_structural_elements(self.adapter_spec)
         api = structural_elements[0]
@@ -467,7 +465,7 @@ class DjangoRestAdapter(NaiveAdapter):
         path = root_loc + (ref, '.drf_collection', 'model')
         ref_model = self._get_or_import_model(ref, path, top_spec)
         if model_field.related_model is not ref_model:
-            raise DRFAdapterException(
+            raise utils.DRFAdapterException(
                 'Model field of %s is not related to %s. Loc: %s' % (
                     source or loc[-2], ref_model, str(loc)))
         return model_field, model, ref_model
@@ -507,7 +505,7 @@ class DjangoRestAdapter(NaiveAdapter):
         django_conf = self.get_constructor_params(spec, loc[:-1], [])
         model = self.extract_model(source or loc[-2], django_conf)
         if model is None:
-            raise DRFAdapterException(
+            raise utils.DRFAdapterException(
                 'Invalid argument, model cannot be `None`')
         model_field = model._meta.get_field(source or loc[-2])
         if isinstance(django_field_type, Iterable):
@@ -516,7 +514,7 @@ class DjangoRestAdapter(NaiveAdapter):
         else:
             matches = isinstance(model_field, django_field_type)
         if not matches:
-            raise DRFAdapterException(
+            raise utils.DRFAdapterException(
                 'Field %s is not %s type in your django model' % (
                     repr(loc[-2]), repr(django_field_type)))
         return model_field, model
@@ -532,7 +530,7 @@ class DjangoRestAdapter(NaiveAdapter):
         for field_name, prop in properties.iteritems():
             for u, v in self.NON_INTERSECTIONAL_PAIRS:
                 if prop.get(u, False) and prop.get(v, False):
-                    raise DRFAdapterException(
+                    raise utils.DRFAdapterException(
                         'Field `%s` cannot be both %s and %s' % (
                             field_name, u, v))
 
@@ -578,7 +576,7 @@ class DjangoRestAdapter(NaiveAdapter):
         model = self.extract_model(related_field, django_conf)
         related_field = model._meta.get_field(related_field)
         if related_field.related_model is None:
-            raise DRFAdapterException(
+            raise utils.DRFAdapterException(
                 'Field %s is not related with another model' % (
                     repr(related_field)))
         return related_field.related_model
