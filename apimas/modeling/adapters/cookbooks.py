@@ -275,7 +275,7 @@ class NaiveAdapter(Adapter):
         Method for extracting a predicate whose semantic refers to a type of
         a field from the given instance.
         """
-        types = self.TYPES.intersection(instance.keys())
+        types = set(self.TYPES.intersection(instance.keys()))
         if len(types) > 1:
             raise ex.ApimasException('Type is ambiguous. %s found: %s' % (
                 len(types), str(types)))
