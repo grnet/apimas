@@ -14,6 +14,10 @@ def to_option(name):
     return '--' + name
 
 
+def is_empty(v):
+    return not v and v != 0
+
+
 def handle_exception(func):
     def wrapper(*args, **kwargs):
         try:
@@ -65,7 +69,7 @@ class BaseCommand(object):
         """
         data = {'/'.join(
             self.option_mapping[k]): list(v) if type(v) is tuple else v
-                for k, v in option_data.iteritems() if v is not None}
+                for k, v in option_data.iteritems() if not is_empty(v)}
         return doc.doc_from_ns(data)
 
     def add_credentials(self, data):
