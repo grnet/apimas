@@ -53,8 +53,20 @@ class ApimasPermissions(BasePermission):
             self.permissions.multimatch(pattern_set, expand=expand_columns))
         if not matches:
             return False
-        self.check_field_conditions(request, view, matches)
-        return self.check_state_conditions(request, view, matches, obj)
+        self.check_field_conditions(request, view, matches, obj)
+        return True
+
+    def set_field_context(self, request, view, fields):
+        """
+        This method marks which fields are accesible or writable based on
+        the given request context.
+        """
+        key = 'accesible_fields' if view.action in ['list', 'retrieve']\
+            else 'writable_fields'
+        if any(isinstance(field, AnyPattern) for field in fields):
+            request.parser_context[key] = ANY
+        else:
+            request.parser_context[key] = fields
 
     def has_permission(self, request, view):
         """
@@ -81,33 +93,55 @@ class ApimasPermissions(BasePermission):
         """
         return self.isallowed(request, view, obj)
 
-    def check_field_conditions(self, request, view, matches):
+    def allowed_fields(self, request, view, matches):
         """
-        This method marks which fields are accessible or writable so that
-        serializer can handle data accordingly afterwards.
+        This method determines which fields are allowed given the matches
+        of permission rules.
+
+        In case there are data included in the request, then this method
+        returns the intersectional items of matching rules and included
+        fields.
         """
+        allowed_keys = {row.field for row in matches}
+        if view.action in ['list', 'retrieve']:
+            return allowed_keys
         fields = set(doc_to_ns(dict(request.data)).keys())
         allowed_keys = set()
         for row in matches:
             if isinstance(row.field, AnyPattern):
-                return True
-            allowed_keys.add(row.field)
-        if view.action in ['list', 'retrieve']:
-            allowed_keys = ANY if ANY in allowed_keys else allowed_keys
-            request.parser_context['permitted_fields'] = allowed_keys
+                allowed_keys.add(row.field)
+            if row.field in fields:
+                allowed_keys.add(row.field)
+        return allowed_keys
+
+    def check_field_conditions(self, request, view, matches, obj):
+        """
+        This method marks which fields are accessible or writable so that
+        serializer can handle data accordingly afterwards.
+        """
+        fields = self.allowed_fields(request, view, matches)
+        if not fields:
             return
-        request.parser_context['non_writable_fields'] = fields - allowed_keys
+        state_conditions = self.check_state_conditions(request, view, matches,
+                                                       obj)
+        matches = filter((lambda x: state_conditions[x.state]), matches)
+        fields = self.allowed_fields(request, view, matches)
+        self.set_field_context(request, view, fields)
 
     def check_state_conditions(self, request, view, matches, obj=None):
         """
         For the states that match to the pattern sets, this function checks
-        if this state is statisfied.
+        which states are statisfied.
 
-        If any matched state is statisfied then, the permission is given.
+        Subsequently, it returns a dictionary which maps each state with
+        its satisfiability (`True` or `False`).
         """
-        if any(isinstance(row.state, AnyPattern) for row in matches):
-            return True
+        state_conditions = {}
         for row in matches:
+            if isinstance(row.state, AnyPattern):
+                state_conditions[row.state] = True
+            if row.state in state_conditions:
+                continue
             prefix = self.OBJECT_CHECK_PREFIX if obj is not None\
                 else self.COLLECTION_CHECK_PREFIX
             method_name = prefix + '_' + row.state
@@ -120,9 +154,8 @@ class ApimasPermissions(BasePermission):
                 }
                 access_ok = method(obj, **kwargs) if obj is not None\
                     else method(**kwargs)
-                if access_ok:
-                    return True
-        return False
+                state_conditions[row.state] = access_ok
+        return state_conditions
 
     def __call__(self):
         return self

@@ -262,21 +262,22 @@ class ApimasSerializer(serializers.Serializer):
         request = self._context.get('request')
         if not request:
             return
-        readonly_fields = self._context['request'].parser_context.get(
-            'non_writable_fields', [])
-        permitted_fields = self._context['request'].parser_context.get(
-            'permitted_fields', [])
+        writable_fields = self._context['request'].parser_context.get(
+            'writable_fields', ANY)
+        accessible_fields = self._context['request'].parser_context.get(
+            'accesible_fields', ANY)
         serializer_fields = self.fields
-        for field in readonly_fields:
-            self.set_field_property(
-                field.split('/'), serializer_fields, 'read_only')
-        if permitted_fields == ANY:
-            return
-        non_permitted_fields = set(
-            get_paths(serializer_fields)) - set(permitted_fields)
-        for field in non_permitted_fields:
+        serializer_field_paths = set(get_paths(serializer_fields))
+        non_accessible_fields = [] if isinstance(accessible_fields, type(ANY))\
+            else serializer_field_paths - set(accessible_fields)
+        non_writable_fields = [] if isinstance(writable_fields, type(ANY))\
+            else serializer_field_paths - set(writable_fields)
+        for field in non_accessible_fields:
             self.set_field_property(field.split('/'), serializer_fields,
                                     'write_only')
+        for field in non_writable_fields:
+            self.set_field_property(field.split('/'), serializer_fields,
+                                    'read_only')
 
     def set_field_property(self, segments, fields, property_key):
         if len(segments) == 1:
