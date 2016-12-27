@@ -177,6 +177,43 @@ class TestDjangoRestAdapter(unittest.TestCase):
                 continue
             self.assertFalse(default.get(prop))
 
+    def test_get_ref_params(self):
+        mock_instance = {
+            '.ref': {'to': 'foo'}
+        }
+        top_spec = {'foo': 'bar'}
+        mock_loc = ('foo', 'bar')
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter, ['_get_ref_params'])
+        mock_objects = mock.Mock()
+        mock_model = mock.Mock(objects=mock_objects)
+        mock_adapter._get_or_import_model.return_value = mock_model
+        ref_params = mock_adapter._get_ref_params(
+            mock_adapter, mock_instance, loc=mock_loc, top_spec=top_spec,
+            onmodel=True, field_kwargs={})
+        self.assertEqual(ref_params, {'view_name': 'foo-detail'})
+        mock_adapter._get_or_import_model.assert_not_called
+
+        field_kwargs = {'read_only': True}
+        ref_params = mock_adapter._get_ref_params(
+            mock_adapter, mock_instance, loc=mock_loc, top_spec=top_spec,
+            onmodel=False, field_kwargs=field_kwargs)
+        self.assertEqual(ref_params,
+                         {'view_name': 'foo-detail', 'many': False})
+        mock_adapter._get_or_import_model.assert_not_called
+
+        field_kwargs = {'read_only': False}
+        mock_instance['.ref'].update({'many': True})
+        ref_params = mock_adapter._get_ref_params(
+            mock_adapter, mock_instance, loc=mock_loc, top_spec=top_spec,
+            onmodel=False, field_kwargs=field_kwargs)
+        self.assertEqual(len(ref_params), 3)
+        self.assertEqual(ref_params['view_name'], 'foo-detail')
+        self.assertTrue(ref_params['many'])
+        self.assertTrue(isinstance(ref_params['queryset'], mock.Mock))
+        mock_adapter._get_or_import_model.assert_called_once_with(
+            'foo', ('foo', '.drf_collection', 'model'), top_spec)
+
     def test_generate_field(self):
         mock_a = mock.Mock(return_value='foo_field')
         mock_b = mock.Mock(return_value='bar_field')
@@ -255,6 +292,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
             '.ref': {'to': 'bar'},
             self.adapter_conf: {},
         }
+        mock_adapter._get_ref_params.return_value = {'ref_extra': 'value'}
         mock_spec['instance_source'] = 'instance_mock'
         instance = mock_adapter.default_field_constructor(
             mock_adapter, instance=mock_instance, spec=mock_spec,
@@ -265,10 +303,12 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(instance_conf['field'], 'drf field')
         self.assertEqual(instance_conf['source'], 'instance_mock')
         field_kwargs = {'extra': 'value', 'foo': 'bar',
-                        'view_name': 'bar-detail'}
+                        'ref_extra': 'value'}
         mock_adapter._generate_field.assert_called_with(
             mock_instance, mock_context.get('parent_name'), '.ref', mock.ANY,
             False, **field_kwargs)
+        mock_adapter._get_ref_params.assert_called_once_with(
+            mock_instance, mock_loc, None, False, field_kwargs)
 
     def test_construct_drf_field(self):
         mock_loc = ('api', 'foo', '*', 'field', '.drf_field')

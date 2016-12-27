@@ -349,6 +349,24 @@ class DjangoRestAdapter(NaiveAdapter):
                 drf_field = field_kwargs
         return drf_field
 
+    def _get_ref_params(self, instance, loc, top_spec, onmodel, field_kwargs):
+        """
+        Get extra params needed to initialize a
+        `serializers.HyperlinkedIdentityField`.
+        """
+        ref_kwargs = instance['.ref']
+        many = ref_kwargs.get('many', False)
+        ref = ref_kwargs['to']
+        extra = {'view_name': '%s-detail' % (ref)}
+        if not onmodel:
+            extra['many'] = many
+            if not field_kwargs.get('read_only'):
+                # In case it is not a read only field, specify its queryset.
+                ref_model = self._get_or_import_model(
+                    ref, loc[:1] + ('.drf_collection', 'model'), top_spec)
+                extra['queryset'] = ref_model.objects.all()
+        return extra
+
     def default_field_constructor(self, instance, spec, loc, context,
                                   predicate_type):
         """
@@ -375,10 +393,10 @@ class DjangoRestAdapter(NaiveAdapter):
                 'You don\'t have to specify `instance_source` if'
                 ' `onmodel` is set')
         field_kwargs = {k: v for k, v in spec.iteritems() if k != 'onmodel'}
-        if predicate_type == '.ref':
-            ref = doc.doc_get(instance, ('.ref', 'to'))
-            field_kwargs.update({'view_name': '%s-detail' % (ref)})
         field_kwargs.update(doc.doc_get(instance, path) or {})
+        if predicate_type == '.ref':
+            field_kwargs.update(self._get_ref_params(
+                instance, loc, context.get('top_spec'), onmodel, field_kwargs))
         doc.doc_set(instance, (self.ADAPTER_CONF, 'source'), instance_source)
         drf_field = self._generate_field(
             instance, context.get('parent_name'), predicate_type, model,
