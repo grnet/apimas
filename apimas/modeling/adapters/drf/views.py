@@ -26,7 +26,7 @@ def generate_view(name, serializer, model, permissions=None,
                   authentication_classes=(), permission_classes=(),
                   mixins=(), hook_class=None, filter_fields=None,
                   ordering_fields=None, search_fields=None,
-                  actions=()):
+                  actions=(), **kwargs):
     """
     A function to generate a viewset according to the model given as
     parameter.
@@ -57,6 +57,8 @@ def generate_view(name, serializer, model, permissions=None,
     dicts = [standard_content, searchable_fields, filter_backends]
     # Compose content i.e. standard content, attributes, methods.
     class_dict = dict(sum((list(content.items()) for content in dicts), []))
+    # Update class content with extra attributes.
+    class_dict.update(kwargs)
     bases = get_bases_classes(mixins, hook_class, actions)
     return type(name, bases, class_dict)
 
