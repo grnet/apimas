@@ -179,6 +179,14 @@ class TestDjangoRestAdapter(unittest.TestCase):
                 continue
             self.assertFalse(default.get(prop))
 
+        predicate_type = '.boolean'
+        default = self.adapter.get_default_properties(predicate_type, kwargs)
+        self.assertEqual(len(default), len(self.adapter.PROPERTY_MAPPING) - 3)
+        expected = set(self.adapter.PROPERTY_MAPPING.values()) - {
+            'allow_blank', 'allow_null'}
+        for prop in expected:
+            self.assertFalse(default.get(prop))
+
     def test_get_ref_params(self):
         mock_instance = {
             '.ref': {'to': 'foo'}

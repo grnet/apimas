@@ -369,6 +369,8 @@ class DjangoRestAdapter(NaiveAdapter):
         for prop in self.PROPERTY_MAPPING.itervalues():
             if predicate_type != '.string' and prop == 'allow_blank':
                 continue
+            if predicate_type == '.boolean' and prop == 'allow_null':
+                continue
             if not field_kwargs.get(prop):
                 default[prop] = False
         return default
