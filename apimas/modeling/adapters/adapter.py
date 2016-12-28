@@ -41,6 +41,7 @@ class Adapter(object):
         '.serial',
         '.integer',
         '.biginteger',
+        '.float',
         '.string',
         '.boolean',
         '.datetime',
