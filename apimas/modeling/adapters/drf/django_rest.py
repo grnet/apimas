@@ -21,6 +21,46 @@ def handle_exception(func):
     return wrapper
 
 
+def _validate_model_type(api_field_name, model_field, django_field_type):
+    """
+    Checks that the type of the specified model field matches with the
+    `django_field_type` passed as parameter.
+
+    `django_field_type` may be an iterable of types. If at least one type
+    matches with the type of given model field, then we have a match.
+    """
+    if isinstance(django_field_type, Iterable):
+        matches = any(isinstance(model_field, d_field)
+                      for d_field in django_field_type)
+    else:
+        matches = isinstance(model_field, django_field_type)
+    if not matches:
+        raise utils.DRFAdapterException(
+            'Field %s is not %s type in your django model' % (
+                repr(api_field_name), repr(django_field_type)))
+    return model_field
+
+
+def _validate_relational_field(api_field_name, ref_model, model_field):
+    """
+    Checks that the given model field is related to the model given as
+    parameter.
+    """
+    if model_field.related_model is not ref_model:
+        raise utils.DRFAdapterException(
+            'Model field of %s is not related to %s.' % (
+                model_field.name, ref_model))
+    return model_field
+
+
+def _validate_model_attribute(api_field_name, model, model_attr_name):
+    """ Checks that model have an attribute named as `model_attr_name`."""
+    model_attr = getattr(model, model_attr_name, None)
+    if model_attr is None:
+        raise utils.DRFAdapterException
+    return model_attr
+
+
 class DjangoRestAdapter(NaiveAdapter):
     STRUCTURES = {
         '.struct': '.drf_field',
@@ -334,13 +374,13 @@ class DjangoRestAdapter(NaiveAdapter):
         return default
 
     def _generate_field(self, instance, name, predicate_type, model,
-                        onmodel, **field_kwargs):
+                        automated, **field_kwargs):
         if predicate_type in self.STRUCTURES:
             drf_field = self.generate_nested_drf_field(
-                instance, name, predicate_type, model, onmodel=onmodel,
+                instance, name, predicate_type, model, onmodel=automated,
                 **field_kwargs)
         else:
-            if not onmodel:
+            if not automated:
                 field_kwargs.update(self.get_default_properties(
                     predicate_type, field_kwargs))
                 drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
@@ -349,7 +389,8 @@ class DjangoRestAdapter(NaiveAdapter):
                 drf_field = field_kwargs
         return drf_field
 
-    def _get_ref_params(self, instance, loc, top_spec, onmodel, field_kwargs):
+    def _get_ref_params(self, instance, loc, top_spec, automated,
+                        field_kwargs):
         """
         Get extra params needed to initialize a
         `serializers.HyperlinkedIdentityField`.
@@ -358,7 +399,7 @@ class DjangoRestAdapter(NaiveAdapter):
         many = ref_kwargs.get('many', False)
         ref = ref_kwargs['to']
         extra = {'view_name': '%s-detail' % (ref)}
-        if not onmodel:
+        if not automated:
             extra['many'] = many
             if not field_kwargs.get('read_only'):
                 # In case it is not a read only field, specify its queryset.
@@ -383,7 +424,7 @@ class DjangoRestAdapter(NaiveAdapter):
         Moreover, this method checks if the field conforms to the model
         configuations before being constructed.
         """
-        model = self.validate_model_configuration(
+        model, automated = self.validate_model_configuration(
             instance, spec, loc, context, predicate_type)
         path = (self.ADAPTER_CONF,)
         instance_source = spec.pop('instance_source', None)
@@ -396,11 +437,12 @@ class DjangoRestAdapter(NaiveAdapter):
         field_kwargs.update(doc.doc_get(instance, path) or {})
         if predicate_type == '.ref':
             field_kwargs.update(self._get_ref_params(
-                instance, loc, context.get('top_spec'), onmodel, field_kwargs))
+                instance, loc, context.get('top_spec'), onmodel and automated,
+                field_kwargs))
         doc.doc_set(instance, (self.ADAPTER_CONF, 'source'), instance_source)
         drf_field = self._generate_field(
             instance, context.get('parent_name'), predicate_type, model,
-            onmodel, **field_kwargs)
+            automated and onmodel, **field_kwargs)
         doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
         return instance
 
@@ -434,17 +476,18 @@ class DjangoRestAdapter(NaiveAdapter):
         collection = loc[1]
         model = self._get_or_import_model(collection, model_path, top_spec)
         structures = {'.struct', '.structarray'}
+        automated = False
         if onmodel:
             field_type = self.TYPE_MAPPING[predicate_type[1:]]
             if predicate_type == '.ref':
-                _, model, _ = self.validate_ref(
+                _, model, automated = self.validate_ref(
                     instance, parent_name, loc, top_spec, source)
             else:
-                model_field, model = self.validate_model_field(
+                model_field, model, automated = self.validate_model_field(
                     top_spec, parent_name, loc, field_type, source)
                 if predicate_type in structures:
                     model = model_field.related_model
-        return model
+        return model, automated
 
     def construct_drf_field(self, instance, spec, loc, context):
         """
@@ -483,14 +526,18 @@ class DjangoRestAdapter(NaiveAdapter):
         ref = doc.doc_get(instance, ('.ref', 'to'))
         django_conf = self.get_constructor_params(top_spec, loc, [])
         model = self.extract_model(source or name, django_conf)
-        model_field = model._meta.get_field(source or name)
-        path = root_loc + (ref, '.drf_collection', 'model')
-        ref_model = self._get_or_import_model(ref, path, top_spec)
-        if model_field.related_model is not ref_model:
-            raise utils.DRFAdapterException(
-                'Model field of %s is not related to %s. Loc: %s' % (
-                    source or name, ref_model, str(loc)))
-        return model_field, model, ref_model
+        auto = True
+        try:
+            model_field = model._meta.get_field(source or name)
+            path = root_loc + (ref, '.drf_collection', 'model')
+            ref_model = self._get_or_import_model(ref, path, top_spec)
+            model_attr = _validate_relational_field(
+                name, ref_model, model_field)
+        except FieldDoesNotExist:
+            auto = False
+            model_attr = _validate_model_attribute(name, model,
+                                                   source or name)
+        return model_attr, model, auto
 
     def construct_type(self, instance, spec, loc, context, field_type=None):
         """
@@ -518,7 +565,6 @@ class DjangoRestAdapter(NaiveAdapter):
             {self.PROPERTY_MAPPING[property_name]: True})
         return instance
 
-    @handle_exception
     def validate_model_field(self, spec, name, loc, django_field_type,
                              source=None):
         """
@@ -527,20 +573,19 @@ class DjangoRestAdapter(NaiveAdapter):
         """
         django_conf = self.get_constructor_params(spec, loc[:-1], [])
         model = self.extract_model(source or name, django_conf)
+        automated = True
         if model is None:
             raise utils.DRFAdapterException(
                 'Invalid argument, model cannot be `None`')
-        model_field = model._meta.get_field(source or name)
-        if isinstance(django_field_type, Iterable):
-            matches = any(isinstance(model_field, d_field)
-                          for d_field in django_field_type)
-        else:
-            matches = isinstance(model_field, django_field_type)
-        if not matches:
-            raise utils.DRFAdapterException(
-                'Field %s is not %s type in your django model' % (
-                    repr(name), repr(django_field_type)))
-        return model_field, model
+        try:
+            model_field = model._meta.get_field(source or name)
+            model_attr = _validate_model_type(name, model_field,
+                                              django_field_type)
+        except FieldDoesNotExist:
+            automated = False
+            model_attr = _validate_model_attribute(
+                name, model, source or name)
+        return model_attr, model, automated
 
     def validate_intersectional_pairs(self, properties):
         """

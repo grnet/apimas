@@ -1,7 +1,9 @@
 import mock
 import unittest
+from django.core.exceptions import FieldDoesNotExist
 from apimas.modeling.core import documents as doc
 from apimas.modeling.adapters.drf import utils
+from apimas.modeling.adapters.drf import django_rest
 from apimas.modeling.adapters.drf.django_rest import DjangoRestAdapter
 from apimas.modeling.tests.helpers import create_mock_object
 
@@ -190,14 +192,14 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_adapter._get_or_import_model.return_value = mock_model
         ref_params = mock_adapter._get_ref_params(
             mock_adapter, mock_instance, loc=mock_loc, top_spec=top_spec,
-            onmodel=True, field_kwargs={})
+            automated=True, field_kwargs={})
         self.assertEqual(ref_params, {'view_name': 'foo-detail'})
         mock_adapter._get_or_import_model.assert_not_called
 
         field_kwargs = {'read_only': True}
         ref_params = mock_adapter._get_ref_params(
             mock_adapter, mock_instance, loc=mock_loc, top_spec=top_spec,
-            onmodel=False, field_kwargs=field_kwargs)
+            automated=False, field_kwargs=field_kwargs)
         self.assertEqual(ref_params,
                          {'view_name': 'foo-detail', 'many': False})
         mock_adapter._get_or_import_model.assert_not_called
@@ -206,7 +208,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_instance['.ref'].update({'many': True})
         ref_params = mock_adapter._get_ref_params(
             mock_adapter, mock_instance, loc=mock_loc, top_spec=top_spec,
-            onmodel=False, field_kwargs=field_kwargs)
+            automated=False, field_kwargs=field_kwargs)
         self.assertEqual(len(ref_params), 3)
         self.assertEqual(ref_params['view_name'], 'foo-detail')
         self.assertTrue(ref_params['many'])
@@ -232,7 +234,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         for predicate_type in ['.struct', '.structarray']:
             field = mock_adapter._generate_field(
                 mock_adapter, instance={}, name=None,
-                predicate_type=predicate_type, model=None, onmodel=True)
+                predicate_type=predicate_type, model=None, automated=True)
             self.assertEqual(field, 'nested_field')
             mock_adapter.generate_nested_drf_field.assert_called_with(
                 {}, None, predicate_type, None, onmodel=True)
@@ -242,14 +244,14 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertNotIn(predicate_type, mock_adapter.STRUCTURES)
         field = mock_adapter._generate_field(
             mock_adapter, instance={}, name=None,
-            predicate_type=predicate_type, model=None, onmodel=False)
+            predicate_type=predicate_type, model=None, automated=False)
         self.assertEqual(field, 'foo_field')
         mock_a.assert_called_with()
         mock_b.assert_not_called
 
         field = mock_adapter._generate_field(
             mock_adapter, instance={}, name=None,
-            predicate_type=predicate_type, model=None, onmodel=True)
+            predicate_type=predicate_type, model=None, automated=True)
         self.assertEqual(field, {})
 
     def test_default_field_constructor(self):
@@ -268,6 +270,10 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_adapter = create_mock_object(
             DjangoRestAdapter, ['default_field_constructor', 'ADAPTER_CONF'])
         mock_adapter._generate_field.return_value = 'drf field'
+        mock_adapter.validate_model_configuration.return_value = (
+            mock.Mock, True)
+
+        # Case A: `instance_source` and `onmodel` are mutually exclusive.
         self.assertRaises(
             utils.DRFAdapterException, mock_adapter.default_field_constructor,
             mock_adapter, instance=mock_instance, spec=mock_spec,
@@ -275,6 +281,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_spec['onmodel'] = False
         mock_spec['instance_source'] = 'instance_mock'
 
+        # Case B: A common field construction.
         instance = mock_adapter.default_field_constructor(
             mock_adapter, instance=mock_instance, spec=mock_spec,
             loc=mock_loc, context=mock_context, predicate_type='.string')
@@ -288,6 +295,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
             mock_instance, mock_context.get('parent_name'), '.string',
             mock.ANY, False, **field_kwargs)
 
+        # Case C: A `.ref` field construction.
         mock_instance = {
             '.ref': {'to': 'bar'},
             self.adapter_conf: {},
@@ -375,33 +383,140 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(len(instance_conf), 1)
         self.assertTrue(instance_conf['foo_mapping'])
 
-    def test_validate_model_field(self):
+    @mock.patch.object(django_rest, '_validate_model_type')
+    @mock.patch.object(django_rest, '_validate_model_attribute')
+    def test_validate_model_field(self, mock_attr, mock_type):
         mock_adapter = create_mock_object(
             DjangoRestAdapter, ['validate_model_field', 'ADAPTER_CONF'])
-        mock_adapter.TYPE_MAPPING = self.mock_type_mapping
-        mock_cls = type('mock', (object,), {})
-        mock_cls2 = type('mock2', (object,), {})
-        field_type = mock_cls
+        field_type = 'foo'
         mock_adapter.extract_model.return_value = None
         mock_meta = mock.Mock()
-        mock_meta.get_field.return_value = mock_cls()
         mock_model = mock.Mock(_meta=mock_meta)
 
+        # Case A: Extracted model is `None`.
         self.assertRaises(utils.DRFAdapterException,
                           mock_adapter.validate_model_field, mock_adapter,
                           None, 'foo', self.loc, field_type, None)
-        mock_meta.get_field.assert_not_called
+        mock_attr.assert_not_called
+        mock_type.assert_not_called
 
-        source = 'myvalue'
+        # Case B: `_validate_model_type` pass
+        mock_type.return_value = '_validate_model_type_called'
         mock_adapter.extract_model.return_value = mock_model
-        mock_adapter.validate_model_field(mock_adapter, None, 'foo', self.loc,
-                                          field_type, source)
-        mock_meta.get_field.assert_called_once_with(source)
+        field, model, automated = mock_adapter.validate_model_field(
+            mock_adapter, None, 'foo', self.loc, field_type, None)
+        self.assertEqual(field, '_validate_model_type_called')
+        self.assertEqual(model, mock_model)
+        self.assertTrue(automated)
+        mock_type.assert_called_once_with('foo', mock.ANY, field_type)
+        mock_attr.assert_not_called
 
-        self.assertRaises(utils.DRFAdapterException,
-                          mock_adapter.validate_model_field,
-                          mock_adapter, None, 'foo', self.loc, mock_cls2,
-                          source)
+        # Case C: `_validate_model_type` fails and `_validate_model_attribute`
+        # is called.
+        mock_meta.get_field.side_effect = FieldDoesNotExist()
+        mock_attr.return_value = '_validate_model_attribute_called'
+        field, model, automated = mock_adapter.validate_model_field(
+            mock_adapter, None, 'foo', self.loc, field_type, source='source')
+        self.assertEqual(field, '_validate_model_attribute_called')
+        self.assertEqual(model, mock_model)
+        self.assertFalse(automated)
+        mock_attr.assert_called_once_with('foo', mock_model, 'source')
+        mock_meta.get_field.assert_called_with('source')
+
+    @mock.patch.object(django_rest, '_validate_relational_field')
+    @mock.patch.object(django_rest, '_validate_model_attribute')
+    def test_validate_ref(self, mock_attr, mock_ref):
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter, ['validate_ref'])
+        mock_meta = mock.Mock()
+        mock_model = mock.Mock(_meta=mock_meta)
+        mock_adapter.extract_model.return_value = mock_model
+        mock_instance = {'.ref': {'to': 'foo_ref'}}
+
+        # Case A: `_validate_relational_field` is passed.
+        ref_model = mock.Mock()
+        mock_adapter._get_or_import_model.return_value = ref_model
+        mock_ref.return_value = '_validate_relational_field_called'
+        field, model, automated = mock_adapter.validate_ref(
+            mock_adapter, instance=mock_instance, name='foo', loc=self.loc,
+            top_spec={}, source='source')
+        self.assertEqual(field, '_validate_relational_field_called')
+        self.assertEqual(model, mock_model)
+        self.assertTrue(automated)
+        mock_attr.assert_not_called
+        mock_ref.assert_called_once_with('foo', ref_model, mock.ANY)
+        mock_meta.get_field.assert_called_once_with('source')
+        mock_adapter._get_or_import_model.assert_called_once_with(
+            'foo_ref', self.loc[:1] + ('foo_ref', '.drf_collection', 'model'),
+            {})
+
+        # Case B: `_meta.get_field fails, and `_validate_model_attribute` is
+        # called`.
+        mock_meta.get_field.side_effect = FieldDoesNotExist()
+        mock_attr.return_value = '_validate_model_attribute_called'
+        field, model, automated = mock_adapter.validate_ref(
+            mock_adapter, instance=mock_instance, name='foo', loc=self.loc,
+            top_spec={}, source='source')
+        self.assertEqual(field, '_validate_model_attribute_called')
+        self.assertEqual(model, mock_model)
+        self.assertFalse(automated)
+        mock_attr.assert_called_once_with('foo', mock_model, 'source')
+        mock_meta.get_field.assert_called_with('source')
+        self.assertEqual(mock_meta.get_field.call_count, 2)
+
+    def test_validate_model_configuration(self):
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter, ['validate_model_configuration'])
+        mock_adapter.TYPE_MAPPING = mock.MagicMock()
+        mock_spec = {
+            'source': 'source',
+            'onmodel': False,
+        }
+        mock_loc = ('api', 'foo', '.drf_collection', '*', 'bar')
+        mock_model = mock.Mock()
+        mock_adapter._get_or_import_model.return_value = mock_model
+
+        # Case A: There is no model configuration.
+        model, automated = mock_adapter.validate_model_configuration(
+            mock_adapter, instance={}, spec=mock_spec, loc=mock_loc,
+            context={}, predicate_type='foo')
+        self.assertEqual(model, mock_model)
+        self.assertFalse(automated)
+
+        # Case B: `.ref` field.
+        mock_adapter.validate_ref.return_value = mock.Mock, mock_model, True
+        mock_spec['onmodel'] = True
+        model, automated = mock_adapter.validate_model_configuration(
+            mock_adapter, instance={}, spec=mock_spec, loc=mock_loc,
+            context={}, predicate_type='.ref')
+        self.assertEqual(model, mock_model)
+        self.assertTrue(automated)
+        mock_adapter.validate_ref.assert_called_once_with(
+            {}, None, mock_loc, None, 'source')
+
+        # Case C: typical field.
+        mock_adapter.validate_model_field.return_value = (
+            mock.Mock, mock_model, True)
+        mock_spec['onmodel'] = True
+        model, automated = mock_adapter.validate_model_configuration(
+            mock_adapter, instance={}, spec=mock_spec, loc=mock_loc,
+            context={}, predicate_type='foo')
+        self.assertEqual(model, mock_model)
+        self.assertTrue(automated)
+        mock_adapter.validate_model_field.assert_called_once_with(
+            None, None, mock_loc, mock.ANY, 'source')
+
+        # Case D: structure fields.
+        related_model = mock.Mock()
+        mock_field = mock.Mock(related_model=related_model)
+        mock_adapter.validate_model_field.return_value = (
+            mock_field, mock_model, True)
+        for structure in {'.struct', '.structarray'}:
+            model, automated = mock_adapter.validate_model_configuration(
+                mock_adapter, instance={}, spec=mock_spec, loc=mock_loc,
+                context={}, predicate_type=structure)
+            self.assertEqual(model, related_model)
+            self.assertTrue(automated)
 
     def test_get_constructor_params(self):
         mock_structures = {
@@ -486,3 +601,56 @@ class TestDjangoRestAdapter(unittest.TestCase):
                          {'foo': 'a_imported', 'bar': 'b_imported'})
         mock_import.assert_called_with('b')
         self.assertEqual(mock_import.call_count, 2)
+
+
+class TestUtilityFunctions(unittest.TestCase):
+    def test_validate_model_type(self):
+        mock_cls = type('mock', (object,), {})
+        mock_cls2 = type('mock2', (object,), {})
+        mock_model_field = mock.Mock(spec=mock_cls2)
+
+        # Case A: Multiple field types.
+        field_types = (mock_cls, mock_cls2)
+        model_field = django_rest._validate_model_type(
+            'foo', mock_model_field, field_types)
+        self.assertEqual(mock_model_field, model_field)
+
+        # Case B: Known field_type.
+        field_types = mock_cls2
+        model_field = django_rest._validate_model_type(
+            'foo', mock_model_field, field_types)
+        self.assertEqual(mock_model_field, model_field)
+
+        # Case C: Types do not match.
+        cases = [(mock_cls, mock_cls), mock_cls]
+        for case in cases:
+            self.assertRaises(utils.DRFAdapterException,
+                              django_rest._validate_model_type, 'foo',
+                              mock_model_field, case)
+
+    def test_validate_model_attr(self):
+        mock_cls_spec = type('mock', (object,), {'foo': 'bar'})
+        mock_model = mock.Mock(foo='bar', spec=mock_cls_spec)
+
+        # Case A: Attribute found on given instance.
+        model_attr = django_rest._validate_model_attribute(
+            'field name', mock_model, 'foo')
+        self.assertEqual(model_attr, 'bar')
+
+        # Case B: Attribute not found on given instance.
+        self.assertRaises(utils.DRFAdapterException,
+                          django_rest._validate_model_attribute,
+                          'field_name', mock_model, 'unknown')
+
+    def test_validate_relational_field(self):
+        mock_field = mock.Mock(related_model='foo')
+
+        # Case A: Related model of field and given ref model match.
+        model_field = django_rest._validate_relational_field(
+            'foo name', ref_model='foo', model_field=mock_field)
+        self.assertEqual(model_field, mock_field)
+
+        # Case B: Related model of field and given ref model do not match.
+        self.assertRaises(utils.DRFAdapterException,
+                          django_rest._validate_relational_field,
+                          'foo name', ref_model='bar', model_field=model_field)
