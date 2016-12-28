@@ -5,7 +5,6 @@ from apimas.modeling.core.exceptions import ApimasException
 
 
 HOME_DIR = expanduser("~")
-CONFIG_FILE = '.apimas'
 
 
 VALIDATION_SCHEMA = {
@@ -18,8 +17,8 @@ VALIDATION_SCHEMA = {
 }
 
 
-def load_config(path=None):
-    filepath = join(path or HOME_DIR, CONFIG_FILE)
+def load_config(path=None, config_file=".apimas"):
+    filepath = join(path or HOME_DIR, config_file)
     if not isfile(filepath):
         raise ApimasException('.apimas file not found')
 
