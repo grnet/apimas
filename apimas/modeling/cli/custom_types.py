@@ -53,13 +53,13 @@ class Credentials(click.File):
         try:
             return yaml.load(f)
         except yaml.YAMLError as e:
-            self.fail(e)
+            self.fail(e.message)
 
     def load_json(self, f):
         try:
             return json.load(f)
         except ValueError as e:
-            self.fail(e)
+            self.fail(e.message)
 
     def convert(self, value, param, ctx):
         """
