@@ -318,7 +318,7 @@ class DjangoRestAdapter(NaiveAdapter):
     def construct_identity_field(self, instance, spec, loc, context,
                                  predicate_type):
         """ Construct an `.identity` field. """
-        collection_name = loc[-4]
+        collection_name = loc[1]
         drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
             view_name='%s-detail' % (collection_name))
         doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
