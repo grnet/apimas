@@ -48,7 +48,7 @@ class DjangoRestAdapter(NaiveAdapter):
     SERILIZERS_TYPE_MAPPING = {
         'serial': serializers.IntegerField,
         'integer': serializers.IntegerField,
-        'big-integer': serializers.IntegerField,
+        'biginteger': serializers.IntegerField,
         'float': serializers.FloatField,
         'string': serializers.CharField,
         'boolean': serializers.BooleanField,
@@ -64,7 +64,7 @@ class DjangoRestAdapter(NaiveAdapter):
     TYPE_MAPPING = {
         'serial': models.AutoField,
         'integer': models.IntegerField,
-        'big-integer': models.BigIntegerField,
+        'biginteger': models.BigIntegerField,
         'float': models.FloatField,
         'string': (models.CharField, models.TextField),
         'boolean': models.BooleanField,
