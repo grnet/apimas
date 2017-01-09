@@ -60,6 +60,10 @@ class DateGenerator(Generator):
         return date_obj
 
 
+def generate_random_email(api=False):
+    return fake.email()
+
+
 def file_generator(api=False):
     content = str(fake.text())
     mime_type = fake.mime_type()
@@ -73,6 +77,7 @@ def generate_random_boolean(api=False):
 
 RANDOM_GENERATORS = {
     'string': StringGenerator(n=10),
+    'email': generate_random_email,
     'integer': NumberGenerator(),
     'biginteger': NumberGenerator(),
     'float': NumberGenerator(isfloat=True),
