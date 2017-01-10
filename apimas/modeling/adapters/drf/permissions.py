@@ -53,7 +53,16 @@ class ApimasPermissions(BasePermission):
             self.permissions.multimatch(pattern_set, expand=expand_columns))
         if not matches:
             return False
-        self.check_field_conditions(request, view, matches, obj)
+
+        # We check which matching states are valid, and then we get the
+        # subset of rules which match the valid states. If the is subset is
+        # empty, then the permissions is not granted.
+        state_conditions = self.check_state_conditions(request, view, matches,
+                                                       obj)
+        matches = filter((lambda x: state_conditions[x.state]), matches)
+        if not matches:
+            return False
+        self.check_field_conditions(request, view, matches)
         return True
 
     def set_field_context(self, request, view, fields):
@@ -114,17 +123,11 @@ class ApimasPermissions(BasePermission):
                 allowed_keys.add(row.field)
         return allowed_keys
 
-    def check_field_conditions(self, request, view, matches, obj):
+    def check_field_conditions(self, request, view, matches):
         """
         This method marks which fields are accessible or writable so that
         serializer can handle data accordingly afterwards.
         """
-        fields = self.allowed_fields(request, view, matches)
-        if not fields:
-            return
-        state_conditions = self.check_state_conditions(request, view, matches,
-                                                       obj)
-        matches = filter((lambda x: state_conditions[x.state]), matches)
         fields = self.allowed_fields(request, view, matches)
         self.set_field_context(request, view, fields)
 

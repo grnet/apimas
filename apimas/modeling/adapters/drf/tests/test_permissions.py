@@ -14,7 +14,7 @@ class TestPermissions(unittest.TestCase):
         self.mock_view.action = 'mock'
 
     def test_get_pattern_sets(self):
-        mock_user = mock.Mock(spec=AnonymousUser)
+        mock_user = mock.MagicMock(spec=AnonymousUser)
         mock_permission = create_mock_object(
             ApimasPermissions, ['get_pattern_sets', 'ANONYMOUS_ROLES'])
         self.mock_request.user = mock_user
@@ -43,23 +43,43 @@ class TestPermissions(unittest.TestCase):
         mock_permissions = create_mock_object(
             ApimasPermissions, ['isallowed'])
         mock_permissions.permissions = mock_tabmatch
-
         pattern_set = [['foo'], ['bar'], [doc.ANY], [doc.ANY]]
         mock_permissions.get_pattern_sets.return_value = pattern_set
 
+        # Case A: No matches.
         allowed = mock_permissions.isallowed(
             mock_permissions, self.mock_request, self.mock_view, obj=None)
         self.assertFalse(allowed)
         mock_permissions.check_field_conditions.assert_not_called
 
-        matches = ['foo', 'bar']
+        # Case B: There are matches, but invalid states.
+        matches = [mock.Mock(field=doc.ANY, state='bar'),
+                   mock.Mock(field='foo', state='foo')]
         mock_tabmatch.multimatch.return_value = matches
+        mock_states = {
+            'foo': False,
+            'bar': False,
+        }
+        mock_permissions.check_state_conditions.return_value = mock_states
+        allowed = mock_permissions.isallowed(
+            mock_permissions, self.mock_request, self.mock_view, obj=None)
+        self.assertFalse(allowed)
+        mock_permissions.check_state_conditions.assert_called_once_with(
+            self.mock_request, self.mock_view, matches, None)
 
+        # Case C: There are some states which are valid.
+        mock_states = {
+            'foo': True,
+            'bar': False,
+        }
+        mock_permissions.check_state_conditions.return_value = mock_states
         allowed = mock_permissions.isallowed(
             mock_permissions, self.mock_request, self.mock_view, obj=None)
         self.assertTrue(allowed)
-        mock_permissions.check_field_conditions.assert_called_once_with(
+        mock_permissions.check_state_conditions.assert_called_with(
             self.mock_request, self.mock_view, matches, None)
+        mock_permissions.check_field_conditions.assert_called_once_with(
+            self.mock_request, self.mock_view, matches[1:])
 
     def test_has_permission(self):
         lookup_field = 'foo'
@@ -135,40 +155,6 @@ class TestPermissions(unittest.TestCase):
             allowed_fields = mock_permission.allowed_fields(
                 mock_permission, self.mock_request, self.mock_view, matches)
             self.assertEqual(allowed_fields, {'b/c', doc.ANY})
-
-    def test_check_field_conditions(self):
-        matches = [mock.Mock(field=doc.ANY, state='bar'),
-                   mock.Mock(field='foo', state='foo')]
-        mock_permission = create_mock_object(
-            ApimasPermissions, ['check_field_conditions'])
-        mock_permission.allowed_fields.return_value = []
-
-        mock_permission.check_field_conditions(
-            mock_permission, self.mock_request, self.mock_view, matches,
-            None)
-        mock_permission.check_state_conditions.assert_not_called
-        mock_permission.allowed_fields.assert_called_once_with(
-            self.mock_request, self.mock_view, matches)
-
-        mock_permission.allowed_fields.return_value = ['foo']
-
-        mock_states = {
-            'foo': True,
-            'bar': False,
-        }
-        mock_permission.check_state_conditions.return_value = mock_states
-        mock_permission.check_field_conditions(
-            mock_permission, self.mock_request, self.mock_view, matches,
-            None)
-        mock_permission.check_state_conditions.assert_called_once_with(
-            self.mock_request, self.mock_view, matches, None)
-        allowed_fields_calls = [
-            mock.call(self.mock_request, self.mock_view, matches),
-            mock.call(self.mock_request, self.mock_view, matches[1:])
-        ]
-        mock_permission.allowed_fields.assert_has_calls(allowed_fields_calls)
-        mock_permission.set_field_context.assert_called_once_with(
-            self.mock_request, self.mock_view, ['foo'])
 
     def test_check_state_conditions(self):
         mock_model = mock.MagicMock()
