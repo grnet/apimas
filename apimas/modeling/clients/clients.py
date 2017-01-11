@@ -370,6 +370,7 @@ class ApimasClientAdapter(NaiveAdapter):
         'biginteger': 'integer',
         'float': 'float',
         'string': 'string',
+        'email': 'email',
         'boolean': 'boolean',
         'date': 'string',
         'datetime': 'string',

@@ -3,10 +3,20 @@ import unittest
 import mock
 from click.exceptions import BadParameter
 from apimas.modeling.tests.helpers import create_mock_object
-from apimas.modeling.cli.custom_types import Json, Date, DateTime, Credentials
+from apimas.modeling.cli.custom_types import (
+    Email, Json, Date, DateTime, Credentials)
 
 
 class TestCustomTypes(unittest.TestCase):
+
+    def test_email(self):
+        value = 'test@example.com'
+        email = Email()
+        output = email.convert(value, '', '')
+        self.assertEqual(output, value)
+
+        value = 'invalid email'
+        self.assertRaises(BadParameter, email.convert, value, '', '')
 
     def test_json(self):
         value = '{"key": "value"}'

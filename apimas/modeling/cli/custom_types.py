@@ -1,7 +1,25 @@
 import json
 from datetime import datetime
+import re
 import click
+from click.types import StringParamType
 import yaml
+
+
+class Email(StringParamType):
+    name = 'email'
+
+    # http://haacked.com/archive/2007/08/21/i-knew-how-to-validate-an-email-address-until-i.aspx/
+    regex = re.compile(r"^(?!\.)(""([^""\r\\]|\\[""\r\\])*""|"
+                       r"([-a-z0-9!#$%&'*+/=?^_`{|}~]|(?<!\.)\.)*)(?<!\.)"
+                       r"@[a-z0-9][\w\.-]*[a-z0-9]\.[a-z][a-z\.]*[a-z]$")
+
+    def convert(self, value, param, ctx):
+        value = super(Email, self).convert(value, param, ctx)
+        matched = self.regex.match(value)
+        if not matched:
+            self.fail('Email is invalid')
+        return value
 
 
 class Json(click.ParamType):

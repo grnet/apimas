@@ -162,6 +162,14 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'string')
 
+    def construct_email(self, instance, spec, loc, context):
+        """
+        Constuctor for `.ref` predicate.
+
+        This maps predicate to the specified type according to mapping.
+        """
+        return self.construct_type(instance, spec, loc, context, 'email')
+
     def construct_boolean(self, instance, spec, loc, context):
         """
         Constuctor for `.ref` predicate.

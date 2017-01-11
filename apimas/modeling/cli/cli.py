@@ -4,7 +4,7 @@ import click
 from click import types
 from apimas.modeling import utils
 from apimas.modeling.cli.custom_types import (
-    Json, Credentials, Date, DateTime)
+    Email, Json, Credentials, Date, DateTime)
 from apimas.modeling.clients import ApimasClientAdapter
 from apimas.modeling.core import documents as doc, exceptions as ex
 from apimas.modeling.adapters.cookbooks import NaiveAdapter, SKIP
@@ -190,6 +190,7 @@ class ApimasCliAdapter(NaiveAdapter):
         'integer': types.IntParamType,
         'serial': types.IntParamType,
         'string': types.StringParamType,
+        'email': Email,
         'boolean': types.BoolParamType,
         'biginteger': types.IntParamType,
         'float': types.FloatParamType,
