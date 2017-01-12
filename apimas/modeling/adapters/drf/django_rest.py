@@ -57,7 +57,9 @@ def _validate_model_attribute(api_field_name, model, model_attr_name):
     """ Checks that model have an attribute named as `model_attr_name`."""
     model_attr = getattr(model, model_attr_name, None)
     if model_attr is None:
-        raise utils.DRFAdapterException
+        raise utils.DRFAdapterException(
+            'Attribute %s (%s) not found in model %s' % (
+                model_attr_name, api_field_name, model.__name__))
     return model_attr
 
 

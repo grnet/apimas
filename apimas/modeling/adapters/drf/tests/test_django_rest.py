@@ -638,7 +638,8 @@ class TestUtilityFunctions(unittest.TestCase):
 
     def test_validate_model_attr(self):
         mock_cls_spec = type('mock', (object,), {'foo': 'bar'})
-        mock_model = mock.Mock(foo='bar', spec=mock_cls_spec)
+        mock_model = mock.MagicMock(foo='bar', spec=mock_cls_spec,
+                                    __name__='bar')
 
         # Case A: Attribute found on given instance.
         model_attr = django_rest._validate_model_attribute(
