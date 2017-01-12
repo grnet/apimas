@@ -57,8 +57,8 @@
     BrowserMatch "MSIE [17-9]" ssl-unclean-shutdown
 
     SSLCACertificatePath    /etc/ssl/certs/
-    SSLCertificateFile      /etc/ssl/certs/<%= @server_name %>.pem
-    SSLCertificateKeyFile   /etc/ssl/private/<%= @server_name %>.key
+    SSLCertificateFile      /etc/ssl/certs/apimas-<%= @server_name %>.pem
+    SSLCertificateKeyFile   /etc/ssl/private/apimas-<%= @server_name %>.key
     #SSLCertificateChainFile /etc/ssl/<%= @server_name %>.chain
 
     RequestHeader set X-Forwarded-Proto "https" env=HTTPS

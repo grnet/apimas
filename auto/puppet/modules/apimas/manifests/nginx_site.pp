@@ -37,7 +37,7 @@ define apimas::nginx_site (
     #    notify => Service['nginx'],
     #}
 
-    file { "/etc/ssl/certs/${server_name}.pem":
+    file { "/etc/ssl/certs/apimas-${server_name}.pem":
         ensure => file,
         owner => "root",
         group => "root",
@@ -46,7 +46,7 @@ define apimas::nginx_site (
         notify => Service['nginx'],
     }
 
-    file { "/etc/ssl/private/${server_name}.key":
+    file { "/etc/ssl/private/apimas-${server_name}.key":
         ensure => file,
         owner => "root",
         group => "root",

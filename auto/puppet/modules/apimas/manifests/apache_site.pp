@@ -73,7 +73,7 @@ define apimas::apache_site (
         notify => Service['apache2'],
     }
 
-    file { "/etc/ssl/certs/${server_name}.pem":
+    file { "/etc/ssl/certs/apimas-${server_name}.pem":
         ensure => file,
         owner => "root",
         group => "root",
@@ -82,7 +82,7 @@ define apimas::apache_site (
         notify => Service['apache2'],
     }
 
-    file { "/etc/ssl/private/${server_name}.key":
+    file { "/etc/ssl/private/apimas-${server_name}.key":
         ensure => file,
         owner => "root",
         group => "root",
