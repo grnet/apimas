@@ -41,83 +41,32 @@ class apimas (
     $ssl_cert,
     $ssl_key,
 ) {
-    apimas::pin { 'python-django':
-        version => "1.8.*",
-        before => Apimas::Apache_site["${server_name}"],
-    }
-
-    apimas::pin { 'python-django-common':
-        version => "1.8.*",
-        before => Package['python-django'],
-    }
-
     package { 'python-django':
         ensure => installed,
-        require => Apimas::Pin['python-django'],
         before => Apimas::Apache_site["${server_name}"],
-    }
-
-    apimas::pin { 'python-psycopg2':
-        version => "2.5.*",
-        before => Apimas::Apache_site["${server_name}"],
+        install_options => ['-t', 'jessie-backports'],
     }
 
     package { 'python-psycopg2':
         ensure => installed,
-        require => Apimas::Pin['python-psycopg2'],
-        before => Apimas::Apache_site["${server_name}"],
-    }
-
-    #apimas::pin { 'nginx':
-    #    version => "1.6.*",
-    #    before => Nginx_site["${server_name}"],
-    #}
-
-    #package { 'nginx':
-    #    ensure => installed,
-    #    require => Apimas::Pin['nginx'],
-    #    before => Nginx_site["${server_name}"],
-    #}
-
-    apimas::pin { 'apache2':
-        version => "2.4.*",
         before => Apimas::Apache_site["${server_name}"],
     }
 
     package { 'apache2':
         ensure => installed,
-        require => Apimas::Pin['apache2'],
-        before => Apimas::Apache_site["${server_name}"],
-    }
-
-    apimas::pin { 'gunicorn':
-        version => "19.0.*",
         before => Apimas::Apache_site["${server_name}"],
     }
 
     package { 'gunicorn':
         ensure => installed,
-        require => Apimas::Pin['gunicorn'],
         before => Apimas::Apache_site["${server_name}"],
-    }
-
-    apimas::pin { 'postgresql':
-        version => "9.4*",
-        before => Apimas::Apache_site["${server_name}"],
+        install_options => ['-t', 'jessie'],
     }
 
     package { 'postgresql':
         ensure => installed,
-        require => Apimas::Pin['postgresql'],
         before => Apimas::Apache_site["${server_name}"],
     }
-
-    #apimas::nginx_site { $server_name:
-    #    server_name => $server_name,
-    #    ssl_cert => $ssl_cert,
-    #    ssl_key => $ssl_key,
-    #    notify => Service['nginx'],
-    #}
 
     apimas::apache_site { $server_name:
         server_name => $server_name,
