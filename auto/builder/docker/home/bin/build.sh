@@ -63,6 +63,7 @@ for source_name in "${source_vars}"; do
             echo "${name} exists yet remote is not either 'local' or 'local+fetch'"
             exit 2
         fi
+        (cmd cd "${name}"; cmd git checkout "${commit}")
     else
         cmd git_repo.sh ${remote_opt} ${commit_opt} ${name_opt}
     fi
