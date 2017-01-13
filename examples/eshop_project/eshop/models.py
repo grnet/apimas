@@ -6,7 +6,9 @@ from django.db import models
 
 
 class UserProfile(AbstractUser):
-    pass
+    @property
+    def apimas_roles(self):
+        return self.groups.all()
 
 
 class Country(models.Model):
