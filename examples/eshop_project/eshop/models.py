@@ -48,6 +48,12 @@ class Cart(models.Model):
 
 
 class Order(models.Model):
+    RECEIVED = 1
+    BEING_PROCESSED = 2
+    DELIVERED = 3
+
+    ORDER_STATUSES = {RECEIVED, BEING_PROCESSED, DELIVERED}
+
     id = models.AutoField(primary_key=True)
     status = models.IntegerField()
     date = models.DateTimeField()
