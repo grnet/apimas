@@ -17,11 +17,11 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 from apimas.modeling.adapters.drf import django_rest
-from apimas.modeling.cli.cli import load_config
+from eshop.api_spec import API_SPEC
 
-config = load_config()
+
 adapter = django_rest.DjangoRestAdapter()
-adapter.construct(config.get('spec'))
+adapter.construct(API_SPEC)
 adapter.apply()
 
 urlpatterns = [
