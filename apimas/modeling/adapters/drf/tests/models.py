@@ -2,7 +2,7 @@ from django.db import models
 
 
 class MyModel(models.Model):
-    string = models.CharField(blank=False, null=False, max_length=255)
+    string = models.CharField(blank=False, null=False, max_length=2)
     text = models.TextField()
     email = models.EmailField()
     number = models.IntegerField()

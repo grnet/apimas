@@ -62,15 +62,15 @@ def generate_field_schema(model_fields, iscollection=True):
             field_node = dict({'.drf_field': {}}, **spec_field)
         if '.struct' not in field_node and '.structarray' not in field_node:
             field_schema[model_field.name] = dict(field_node, **PROPERTIES)
-    identity_field = utils.StringGenerator(n=5)()
+    identity_field = utils.generate_random_string(max_length=4)
     if iscollection:
         field_schema[identity_field] = {'.drf_field': {}, '.identity': {}}
     return field_schema
 
 
 def generate_random_spec(test_models):
-    DEFAULT_PERMISSIONS = [('*',) * 6]
-    spec = {'.endpoint': {'permissions': DEFAULT_PERMISSIONS}, 'api': {}}
+    default_permissions = [('*',) * 6]
+    spec = {'.endpoint': {'permissions': default_permissions}, 'api': {}}
     for model in test_models:
         model_cls = import_object(model)
         collection_name = model_cls.__name__ + '_collection'

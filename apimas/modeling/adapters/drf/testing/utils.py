@@ -20,14 +20,6 @@ class Generator(object):
         raise NotImplementedError('__call__() must be implemented.')
 
 
-class StringGenerator(Generator):
-    def __init__(self, n=10):
-        self.n = n
-
-    def __call__(self, api=False):
-        return fake.pystr(max_chars=self.n)
-
-
 class NumberGenerator(Generator):
     def __init__(self, upper=10, negative=False, isfloat=False):
         self.upper = upper
@@ -60,6 +52,12 @@ class DateGenerator(Generator):
         return date_obj
 
 
+def generate_random_string(api=False, max_length=None):
+    max_length = max_length or 255
+    size = random.randint(1, max_length)
+    return fake.pystr(max_chars=size)
+
+
 def generate_random_email(api=False):
     return fake.email()
 
@@ -76,7 +74,7 @@ def generate_random_boolean(api=False):
 
 
 RANDOM_GENERATORS = {
-    'string': StringGenerator(n=10),
+    'string': generate_random_string,
     'email': generate_random_email,
     'integer': NumberGenerator(),
     'biginteger': NumberGenerator(),
@@ -254,6 +252,21 @@ def get_sample_field_schema(field_schema):
     return dict(random.sample(field_schema.items(), sample_size))
 
 
+def _get_extra_string_params(spec, predicate_type):
+    return {'max_length': spec.get(predicate_type).get('max_length')}
+
+
+def _get_extra_date_params(spec, predicate_type):
+    return {'date_format': spec.get(predicate_type).get('format')}
+
+
+EXTRA_API_PARAMS = {
+    '.string': _get_extra_string_params,
+    '.date': _get_extra_date_params,
+    '.datetime': _get_extra_date_params,
+}
+
+
 def populate_request(field_schema, instances, all_fields=True):
     adapter = DjangoRestAdapter()
     kwargs = {}
@@ -263,20 +276,23 @@ def populate_request(field_schema, instances, all_fields=True):
         if '.readonly' in spec or '.identity' in spec or '.serial' in spec:
             continue
         predicate_type = adapter.extract_type(spec)
+        method = EXTRA_API_PARAMS.get(predicate_type)
+        extra_params = method(spec, predicate_type) if method else {}
         if isrelational(predicate_type):
             predicate_kwargs = spec.get(predicate_type)
             kwargs[field_name] = RELATIONAL_CONSTRUCTORS[predicate_type](
-                predicate_kwargs, instances)
+                predicate_kwargs, instances, **extra_params)
         else:
             kwargs[field_name] = RANDOM_GENERATORS[predicate_type[1:]](
-                api=True)
+                api=True, **extra_params)
     return kwargs
 
 
 def generate_field_value(model_field, instances):
+    model_kwargs = _extra_model_kwargs(model_field)
     if model_field.related_model is None:
         field_type = FIELD_TYPE_MAPPING[type(model_field)]
-        return RANDOM_GENERATORS[field_type](), False
+        return RANDOM_GENERATORS[field_type](**model_kwargs), False
     ref_instance = instances.get(
         model_field.related_model)
     if model_field.one_to_one or model_field.many_to_one:
@@ -291,6 +307,12 @@ def create_instance(model, kwargs, outstanding):
         model_field = getattr(instance, k)
         model_field.add(v)
     return instance
+
+
+def _extra_model_kwargs(model_field):
+    if type(model_field) is models.CharField:
+        return {'max_length': model_field.max_length}
+    return {}
 
 
 def populate_model(model, instances, create=True):
