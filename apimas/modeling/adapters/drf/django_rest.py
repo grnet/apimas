@@ -414,6 +414,22 @@ class DjangoRestAdapter(NaiveAdapter):
                 extra['queryset'] = ref_model.objects.all()
         return extra
 
+    def _get_string_params(self, instance):
+        params = instance.get('.string')
+        max_length = params.get('max_length')
+        return {'max_length': max_length}
+
+    def _get_extra_field_kwargs(self, predicate_type, instance, loc, context,
+                                automated, field_kwargs):
+        if predicate_type == '.ref':
+            return self._get_ref_params(
+                instance, loc, context.get('top_spec'), automated,
+                field_kwargs)
+        elif predicate_type == '.string':
+            return self._get_string_params(instance)
+        else:
+            return {}
+
     def default_field_constructor(self, instance, spec, loc, context,
                                   predicate_type):
         """
@@ -441,10 +457,8 @@ class DjangoRestAdapter(NaiveAdapter):
                 ' `onmodel` is set')
         field_kwargs = {k: v for k, v in spec.iteritems() if k != 'onmodel'}
         field_kwargs.update(doc.doc_get(instance, path) or {})
-        if predicate_type == '.ref':
-            field_kwargs.update(self._get_ref_params(
-                instance, loc, context.get('top_spec'), onmodel and automated,
-                field_kwargs))
+        field_kwargs.update(self._get_extra_field_kwargs(
+            predicate_type, instance, loc, context, automated, field_kwargs))
         doc.doc_set(instance, (self.ADAPTER_CONF, 'source'), instance_source)
         drf_field = self._generate_field(
             instance, context.get('parent_name'), predicate_type, model,

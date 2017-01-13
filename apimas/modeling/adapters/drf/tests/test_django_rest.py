@@ -262,6 +262,30 @@ class TestDjangoRestAdapter(unittest.TestCase):
             predicate_type=predicate_type, model=None, automated=True)
         self.assertEqual(field, {})
 
+    def test_get_extra_field_kwargs(self):
+        mock_adapter = create_mock_object(
+            DjangoRestAdapter, ['_get_extra_field_kwargs'])
+        mock_adapter._get_ref_params.return_value = 'extra_ref'
+        mock_adapter._get_string_params.return_value = 'extra_string'
+
+        # Case A: A `.ref` field.
+        field_kwargs = mock_adapter._get_extra_field_kwargs(
+            mock_adapter, '.ref', instance={}, loc=(), context={},
+            automated=True, field_kwargs={})
+        self.assertEqual(field_kwargs, 'extra_ref')
+
+        # Case B: A '.string' field.
+        field_kwargs = mock_adapter._get_extra_field_kwargs(
+            mock_adapter, '.string', instance={}, loc=(), context={},
+            automated=True, field_kwargs={})
+        self.assertEqual(field_kwargs, 'extra_string')
+
+        # Case C: A common field.
+        field_kwargs = mock_adapter._get_extra_field_kwargs(
+            mock_adapter, '.foo', instance={}, loc=(), context={},
+            automated=True, field_kwargs={})
+        self.assertEqual(field_kwargs,  {})
+
     def test_default_field_constructor(self):
         mock_instance = {
             '.string': {},
@@ -280,6 +304,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_adapter._generate_field.return_value = 'drf field'
         mock_adapter.validate_model_configuration.return_value = (
             mock.Mock, True)
+        mock_adapter._get_extra_field_kwargs.return_value = {
+           'extra_key': 'value'}
 
         # Case A: `instance_source` and `onmodel` are mutually exclusive.
         self.assertRaises(
@@ -298,33 +324,11 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(len(instance_conf), 2)
         self.assertEqual(instance_conf['field'], 'drf field')
         self.assertEqual(instance_conf['source'], 'instance_mock')
-        field_kwargs = {'extra': 'value', 'foo': 'bar'}
+        field_kwargs = {'extra': 'value', 'foo': 'bar', 'extra_key': 'value'}
         mock_adapter._generate_field.assert_called_with(
             mock_instance, mock_context.get('parent_name'), '.string',
             mock.ANY, False, **field_kwargs)
-
-        # Case C: A `.ref` field construction.
-        mock_instance = {
-            '.ref': {'to': 'bar'},
-            self.adapter_conf: {},
-        }
-        mock_adapter._get_ref_params.return_value = {'ref_extra': 'value'}
-        mock_spec['instance_source'] = 'instance_mock'
-        instance = mock_adapter.default_field_constructor(
-            mock_adapter, instance=mock_instance, spec=mock_spec,
-            loc=mock_loc, context=mock_context, predicate_type='.ref')
-        instance_conf = instance.get(mock_adapter.ADAPTER_CONF)
-        self.assertIsNotNone(instance_conf)
-        self.assertEqual(len(instance_conf), 2)
-        self.assertEqual(instance_conf['field'], 'drf field')
-        self.assertEqual(instance_conf['source'], 'instance_mock')
-        field_kwargs = {'extra': 'value', 'foo': 'bar',
-                        'ref_extra': 'value'}
-        mock_adapter._generate_field.assert_called_with(
-            mock_instance, mock_context.get('parent_name'), '.ref', mock.ANY,
-            False, **field_kwargs)
-        mock_adapter._get_ref_params.assert_called_once_with(
-            mock_instance, mock_loc, None, False, field_kwargs)
+        mock_adapter._get_extra_field_kwargs.assert_called_once
 
     def test_construct_drf_field(self):
         mock_loc = ('api', 'foo', '*', 'field', '.drf_field')

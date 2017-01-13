@@ -470,6 +470,16 @@ class ApimasClientAdapter(NaiveAdapter):
         return getattr(self, method_name, default)(
             instance, spec, loc, context, **params)
 
+    def _add_string_params(self, instance, spec, loc, context, **kwargs):
+        """
+        Add extra params translated to cerberus syntax for `.string`
+        predicates.
+        """
+        max_length = kwargs.get('max_length')
+        if max_length is not None:
+            instance[self.ADAPTER_CONF].update({'maxlength': max_length})
+        return instance
+
     def _add_date_params(self, instance, spec, loc, context, **kwargs):
         """
         Adds extra configuration based on the parameters of constructor.
