@@ -24,12 +24,12 @@ class City(models.Model):
 
 class Manufacturer(models.Model):
     id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=255, blank=False)
+    name = models.CharField(max_length=10, blank=False)
 
 
 class Product(models.Model):
     id = models.AutoField(primary_key=True)
-    key = models.CharField(max_length=255, blank=False)
+    key = models.CharField(max_length=10, blank=False)
     name = models.CharField(max_length=255, blank=False)
     description = models.CharField(max_length=255, blank=False)
     stock = models.IntegerField(
