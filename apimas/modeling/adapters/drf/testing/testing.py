@@ -333,7 +333,7 @@ class ApimasTestCase(APITestCase):
         if structure_type not in ['.struct', '.structarray']:
             raise ValueError('`structure_type` must be `.struct|.structarray`')
 
-        if structure == '.structarray':
+        if structure_type == '.structarray':
             self.assertTrue(isinstance(value, list))
             for element in value:
                 self._validate_response(element, structure,
@@ -391,7 +391,9 @@ class ApimasTestCase(APITestCase):
             response_spec = utils.get_fields(self.spec, collection,
                                              excluded=['.writeonly'])
         else:
-            response_spec = utils.get_required_fields(self.spec, collection)
+            response_spec = utils.get_fields(self.spec, collection,
+                                             included=['.required'],
+                                             excluded=['.writeonly'])
         method_name = self.VALIDATE_RE_METHOD_NAME_PATTERN % (
             action, collection)
         validate_response = getattr(self, method_name,
