@@ -141,6 +141,20 @@ class ContainerSerializer(serializers.BaseSerializer):
             context=self._context, partial=self.partial, instance=instance,
             **kwargs)
 
+    def validate_empty_values(self, data):
+        isempty, data = super(
+            ContainerSerializer, self).validate_empty_values(data)
+        if getattr(self.root, 'partial', False):
+            return isempty, data
+        return False, data
+
+    def get_default(self):
+        default = {}
+        for serializer in self.contained_sers:
+            if serializer is not None:
+                default.update(serializer.get_default())
+        return default
+
     def is_valid(self, raise_exception=False):
         self._errors = {}
         for serializer in self.contained_sers:
@@ -292,6 +306,36 @@ class ApimasSerializer(serializers.Serializer):
         return self.set_field_property(
             segments[1:], fields, property_key)
 
+    def validate_empty_values(self, data):
+        """
+        Override default behaviour of `validate_empty_values()`.
+
+        Except for `partial_update`, when a serializer field, i.e. a nested
+        field is empty, then return `False` which indicates that further
+        validation should be applied on this field.
+        """
+        isempty, default = super(
+            ApimasSerializer, self).validate_empty_values(data)
+        if getattr(self.root, 'partial', False):
+            return isempty, default
+        return False, default
+
+    def get_default(self):
+        """
+        Override `get_default()` defined on `serializers.Field` class.
+
+        In this case, if there are empty data for a serializer field, i.e.
+        a nested field, try to populate it by retrieving the default value of
+        each of their fields.
+        """
+        default = {}
+        for k, v in self.fields.iteritems():
+            try:
+                default[k] = v.get_default()
+            except serializers.SkipField:
+                pass
+        return default
+
     def get_attribute(self, instance):
         try:
             return super(ApimasSerializer, self).get_attribute(instance)
@@ -376,12 +420,17 @@ class ApimasSerializer(serializers.Serializer):
                     new_instance, instance, drf_field, v, **kwargs)
                 if value:
                     new_instance = value
-            elif instance:
+            elif instance is not None:
                 self.update_non_model_field(drf_field, instance, v,
                                             validated_data)
             else:
                 self.create_non_model_field(drf_field, v, validated_data)
-        return new_instance
+
+        # In case of an update action where `instance` has specified,
+        # there is a case when client sent empty data, and, therefore,
+        # current instance is not updated. Thus, in this case, return
+        # the current instance instead of the new one.
+        return new_instance or getattr(self, 'instance', None)
 
     def create(self, validated_data, **kwargs):
         return self.perform_action(validated_data, **kwargs)
