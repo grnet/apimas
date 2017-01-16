@@ -7,21 +7,13 @@ class TestUtils(unittest.TestCase):
 
     @mock.patch.object(utils, 'get_package_module')
     def test_import_object(self, mock_func):
-        self.assertRaises(utils.DRFAdapterException,
+        self.assertRaises(ImportError,
                           utils.import_object, None)
-        self.assertRaises(utils.DRFAdapterException,
-                          utils.import_object, 'module')
         mock_func.assert_not_called
 
-        mock_func.side_effect = ImportError()
-        self.assertRaises(utils.DRFAdapterException,
-                          utils.import_object, 'module.object')
-        mock_func.assert_called_with('module', raise_exception=True)
-
-        mock_func.side_effect = None
         mock_module = mock.MagicMock(object=None)
         mock_func.return_value = mock_module
-        self.assertRaises(utils.DRFAdapterException,
+        self.assertRaises(ImportError,
                           utils.import_object, 'module.object')
 
         mock_module = mock.MagicMock(object='foo')

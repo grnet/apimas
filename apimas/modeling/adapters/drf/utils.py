@@ -1,5 +1,5 @@
 import importlib
-from apimas.modeling.core.exceptions import ApimasException
+from apimas.modeling.core.exceptions import ApimasAdapterException
 
 
 AUTH_CLASSES_LOOKUP_FIELD = 'authentication_classes'
@@ -25,7 +25,7 @@ PROPERTIES = {
 }
 
 
-class DRFAdapterException(ApimasException):
+class DRFAdapterException(ApimasAdapterException):
     pass
 
 
@@ -34,15 +34,12 @@ LOAD_CLASS = lambda x: import_object(x)
 
 def import_object(obj_path):
     if obj_path is None:
-        raise DRFAdapterException('Cannot import NoneType object')
-    try:
-        module_name, obj_name = obj_path.rsplit('.', 1)
-        mod = get_package_module(module_name, raise_exception=True)
-    except (ValueError, ImportError) as e:
-        raise DRFAdapterException(e)
+        raise ImportError('Cannot import NoneType object')
+    module_name, obj_name = obj_path.rsplit('.', 1)
+    mod = get_package_module(module_name, raise_exception=True)
     obj = getattr(mod, obj_name, None)
     if not obj:
-        raise DRFAdapterException('Cannot import object %s from %s' % (
+        raise ImportError('Cannot import object %s from %s' % (
             obj_name, module_name))
     return obj
 
