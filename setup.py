@@ -26,5 +26,5 @@ setup(
             'apimas=apimas.modeling.cli.cli:main'
         }
     },
-    scripts=['apimas/scripts/apimas-mkdeb'],
+    scripts=['scripts/apimas-mkdeb'],
 )
