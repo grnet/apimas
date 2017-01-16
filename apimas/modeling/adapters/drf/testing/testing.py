@@ -135,7 +135,7 @@ class ApimasTestCase(APITestCase):
 
     VALIDATE_RE_METHOD_NAME_PATTERN = 'validate_response_%s_%s'
 
-    REQUEST_CONTEXT_METHOD_PATTERN = 'request_context_%s_%s'
+    REQUEST_CONTEXT_METHOD_PATTERN = 'set_request_context_%s_%s'
 
     AUTHENTICATE_METHOD_PATTERN = 'authenticate_%s'
 
@@ -249,7 +249,7 @@ class ApimasTestCase(APITestCase):
             response.status_code, self.STATUS_CODES[action], response.data,
             expected_structure)
 
-    def request_context(self, collection, action, instances):
+    def set_request_context(self, collection, action, instances):
         """
         Create request context in order test scenario to be triggered.
 
@@ -385,7 +385,8 @@ class ApimasTestCase(APITestCase):
 
         method_name = self.REQUEST_CONTEXT_METHOD_PATTERN % (
             action, collection)
-        request_context = getattr(self, method_name, self.request_context)
+        request_context = getattr(
+            self, method_name, self.set_request_context)
         request_context(collection, action, instances=instances)
         client_method = getattr(self.client, self.ACTIONS_TO_METHODS[action])
         response = client_method(self.url, data=self.data,
