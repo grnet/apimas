@@ -58,7 +58,7 @@ def _add_urlpatterns(module, urls):
     setattr(module, 'urlpatterns', [urls])
 
 
-def set_apimas_context(urlconf_module, spec):
+def apimas_context(urlconf_module, spec):
     """
     This function (decorator) is used to customize `TestCase` classes based
     on the `APIMAS` spec of an application.

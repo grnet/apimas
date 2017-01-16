@@ -1,7 +1,7 @@
 from django.db import models
 from rest_framework import serializers
 from apimas.modeling.adapters.drf.testing import (
-    set_apimas_context, ApimasTestCase)
+    apimas_context, ApimasTestCase)
 from apimas.modeling.adapters.drf.tests.models import MyModel
 from apimas.modeling.adapters.drf.tests.utils import (
     generate_field_schema, ACTIONS)
@@ -73,6 +73,6 @@ SPEC = {
 }
 
 
-@set_apimas_context(__name__, SPEC)
+@apimas_context(__name__, SPEC)
 class TestNestedObjectCreation(ApimasTestCase):
     pass

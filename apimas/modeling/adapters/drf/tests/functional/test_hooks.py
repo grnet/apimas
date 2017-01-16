@@ -1,7 +1,7 @@
 import random
 from rest_framework import status
 from apimas.modeling.adapters.drf.testing import (
-    set_apimas_context, ApimasTestCase)
+    apimas_context, ApimasTestCase)
 from apimas.modeling.adapters.drf.testing import utils
 from apimas.modeling.adapters.drf.tests.utils import ACTIONS
 from apimas.modeling.adapters.drf.mixins import HookMixin
@@ -146,7 +146,7 @@ class WriteOperations(HookMixin):
         self.stash(extra=extra_data)
 
 
-@set_apimas_context(__name__, SPEC)
+@apimas_context(__name__, SPEC)
 class TestSpec(ApimasTestCase):
     def validate_response_create_mymodel(self, collection, action,
                                          response, data, response_spec,

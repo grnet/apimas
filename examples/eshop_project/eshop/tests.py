@@ -1,11 +1,11 @@
 from django.contrib.auth.models import Group
 from apimas.modeling.adapters.drf.testing import (
-    ApimasTestCase, set_apimas_context)
+    ApimasTestCase, apimas_context)
 from eshop.api_spec import API_SPEC
 from eshop.models import UserProfile
 
 
-@set_apimas_context(__name__, API_SPEC)
+@apimas_context(__name__, API_SPEC)
 class TestApplication(ApimasTestCase):
     def authenticate(self):
         user = UserProfile.objects.create(username='fdsfa', first_name='fdadaf',

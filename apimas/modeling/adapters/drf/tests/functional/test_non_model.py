@@ -1,5 +1,5 @@
 from apimas.modeling.adapters.drf.testing import (
-    set_apimas_context, ApimasTestCase)
+    apimas_context, ApimasTestCase)
 from apimas.modeling.adapters.drf.tests.utils import ACTIONS
 
 
@@ -106,6 +106,6 @@ SPEC = {
 }
 
 
-@set_apimas_context(__name__, SPEC)
+@apimas_context(__name__, SPEC)
 class TestNonModelFields(ApimasTestCase):
     pass

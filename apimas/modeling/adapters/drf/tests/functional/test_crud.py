@@ -1,5 +1,5 @@
 from apimas.modeling.adapters.drf.testing import (
-    set_apimas_context, ApimasTestCase)
+    apimas_context, ApimasTestCase)
 from apimas.modeling.adapters.drf.tests.utils import generate_random_spec
 
 
@@ -16,6 +16,6 @@ TEST_MODELS = [
 SPEC = generate_random_spec(TEST_MODELS)
 
 
-@set_apimas_context(__name__, SPEC)
+@apimas_context(__name__, SPEC)
 class TestCRUDOperations(ApimasTestCase):
     pass
