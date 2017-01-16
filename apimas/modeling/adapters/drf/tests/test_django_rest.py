@@ -420,7 +420,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(field, '_validate_model_type_called')
         self.assertEqual(model, mock_model)
         self.assertTrue(automated)
-        mock_type.assert_called_once_with('foo', mock.ANY, field_type)
+        mock_type.assert_called_once_with('foo', mock.ANY, field_type,
+                                          self.loc)
         mock_attr.assert_not_called
 
         # Case C: `_validate_model_type` fails and `_validate_model_attribute`
@@ -432,7 +433,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(field, '_validate_model_attribute_called')
         self.assertEqual(model, mock_model)
         self.assertFalse(automated)
-        mock_attr.assert_called_once_with('foo', mock_model, 'source')
+        mock_attr.assert_called_once_with('foo', mock_model, 'source',
+                                          self.loc)
         mock_meta.get_field.assert_called_with('source')
 
     @mock.patch.object(django_rest, '_validate_relational_field')
@@ -456,7 +458,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(model, mock_model)
         self.assertTrue(automated)
         mock_attr.assert_not_called
-        mock_ref.assert_called_once_with('foo', ref_model, mock.ANY)
+        mock_ref.assert_called_once_with('foo', ref_model, mock.ANY, self.loc)
         mock_meta.get_field.assert_called_once_with('source')
         mock_adapter._get_or_import_model.assert_called_once_with(
             'foo_ref', self.loc[:1] + ('foo_ref', '.drf_collection', 'model'),
@@ -472,7 +474,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(field, '_validate_model_attribute_called')
         self.assertEqual(model, mock_model)
         self.assertFalse(automated)
-        mock_attr.assert_called_once_with('foo', mock_model, 'source')
+        mock_attr.assert_called_once_with('foo', mock_model, 'source',
+                                          self.loc)
         mock_meta.get_field.assert_called_with('source')
         self.assertEqual(mock_meta.get_field.call_count, 2)
 
@@ -583,8 +586,6 @@ class TestDjangoRestAdapter(unittest.TestCase):
 
     @mock.patch.object(utils, 'import_object')
     def test_get_or_import_model(self, mock_import):
-        side_effect = lambda x: x + '_imported'
-        mock_import.side_effect = side_effect
         spec = {
             'foo': {
                 'model': 'a',
@@ -593,26 +594,39 @@ class TestDjangoRestAdapter(unittest.TestCase):
                 'model': 'b'
             }
         }
+        # Case A: Cannot import model.
+        self.assertEqual(self.adapter.models, {})
+        mock_import.side_effect = ImportError()
+        self.assertRaises(utils.DRFAdapterException,
+                          self.adapter._get_or_import_model, 'foo',
+                          ('foo', 'model'), spec)
+        mock_import.assert_called_once
+
+        # Case B: Import model 'foo'.
+        side_effect = lambda x: x + '_imported'
+        mock_import.side_effect = side_effect
         self.assertEqual(self.adapter.models, {})
         model = self.adapter._get_or_import_model(
             'foo', ('foo', 'model'), spec)
         self.assertEqual(model, 'a_imported')
         self.assertEqual(self.adapter.models, {'foo': 'a_imported'})
-        mock_import.assert_called_once_with('a')
+        mock_import.assert_called_with('a')
 
+        # Case C: Model 'foo' already imported.
         model = self.adapter._get_or_import_model(
             'foo', ('foo', 'model'), spec)
         self.assertEqual(model, 'a_imported')
         self.assertEqual(self.adapter.models, {'foo': 'a_imported'})
-        self.assertEqual(mock_import.call_count, 1)
+        self.assertEqual(mock_import.call_count, 2)
 
+        # Import a second model, 'bar'.
         model = self.adapter._get_or_import_model(
             'bar', ('bar', 'model'), spec)
         self.assertEqual(model, 'b_imported')
         self.assertEqual(self.adapter.models,
                          {'foo': 'a_imported', 'bar': 'b_imported'})
         mock_import.assert_called_with('b')
-        self.assertEqual(mock_import.call_count, 2)
+        self.assertEqual(mock_import.call_count, 3)
 
 
 class TestUtilityFunctions(unittest.TestCase):

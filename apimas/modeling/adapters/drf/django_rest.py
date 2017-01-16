@@ -17,11 +17,12 @@ def handle_exception(func):
         try:
             return func(*args, **kwargs)
         except FieldDoesNotExist as e:
-            raise utils.DRFAdapterException(e)
+            raise utils.DRFAdapterException(e, loc=kwargs.get('loc', ()))
     return wrapper
 
 
-def _validate_model_type(api_field_name, model_field, django_field_type):
+def _validate_model_type(api_field_name, model_field, django_field_type,
+                         loc=()):
     """
     Checks that the type of the specified model field matches with the
     `django_field_type` passed as parameter.
@@ -37,11 +38,12 @@ def _validate_model_type(api_field_name, model_field, django_field_type):
     if not matches:
         raise utils.DRFAdapterException(
             'Field %s is not %s type in your django model' % (
-                repr(api_field_name), repr(django_field_type)))
+                repr(api_field_name), repr(django_field_type)), loc=loc)
     return model_field
 
 
-def _validate_relational_field(api_field_name, ref_model, model_field):
+def _validate_relational_field(api_field_name, ref_model, model_field,
+                               loc=()):
     """
     Checks that the given model field is related to the model given as
     parameter.
@@ -49,17 +51,18 @@ def _validate_relational_field(api_field_name, ref_model, model_field):
     if model_field.related_model is not ref_model:
         raise utils.DRFAdapterException(
             'Model field of %s is not related to %s.' % (
-                model_field.name, ref_model))
+                model_field.name, ref_model), loc=loc)
     return model_field
 
 
-def _validate_model_attribute(api_field_name, model, model_attr_name):
+def _validate_model_attribute(api_field_name, model, model_attr_name,
+                              loc=()):
     """ Checks that model have an attribute named as `model_attr_name`."""
     model_attr = getattr(model, model_attr_name, None)
     if model_attr is None:
         raise utils.DRFAdapterException(
             'Attribute %s (%s) not found in model %s' % (
-                model_attr_name, api_field_name, model.__name__))
+                model_attr_name, api_field_name, model.__name__), loc=loc)
     return model_attr
 
 
@@ -454,7 +457,7 @@ class DjangoRestAdapter(NaiveAdapter):
         if instance_source and onmodel:
             raise utils.DRFAdapterException(
                 'You don\'t have to specify `instance_source` if'
-                ' `onmodel` is set')
+                ' `onmodel` is set', loc=loc)
         field_kwargs = {k: v for k, v in spec.iteritems() if k != 'onmodel'}
         field_kwargs.update(doc.doc_get(instance, path) or {})
         field_kwargs.update(self._get_extra_field_kwargs(
@@ -473,9 +476,12 @@ class DjangoRestAdapter(NaiveAdapter):
         imports it and retrieves it.
         """
         if collection not in self.models:
-            model = utils.import_object(
-                doc.doc_get(top_spec, model_path))
-            self.models[collection] = model
+            try:
+                model = utils.import_object(
+                    doc.doc_get(top_spec, model_path))
+                self.models[collection] = model
+            except ImportError as e:
+                raise utils.DRFAdapterException(e.message, loc=model_path)
         else:
             model = self.models[collection]
         return model
@@ -531,7 +537,7 @@ class DjangoRestAdapter(NaiveAdapter):
         if type_predicate is None:
             raise utils.DRFAdapterException(
                 'Cannot construct drf field `%s` without specifying its'
-                ' type' % (parent))
+                ' type' % (parent), loc=loc)
         return field_constructors.get(
             type_predicate, self.default_field_constructor)(
                 instance, spec, loc, context, type_predicate)
@@ -545,18 +551,18 @@ class DjangoRestAdapter(NaiveAdapter):
         root_loc = loc[0:1]
         ref = doc.doc_get(instance, ('.ref', 'to'))
         django_conf = self.get_constructor_params(top_spec, loc, [])
-        model = self.extract_model(source or name, django_conf)
+        model = self.extract_model(source or name, django_conf, loc)
         auto = True
         try:
             model_field = model._meta.get_field(source or name)
             path = root_loc + (ref, '.drf_collection', 'model')
             ref_model = self._get_or_import_model(ref, path, top_spec)
             model_attr = _validate_relational_field(
-                name, ref_model, model_field)
+                name, ref_model, model_field, loc)
         except FieldDoesNotExist:
             auto = False
-            model_attr = _validate_model_attribute(name, model,
-                                                   source or name)
+            model_attr = _validate_model_attribute(
+                name, model, source or name, loc)
         return model_attr, model, auto
 
     def construct_type(self, instance, spec, loc, context, field_type=None):
@@ -579,7 +585,7 @@ class DjangoRestAdapter(NaiveAdapter):
         """
         if property_name not in self.PROPERTY_MAPPING:
             raise utils.DRFAdapterException(
-                'Unknown property `%s`' % (property_name))
+                'Unknown property `%s`' % (property_name), loc=loc)
         self.init_adapter_conf(instance)
         instance[self.ADAPTER_CONF].update(
             {self.PROPERTY_MAPPING[property_name]: True})
@@ -592,19 +598,19 @@ class DjangoRestAdapter(NaiveAdapter):
         given as input.
         """
         django_conf = self.get_constructor_params(spec, loc[:-1], [])
-        model = self.extract_model(source or name, django_conf)
+        model = self.extract_model(source or name, django_conf, loc)
         automated = True
         if model is None:
             raise utils.DRFAdapterException(
-                'Invalid argument, model cannot be `None`')
+                'Invalid argument, model cannot be `None`', loc=loc)
         try:
             model_field = model._meta.get_field(source or name)
             model_attr = _validate_model_type(name, model_field,
-                                              django_field_type)
+                                              django_field_type, loc)
         except FieldDoesNotExist:
             automated = False
             model_attr = _validate_model_attribute(
-                name, model, source or name)
+                name, model, source or name, loc)
         return model_attr, model, automated
 
     def validate_intersectional_pairs(self, properties):
@@ -642,7 +648,7 @@ class DjangoRestAdapter(NaiveAdapter):
             return self.get_constructor_params(spec, loc[:-1], params)
         return params
 
-    def extract_model(self, related_field, django_conf):
+    def extract_model(self, related_field, django_conf, loc):
         """
         Exctact model according to the django configuration.
 
@@ -652,19 +658,19 @@ class DjangoRestAdapter(NaiveAdapter):
         _, params = django_conf[0]
         if len(django_conf) > 1:
             return self.extract_related_model(
-                params.get('source'), django_conf[1:])
+                params.get('source'), django_conf[1:], loc)
         return params.get('model', None)
 
     @handle_exception
-    def extract_related_model(self, related_field, django_conf):
+    def extract_related_model(self, related_field, django_conf, loc=()):
         """
         Extracts related model based on given field. It also checks that
         given field is related to another model.
         """
-        model = self.extract_model(related_field, django_conf)
+        model = self.extract_model(related_field, django_conf, loc)
         related_field = model._meta.get_field(related_field)
         if related_field.related_model is None:
             raise utils.DRFAdapterException(
                 'Field %s is not related with another model' % (
-                    repr(related_field)))
+                    repr(related_field)), loc=loc)
         return related_field.related_model

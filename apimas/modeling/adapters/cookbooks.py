@@ -53,9 +53,9 @@ class NaiveAdapter(Adapter):
         field_schema = doc.doc_get(instance, ('*',))
         assert len(loc) >= 3
         if not field_schema:
-            raise ex.ApimasException(
+            raise ex.ApimasAdapterException(
                 'A collection must define its field schema.'
-                ' Empty collection found: %s' % (loc[-2]))
+                ' Empty collection found: %s' % (loc[-2]), loc=loc)
         return instance
 
     def construct_type(self, instance, spec, loc, context, field_type=None):
@@ -67,22 +67,22 @@ class NaiveAdapter(Adapter):
         """
         self.init_adapter_conf(instance)
         if field_type not in self.TYPE_MAPPING:
-            raise ex.ApimasException(
-                'Unknown field type: `%s`' % (field_type))
+            raise ex.ApimasAdapterException(
+                'Unknown field type: `%s`' % (field_type), loc=loc)
         field_schema = {'type': self.TYPE_MAPPING[field_type]}
         instance[self.ADAPTER_CONF].update(field_schema)
         return instance
 
     def validate_structure(self, instance, spec, loc, context):
         if not spec:
-            raise ex.ApimasException(
+            raise ex.ApimasAdapterException(
                 'A structure must define its field schema.'
-                ' Empty structure found: %s' % (loc[-2]))
+                ' Empty structure found: %s' % (loc[-2]), loc=loc)
         for k, v in spec.iteritems():
             if not isinstance(v, dict):
-                raise ex.ApimasException(
+                raise ex.ApimasAdapterException(
                     'Not known properties for field `%s` of struct `%s`' % (
-                        k, loc[-2]))
+                        k, loc[-2]), loc=loc)
 
     def construct_struct(self, instance, spec, loc, context):
         """
@@ -112,12 +112,13 @@ class NaiveAdapter(Adapter):
         """
         ref = spec.get('to', None)
         if not ref:
-            raise ex.ApimasException('You have to specify `to` parameter')
+            raise ex.ApimasAdapterException(
+                'You have to specify `to` parameter', loc=loc)
         root_loc = loc[0]
         top_spec = context.get('top_spec', {})
         if ref not in top_spec[root_loc]:
-            raise ex.ApimasException(
-                'Reference collection `%s` does not exist' % (ref))
+            raise ex.ApimasAdapterException(
+                'Reference collection `%s` does not exist' % (ref), loc=loc)
         return self.construct_type(instance, spec, loc, context, 'ref')
 
     def construct_serial(self, instance, spec, loc, context):
@@ -211,11 +212,13 @@ class NaiveAdapter(Adapter):
         constructors = set(context.get('all_constructors') + ['.readonly'])
         properties = self.PROPERTIES.intersection(constructors)
         if len(properties) > 1:
-            raise ex.ApimasException(
-                '.identity field `%s` can only be readonly' % (loc[-2]))
+            raise ex.ApimasAdapterException(
+                '.identity field `%s` can only be readonly' % (loc[-2]),
+                loc=loc)
         if properties != set(['.readonly']):
-            raise ex.ApimasException(
-                '.identity field `%s` is always a readonly field' % (loc[-2]))
+            raise ex.ApimasAdapterException(
+                '.identity field `%s` is always a readonly field' % (loc[-2]),
+                loc=loc)
         return instance
 
     def construct_blankable(self, instance, spec, loc, context):
@@ -273,8 +276,8 @@ class NaiveAdapter(Adapter):
         defered.
         """
         if property_name not in self.PROPERTY_MAPPING:
-            raise ex.ApimasException(
-                'Unknown property name %s' % (property_name))
+            raise ex.ApimasAdapterException(
+                'Unknown property name %s' % (property_name), loc=loc)
         constructed = context.get('constructed')
         predicate_type = self.extract_type(instance)
         if predicate_type not in constructed:

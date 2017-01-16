@@ -1,9 +1,26 @@
 from requests import Response
 from requests.exceptions import HTTPError
+from apimas.modeling.core.errors import GenericException
 
 
-class ApimasException(Exception):
+class ApimasException(GenericException):
     pass
+
+
+class ApimasAdapterException(ApimasException):
+    def __init__(self, msg, loc=(), *args, **kwargs):
+        self.msg = msg
+        self.loc = loc
+        arglist = [msg]
+        arglist.extend(args)
+        kwargs['loc'] = loc
+        super(ApimasAdapterException, self).__init__(*arglist, **kwargs)
+
+    def __str__(self):
+        if self.loc:
+            return '{msg}, on location: ({loc})'.format(
+                msg=self.msg, loc=', '.join(self.loc))
+        return self.msg
 
 
 class ApimasClientException(HTTPError):
