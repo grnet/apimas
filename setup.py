@@ -16,7 +16,6 @@ with open('requirements.txt') as f:
 
 setup(
     name=PACKAGE_NAME,
-    provides=[PACKAGE_NAME + ' (' + COMPATIBLE_VERSION + ')'],
     version=VERSION,
     license='Affero GPL v3',
     author='GRNET S.A.',
