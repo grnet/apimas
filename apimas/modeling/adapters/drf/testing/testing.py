@@ -145,6 +145,9 @@ class ApimasTestCase(APITestCase):
         # A dictionary keyed by each collection which contains the created
         # instance which refer to that collection.
         self.collection_instances = {}
+        self.url = None
+        self.data = None
+        self.content_type = None
 
     def setUp_collection(self, collection, action):
         """
@@ -167,7 +170,6 @@ class ApimasTestCase(APITestCase):
                 collection, excluded_models=[self.models.get(collection)])
         else:
             self.collection_instances = self.create_instances(collection)
-        return self.collection_instances.get(collection)
 
     def _get_response_type(self, action):
         """ Get expected response type based on the action. """
@@ -258,22 +260,22 @@ class ApimasTestCase(APITestCase):
         be uploaded, then the content type denotes `multipart`, `json`
         otherwise.
         """
-        content_type = 'json'
+        self.content_type = 'json'
         if action not in self.RESOURCE_ACTIONS:
-            url = self.get_collection_url(collection)
+            self.url = self.get_collection_url(collection)
         else:
             instance = random.choice(instances)
-            url = self.get_collection_url(collection, pk=instance.pk)
+            self.url = self.get_collection_url(collection, pk=instance.pk)
         if action not in self.WRITABLE_ACTIONS:
-            return url, {}, content_type
+            self.data = {}
+            return
         all_fields = action != 'partial_update'
         writable_fields = utils.get_required_fields(self.spec, collection)
-        data = utils.populate_request(
+        self.data = utils.populate_request(
             writable_fields, self.collection_instances, all_fields=all_fields)
         if any(isinstance(v, (InMemoryUploadedFile, file))
-               for v in data.itervalues()):
-            content_type = 'multipart'
-        return url, data, content_type
+               for v in self.data.itervalues()):
+            self.content_type = 'multipart'
 
     def create_instances(self, collection, excluded_models=None):
         """
@@ -378,15 +380,16 @@ class ApimasTestCase(APITestCase):
         """
         method_name = self.SETUP_METHOD_NAME_PATTERN % (action, collection)
         setup_method = getattr(self, method_name, self.setUp_collection)
-        instances = setup_method(collection, action)
+        setup_method(collection, action)
+        instances = self.collection_instances.get(collection)
 
         method_name = self.REQUEST_CONTEXT_METHOD_PATTERN % (
             action, collection)
         request_context = getattr(self, method_name, self.request_context)
-        url, data, content_type = request_context(
-            collection, action, instances=instances)
+        request_context(collection, action, instances=instances)
         client_method = getattr(self.client, self.ACTIONS_TO_METHODS[action])
-        response = client_method(url, data=data, format=content_type)
+        response = client_method(self.url, data=self.data,
+                                 format=self.content_type)
         if action not in self.WRITABLE_ACTIONS:
             response_spec = utils.get_fields(self.spec, collection,
                                              excluded=['.writeonly'])
@@ -398,5 +401,5 @@ class ApimasTestCase(APITestCase):
             action, collection)
         validate_response = getattr(self, method_name,
                                     self.validate_response)
-        validate_response(collection, action, response, data, response_spec,
-                          instances)
+        validate_response(collection, action, response, self.data,
+                          response_spec, instances)
