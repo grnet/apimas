@@ -13,18 +13,17 @@ complexity.
 
 ## Installation
 
-In a virtualenv, run:
+In a virtualenv, run the following command which will install APIMAS along
+with its dependencies:
 
 ```
 python setup.py install
 ```
 
+Apart from `requirements.txt`, there are also:
+- `requirements_dev.txt` which contains requiments for the development of APIMAS.
+- `requirements_build.txt` associated with the build of APIMAS packages.
 
-To install all dependencies, run:
-
-```
-pip install requirements.txt -r
-```
 
 Copyright and license
 ---------------------
