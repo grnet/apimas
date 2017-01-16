@@ -90,30 +90,30 @@ class ContainerSerializer(serializers.BaseSerializer):
     def _validate_configuration(self):
         meta_cls = getattr(self, 'Meta', None)
         if meta_cls is None:
-            raise utils.DRFAdapterException('`Meta` class cannot be found')
+            raise ex.ApimasException('`Meta` class cannot be found')
         model_fields = getattr(meta_cls, 'model_fields', [])
         fields = getattr(meta_cls, 'extra_fields', [])
         if not (fields or model_fields):
-            raise utils.DRFAdapterException(
+            raise ex.ApimasException(
                 '`extra_fields` and `model_fields` attributes are unspecified')
         if not (self.model_ser_cls or self.ser_cls):
-            raise utils.DRFAdapterException(
+            raise ex.ApimasException(
                 'A `ContainerSerializer` must define a `ModelSerializer` class'
                 ' or a `Serializer class')
         if not (self.model_ser_cls or self.ser_cls):
-            raise utils.DRFAdapterException(
+            raise ex.ApimasException(
                 'A `ContainerSerializer` must include a ModelSerializer'
                 ' and Serializer class')
         if self.model_ser_cls:
             mro = inspect.getmro(self.model_ser_cls)
             if serializers.HyperlinkedModelSerializer not in mro:
-                raise utils.DRFAdapterException(
+                raise ex.ApimasException(
                     'A model serializer class must inherit'
                     ' `serializers.ModelSerializer`')
         if self.ser_cls:
             mro = inspect.getmro(self.ser_cls)
             if serializers.BaseSerializer not in mro:
-                raise utils.DRFAdapterException(
+                raise ex.ApimasException(
                     'A serializer class must implement'
                     ' `serializers.BaseSerializer`')
         return model_fields, fields
