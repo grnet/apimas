@@ -168,6 +168,7 @@ class ContainerSerializer(serializers.BaseSerializer):
         return not bool(self._errors)
 
     def save(self, **kwargs):
+        current_instance = getattr(self, 'instance', None)
         if self.ser:
             instance_a = self.ser.save(**kwargs)
         else:
@@ -176,7 +177,8 @@ class ContainerSerializer(serializers.BaseSerializer):
             instance_b = self.model_ser.save(**kwargs)
         else:
             instance_b = None
-        assert not (instance_a and instance_b), (
+        assert not (instance_a is not current_instance and
+                    instance_b is not current_instance), (
             'Creation of multiple instances is not supported.')
         self.instance = instance_a or instance_b
         return self.instance
