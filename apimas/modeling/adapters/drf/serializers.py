@@ -381,7 +381,7 @@ class ApimasSerializer(serializers.Serializer):
                                             validated_data)
             else:
                 self.create_non_model_field(drf_field, v, validated_data)
-        return new_instance or self.instance
+        return new_instance
 
     def create(self, validated_data, **kwargs):
         return self.perform_action(validated_data, **kwargs)
