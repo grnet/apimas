@@ -96,7 +96,7 @@ if [ -z "${release}" ]; then
     git_tag="$(echo ${git_tag} | tr 'A-Z' 'a-z')"
     extra_version="~dev+${git_tag}+${git_commit}"
 else
-    extra_version=".${release}"
+    extra_version="+${release}"
 fi
 
 export project version extra_version git_commit git_tag
