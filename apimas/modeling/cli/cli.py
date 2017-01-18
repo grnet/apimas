@@ -382,6 +382,11 @@ class ApimasCliAdapter(NaiveAdapter):
         for field_name, spec in field_schema.iteritems():
             if spec == SKIP:
                 continue
+            adapter_conf = spec.get(self.ADAPTER_CONF)
+            # In case there is not option specified for this field,
+            # just skip it.
+            if adapter_conf is None:
+                continue
             for option_name, params in spec.get(self.ADAPTER_CONF).iteritems():
                 option_constructor = self.OPTION_CONSTRUCTORS[action]
                 if not self.option_allowed(action, spec, option_constructor):
