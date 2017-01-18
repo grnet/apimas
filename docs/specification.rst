@@ -1,0 +1,190 @@
+.. _specification:
+
+Introduction to APIMAS specification
+====================================
+
+APIMAS considers interfaces made from a hierarchy of
+Collections, Resources, and Properties.
+
+
+Collections are made from an arbitrary number of resources of the same
+type. Resources in a collection are indexed by a primary property
+within each resource. Collections may have properties directly
+attached to them.
+
+Resources are made from a set of properties with predefined names.
+Resources are of the same type if their properties have the same name
+and data.
+
+Properties are named data items. The type of each item can be a simple
+value (e.g. text, integer) or it can be another resource or another
+collection.
+
+Example:
+
+.. code-block:: rest
+
+   /webstore/api/products/*/reviews/*/text/body
+
+where:
+
+- ``'products'`` is a collection
+- ``'*'`` denotes collection resources
+- ``'reviews'`` is a nested collection property
+- ``'text'`` is a nested resource property
+- ``'body'`` is a value property
+
+
+Given an API location path as above, a rule of thumb is
+for each segment in the path:
+
+  - The last segment is a value
+  - If a segment has ``'*'`` in it, it is a resource
+  - If a segment has ``'*'`` in it, its parent is a collection
+  - All remaining segments are probably nested resources
+
+
+In APIMAS, the specification of an API is a document object following
+the hierarchical structure of the API itself. This document may be
+encoded as a python dict, a JSON object, a yaml document, or a
+namespace with path-value pairs, or any other equivalent
+representation. The documents tool-kit in APIMAS uses the python dict
+form and can also convert to and from the namespace representation.
+
+For example:
+
+.. code-block:: python
+    :caption: Namespace representation
+
+    spec_namespace = {
+        'webstore/.endpoint': {},
+        'webstore/api/products/.collection': {},
+        'webstore/api/products/*/reviews/.collection': {},
+        'webstore/api/products/*/reviews/*/text/body': '.unicode',
+    }
+
+
+.. code-block:: python
+    :caption: Python dict representation
+
+    spec_dict = {
+        'webstore': {
+            '.endpoint': {},
+            'api': {
+                'products': {
+                    '.collection': {},
+                    '*': {
+                        'reviews': {
+                            '.collection': {},
+                            '*': {
+                                'text': {
+                                    'body': '.unicode',
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+
+
+.. code-block:: python
+    :caption: Yaml representation
+
+    spec_yaml = yaml.load("""
+        webstore:
+          .endpoint: {}
+          api:
+            products:
+              .collection: {}
+              '*':
+                reviews:
+                  .collection: {}
+                  '*':
+                    text: {body: .unicode}
+    """)
+
+
+APIMAS predicates
+-----------------
+
+Each node in the specification document contains structural items
+which appear in the API locations (e.g. ``'products'``) and other
+metadata items that attach semantics to the containing nodes (e.g.
+``.unicode``). All metadata keys begin with a dot ``.`` to distinguish
+them from structural keys.
+
+Metadata keys should have well-defined semantics shared by all
+specifications. We call these well known names as Predicates.
+Multiple predicates may be applied in the same node. The value of a
+metadata key is an arbitrary document (with structure and predicates)
+that parametrizes the semantics of the predicate.
+
+For example a person's name can be specified to be a text of length
+between 6 and 64 characters, and their age to be an integer between
+18 and 65:
+
+.. code-block:: python
+
+    person_spec = {
+        'name': {
+            '.text': {
+                'minlen': '6',
+                'maxlen': '64',
+            },
+        },
+        'age': {
+            '.integer': {
+                'min': '18',
+                'max': '65',
+            },
+        },
+    }
+
+Predicates are not limited in format or range specifications but can
+represent any semantics we want them to.
+
+For example, we can introduce a predicate named '.readonly' meaning
+that users cannot write that value through the API, or '.finalizer'
+which means that once this property is written, the whole resource
+becomes immutable.
+
+The benefit of a common format of specification and a common library of
+predicates is that they offer existing patterns and concepts to
+address similar API challenges in the design phase, and then offer
+existing implementations for similar API designs.
+
+Note that each application may introduce its own specific predicates
+that will not be reused anywhere else. Specification also helps by
+giving those application-specific concepts and requirements a name and
+a precise context.
+
+APIMAS Configuration
+--------------------
+
+To summarize, the composition of structural elements and predicates
+should form a specification as explained above which is completely
+understood by the application. However, based on the needs of each
+application, this specification is extendable and customizable.
+This means that the developer can attach implementation-specific
+details which are only understood by the current application which
+reads the specification. For instance, for a Django application a
+Django model can be bound to a specific collection like follows:
+
+.. code-block:: python
+
+    conf = {
+        'webstore/api/products/.drf_collection/model': 'myapp.models.MyModel',
+    }
+
+Recall that each application can define its own predicates, therefore,
+for instance, ``.drf_collection`` is a predicate
+for Django-rest-framework applications and it's parametrized with
+``model`` parameter. Apparently, the above example cannot be
+understood by another application, e.g. Flask, thus, it is something
+that 'configures' the specification ONLY for Django-rest-framework
+applications and this is the reason why it is called "Configuration".
+
+The configuration may be merged with the specification or be another
+document and then later merged by the application behind the scenes.

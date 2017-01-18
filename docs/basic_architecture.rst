@@ -1,9 +1,10 @@
-Basic Architecture.
+Basic Architecture
+==================
 
 APIMAS assumes applications work like this:
 
-1. There is a REST API at a location /<prefix>/api/*
-   with any static files available at /<prefix>/static/*
+1. There is a REST API at a location ``/<prefix>/api/*``
+   with any static files available at ``/<prefix>/static/*``
 
    This API includes multiple collections of REST resources.
 
@@ -14,51 +15,51 @@ APIMAS assumes applications work like this:
    Each resource collection may accept the following operations
    that communicate JSON data back and forth:
 
-   - POST /<prefix>/api/<resource>/  data: {key:val...} -> <url>
+   - ``POST /<prefix>/api/<resource>/  data: {key:val...} -> <url>``
 
      Creates a new resource in the collection. Its identifier is
      returned in the form:
 
-     /<prefix>/api/<resource>/<id>
+     ``/<prefix>/api/<resource>/<id>``
 
      The resource is initialized to the fields provided.
 
-   - GET /<prefix>/api/<resource>/  filter: {}
+   - ``GET /<prefix>/api/<resource>/  filter: {}``
 
      List the resource collection according to filters, ordering,
      and pagination input.
 
-   - PUT /<prefix>/api/<resource/<id>  data: {key:val...}
+   - ``PUT /<prefix>/api/<resource/<id>  data: {key:val...}``
 
      Update (or create) resource with fields from input.
 
-   - GET /<prefix>/api/<resource>/<id> -> data: {key:val...}
+   - ``GET /<prefix>/api/<resource>/<id> -> data: {key:val...}``
 
-     Retrieve a data: {key:val...} representation of the resource.
+     Retrieve a ``data: {key:val...}`` representation of the resource.
 
-   - DELETE /<prefix>/api/<resource>/<id>
+   - ``DELETE /<prefix>/api/<resource>/<id>``
 
      Remove the identified resource from the collection.
 
-   - POST /<prefix>/api/<resource>/<id>/actions/<action>  data:{key:val...}
+   - ``POST /<prefix>/api/<resource>/<id>/actions/<action>  data:{key:val...}``
 
      Execute application-provided actions with input.
 
-   - GET /<prefix>/api/<resource>/<id>/fields/<field> -> val
+   - ``GET /<prefix>/api/<resource>/<id>/fields/<field> -> val``
 
-     Resource fields are accessible recursively under 'fields/<field>'
+     Resource fields are accessible recursively under ``fields/<field>``
      by their name. The value when retrieving is the same that would be
      retrieved from the parent resource in under the field key
-     ({<field>:<value>})
+     ``({<field>:<value>})``
 
-   - PUT /<prefix>/api/<resource>/<id>/fields/<field> val
+   - ``PUT /<prefix>/api/<resource>/<id>/fields/<field> val``
 
      Update a field of a resource with a new value.
      This value is identical to the one that would be provided
      by a PUT on the parent resource under the field key
-     {<field>:<val>}
+     ``{<field>:<val>}``
 
-   - [Collection] /<prefix>/api/<resource>/<id>/fields/<field>/*
+   - ``[Collection] /<prefix>/api/<resource>/<id>/fields/<field>/*``
 
      If a resource field is a collection then all above operations are
      potentially available recursively.
@@ -73,8 +74,8 @@ APIMAS assumes applications work like this:
 
    The data view modelling completely defines the REST behaviour of the
    API locations. The data view may be linked and triggered in various
-   interfaces (e.g. GET /search/by-name/<name>/ being equivalent to
-   GET /resource/<some-id>). Moreover, the underlying data may have
+   interfaces (e.g. ``GET /search/by-name/<name>/`` being equivalent to
+   ``GET /resource/<some-id>``). Moreover, the underlying data may have
    arbitrary representation in actual storage. The data view is
    responsible for connecting the two layers.
 
@@ -84,7 +85,6 @@ APIMAS assumes applications work like this:
    layer should support adapting various storage layers for exposition
    to the REST API locations. For example, django models may be one way
    to model actual storage representation.
-
 
 4. The primary responsibility of the application is to hook at the Data
    View layer and provide storage and business logic. This logic must

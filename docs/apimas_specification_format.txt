@@ -46,7 +46,7 @@
 # the hierarchical structure of the API itself. This document may be
 # encoded as a python dict, a JSON object, a yaml document, or a
 # namespace with path-value pairs, or any other equivalent
-# representation. The documents toolkit in APIMAS uses the python dict
+# representation. The documents tool-kit in APIMAS uses the python dict
 # form and can also convert to and from the namespace representation.
 #
 #
@@ -54,11 +54,9 @@
 
 spec_namespace = {
     'webstore/.endpoint': {},
-    'webstore/api/products/*/.resource': {},
-    'webstore/api/products/*/reviews/*/.resource': {},
-    'webstore/api/products/*/reviews/*/text/body': '.unicode',
-    'webstore/api/products/*/reviews/.collection': {},
     'webstore/api/products/.collection': {},
+    'webstore/api/products/*/reviews/.collection': {},
+    'webstore/api/products/*/reviews/*/text/body': '.unicode',
 }
 
 
@@ -69,15 +67,13 @@ spec_dict = {
             'products': {
                 '.collection': {},
                 '*': {
-                    '.resource': {},
                     'reviews': {
                         '.collection': {},
-			'*': {
-			    '.resource': {},
-			    'text': {
-				'body': '.unicode',
-			    },
-			},
+                        '*': {
+                            'text': {
+                                'body': '.unicode',
+                            },
+                        },
                     },
                 },
             },
@@ -91,14 +87,12 @@ spec_yaml = yaml.load("""
       .endpoint: {}
       api:
         products:
-          '*':
-            .resource: {}
-            reviews:
-              '*':
-                .resource: {}
-                text: {body: .unicode}
-              .collection: {}
           .collection: {}
+          '*':
+            reviews:
+              .collection: {}
+              '*':
+                text: {body: .unicode}
 """)
 
 
@@ -109,7 +103,7 @@ spec_yaml = yaml.load("""
 # structural keys.
 #
 # Metadata keys should have well-defined semantics shared by all
-# specifications. We call these well known names as Predicatees.
+# specifications. We call these well known names as Predicates.
 # Multiple predicates may be applied in the same node. The value of a
 # metadata key is an arbitrary document (with structure and predicates)
 # that parametrizes the semantics of the predicate.
@@ -149,3 +143,27 @@ person_spec = {
 # that will not be reused anywhere else. Specification also helps by
 # giving those application-specific concepts and requirements a name and
 # a precise context.
+
+# To summarize, the composition of structural elements and predicates
+# should form a specification as explained above which is completely
+# understood by the application. However, based on the needs of each
+# application, this specification is extendable and customizable.
+# This means that the developer can attach implementation-specific
+# details which are only understood by the current application which
+# reads the specification. For instance, for a django application a
+# django model may be bound for a specific collection like follows:
+
+{
+    'webstore/api/products/.drf_collection/model': 'myapp.models.MyModel',
+}
+
+# Recall that each application can define its own predicates, therefore,
+# for instance, '.drf_collection' is a predicate for django-rest applications
+# and it's parameterized with 'model' parameter. Apparently, the
+# above example cannot be understood by another application, e.g. Flask,
+# thus, it is something that 'configures' the specification ONLY for
+# django-rest applications and this is the reason why it is called
+# configuration.
+
+# The configuration may be merged with the specification or be another
+# document and then later merged by the application behind the scenes.
