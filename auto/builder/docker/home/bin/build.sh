@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -e
+set -x
 
 BASE="${HOME}"
 mkdir -p "${BASE}/workspace" || true
@@ -24,9 +25,10 @@ cmd () {
 name="$1"
 remote="$2"
 commit="$3"
+release_tag="$4"
 
 if [ -n "${remote}" ]; then
-    export BUILD_SOURCE_${name}="${remote} ${commit}"
+    export BUILD_SOURCE_${name}="${remote} ${commit} ${release_tag}"
 fi
 
 source_vars=$(set | grep '^BUILD_SOURCE_' | sed -ne 's/^BUILD_SOURCE_\([^=]*\)=\(.*\)$/\1/p')
@@ -40,8 +42,13 @@ for source_name in "${source_vars}"; do
     source=$(eval echo ${source_name} \$BUILD_SOURCE_${source_name})
 
     name=
+    name_opt=
     remote=
+    remote_opt=
     commit=
+    commit_opt=
+    release_tag=
+    release_tag_opt=
 
     for var in ${source}; do
         if [ -z "${name}" ]; then
@@ -53,6 +60,11 @@ for source_name in "${source_vars}"; do
         elif [ -z "${commit}" ]; then
             commit="${var}"
             commit_opt="-c ${commit}"
+        elif [ -z "${release_tag}" ]; then
+            release_tag="${var}"
+            if [ -n "${release_tag}" ]; then
+                release_tag_opt="-r ${release_tag}"
+            fi
         fi
     done
 
@@ -67,5 +79,5 @@ for source_name in "${source_vars}"; do
     else
         cmd git_repo.sh ${remote_opt} ${commit_opt} ${name_opt}
     fi
-    (cmd cd "${name}"; cmd mkdeb -b production; cmd cp deb_dist/*deb "${BASE}/build")
+    (cmd cd "${name}"; cmd mkdeb ${release_tag_opt} -b production; cmd cp deb_dist/*deb "${BASE}/build")
 done

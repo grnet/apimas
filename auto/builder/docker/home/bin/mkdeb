@@ -11,8 +11,10 @@ help () {
     echo ' -h --help:'
     echo '      Print this help and exit.'
     echo ''
-    echo ' -r --release:'
-    echo '      Build a package for release. Do not append git versions.'
+    echo ' -r --release <tag>:'
+    echo '      Build a package for release.'
+    echo '      Do not append git versions to package name.'
+    echo '      Instead, append .<tag>'
     echo ''
     echo ' -b --build <environment>:'
     echo '      Execute "./build.sh <environment>" to allow building other binary'
@@ -52,7 +54,8 @@ while [ -n "$1" ]; do
         help
         exit 1
     elif [ "$1" = "-r" ] || [ "$1" = "--release" ]; then
-        release=yes
+        release="$2"
+        shift
     elif [ "$1" = "-b" ] || [ "$1" = "--build" ]; then
         build_env="$2"
         shift
@@ -91,7 +94,9 @@ if [ -z "${release}" ]; then
     git_commit="$(echo ${git_commit} | tr 'A-Z' 'a-z')"
     git_tag="$(basename $(git describe --all --exact-match --abbrev=0 HEAD))"
     git_tag="$(echo ${git_tag} | tr 'A-Z' 'a-z')"
-    extra_version="+${git_tag}+${git_commit}"
+    extra_version="~dev+${git_tag}+${git_commit}"
+else
+    extra_version=".${release}"
 fi
 
 export project version extra_version git_commit git_tag
@@ -119,7 +124,7 @@ stdeb_cfg="mkdeb-stdeb.cfg"
 echo "[DEFAULT]" > "${stdeb_cfg}"
 echo "Package: python-${project}" >> "${stdeb_cfg}"
 echo "Provides: python-${project}-${compatible_version}" >> "${stdeb_cfg}"
-echo "Forced-Upstream-Version: ${version}~dev${extra_version}" >> "${stdeb_cfg}"
+echo "Forced-Upstream-Version: ${version}${extra_version}" >> "${stdeb_cfg}"
 echo "Depends: ${debian_deps}" >> "${stdeb_cfg}"
 
 python setup.py --command-packages=stdeb.command \

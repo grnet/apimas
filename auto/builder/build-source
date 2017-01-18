@@ -1,12 +1,13 @@
 #!/bin/sh
 
 help () {
-    echo "Usage: $0 <app_name> <remote_git_url> [<commit_or_tag>]"
+    echo "Usage: $0 <app_name> <remote_git_url> [<commit_or_tag> [<release_tag>]]"
 }
 
 appname="$1"
 remote="$2"
 commit="$3"
+release_tag="$4"
 
 if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ -z "${appname}" ] || [ -z "${remote}" ]; then
     help
@@ -19,6 +20,6 @@ docker run \
         -v "$(pwd)/sources:/root/sources:ro" \
         -v "$(pwd)/node_modules:/root/node_modules" \
         --name "${container_name}" dev-builder \
-        /root/bin/build.sh "${appname}" "${remote}" "${commit}"
+        /root/bin/build.sh "${appname}" "${remote}" "${commit}" "${release_tag}"
 
 docker cp ${container_name}:/root/build .
