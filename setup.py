@@ -28,5 +28,5 @@ setup(
             'apimas=apimas.modeling.cli.cli:main'
         }
     },
-    scripts=['scripts/apimas-mkdeb'],
+    scripts=['auto/builder/docker/home/bin/mkdeb'],
 )
