@@ -9,6 +9,10 @@ remote="$2"
 commit="$3"
 release_tag="$4"
 
+if [ "${release_tag}" = "now" ]; then
+    release_tag=$(date --utc -Imin | cut -d+ -f 1 | sed -e 's/[^0-9]/./g')
+fi
+
 if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ -z "${appname}" ] || [ -z "${remote}" ]; then
     help
     exit 1
