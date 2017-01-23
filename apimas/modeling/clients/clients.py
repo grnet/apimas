@@ -1,3 +1,4 @@
+from copy import deepcopy
 import requests
 from requests.exceptions import HTTPError
 from requests.compat import urljoin, quote
@@ -234,6 +235,7 @@ class ApimasClient(object):
         """
         subdocs = get_subdocuments(data)
         validated = {}
+        schema = deepcopy(schema)
         for k, v in subdocs.iteritems():
             path = k.split('/')
             cerberus_path = []
