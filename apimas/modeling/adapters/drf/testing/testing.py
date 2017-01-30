@@ -33,8 +33,9 @@ def _add_test_functions(cls, adapter):
     """
     structural_elements = adapter.get_structural_elements(
         adapter.adapter_spec)
-    for collection, _ in adapter.adapter_spec.get(
-            structural_elements[0]).iteritems():
+    collections = adapter.get_structural_elements(adapter.adapter_spec.get(
+        structural_elements[0]))
+    for collection in collections:
         func = getattr(cls, 'validate_crud_action')
         for func_name in TEST_CASE_FUNCTIONS:
             function = get_collection_test_method(collection, func_name)(func)

@@ -8,10 +8,10 @@ def get_value(instance):
 
 
 SPEC = {
-    '.endpoint': {
-        'permissions': [('*',) * 6],
-    },
     'api': {
+        '.endpoint': {
+            'permissions': [('*',) * 6],
+        },
         'mymodel': {
             '.collection': {},
             '.drf_collection': {

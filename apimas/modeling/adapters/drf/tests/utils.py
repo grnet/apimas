@@ -70,7 +70,8 @@ def generate_field_schema(model_fields, iscollection=True):
 
 def generate_random_spec(test_models):
     default_permissions = [('*',) * 6]
-    spec = {'.endpoint': {'permissions': default_permissions}, 'api': {}}
+    api_name = utils.generate_random_string(max_length=10)
+    spec = {api_name: {}}
     for model in test_models:
         model_cls = import_object(model)
         collection_name = model_cls.__name__ + '_collection'
@@ -81,5 +82,7 @@ def generate_random_spec(test_models):
         collection_spec['.drf_collection']['model'] = model
         collection_spec['*'] = field_schema
         collection_spec['actions'] = ACTIONS
-        spec['api'][collection_name] = collection_spec
+        spec[api_name][collection_name] = collection_spec
+        spec[api_name].update(
+            {'.endpoint': {'permissions': default_permissions}})
     return spec

@@ -1,8 +1,8 @@
 API_SPEC = {
-    '.endpoint': {
-        'permissions': [('*',) * 6],
-    },
     'api': {
+        '.endpoint': {
+            'permissions': [('*',) * 6],
+        },
         'manufacturers': {
             '.collection': {},
             '.drf_collection': {

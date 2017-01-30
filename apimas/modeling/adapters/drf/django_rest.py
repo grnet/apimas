@@ -235,7 +235,7 @@ class DjangoRestAdapter(NaiveAdapter):
         return self.construct_CRUD_action(instance, spec, loc, context,
                                           'delete')
 
-    def get_permissions(self, collection, top_spec):
+    def get_permissions(self, collection_path, top_spec):
         """
         It constructs permissions rules for every collection.
 
@@ -245,9 +245,11 @@ class DjangoRestAdapter(NaiveAdapter):
         are compatible and apply on the collection.
         """
         permission_path = ('.endpoint', 'permissions')
+        collection = collection_path[-1]
         nu_columns = 6
         permission_doc = {}
-        permissions = doc.doc_get(top_spec, permission_path) or []
+        permissions = doc.doc_get(top_spec,
+                                  collection_path[:-1] + permission_path) or []
         permissions = [[doc.parse_pattern(segment) for segment in row]
                        for row in permissions]
         for rule in permissions:
@@ -313,7 +315,7 @@ class DjangoRestAdapter(NaiveAdapter):
             model_serializers=model_serializers,
             extra_serializers=extra_serializers)
         kwargs = {k: v for k, v in spec.iteritems() if k != 'model'}
-        permissions = self.get_permissions(parent, context.get('top_spec'))
+        permissions = self.get_permissions(loc[:-1], context.get('top_spec'))
         view = generate_view(parent, serializer, model, actions=actions,
                              permissions=permissions, **kwargs)
         instance[self.ADAPTER_CONF] = view

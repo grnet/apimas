@@ -38,6 +38,8 @@ def generate_random_permissions(spec):
     permissions = []
     for collection, collection_spec in spec.get(
             structural_element).iteritems():
+        if collection.startswith('.'):
+            continue
         field_schema = collection_spec.get('*')
         fields = get_fields_sample(field_schema)
         rules = [(collection, action, 'anonymous', field, '*', '*')
@@ -53,10 +55,10 @@ MY_STRING_UPDATE = 'value set on preprocess_update'
 
 
 SPEC = {
-    '.endpoint': {
-        'permissions': [],
-    },
     'api': {
+        '.endpoint': {
+            'permissions': [],
+        },
         'mymodel': {
             '.collection': {},
             '.drf_collection': {
@@ -121,7 +123,7 @@ SPEC = {
 
 
 PERMISSION_RULES = generate_random_permissions(SPEC)
-SPEC['.endpoint']['permissions'] = PERMISSION_RULES
+SPEC['api']['.endpoint']['permissions'] = PERMISSION_RULES
 
 
 def get_permitted_fields(rules, collection, action):

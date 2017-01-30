@@ -39,12 +39,12 @@ model_fields = filter((lambda x: isinstance(x, models.Field)),
 mymodel_field_schema = generate_field_schema(model_fields, iscollection=False)
 
 SPEC = {
-    '.endpoint': {
-        'permissions': [
-            ('*',) * 6
-        ]
-    },
     'api': {
+        '.endpoint': {
+            'permissions': [
+                ('*',) * 6
+            ]
+        },
         'my_collection': {
             '.collection': {},
             '.drf_collection': {
