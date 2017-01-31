@@ -146,27 +146,28 @@ class DjangoRestAdapter(NaiveAdapter):
         """ Get `Serializer`classes for every collection. """
         return self.serializers
 
-    def get_class(self, class_container, collection):
+    def get_class(self, class_container, endpoint, collection):
         """
         Utitily method for getting the generated class based on the given
         collection.
         """
+        collection_name = endpoint + '/' + collection
         if not class_container:
             raise utils.DRFAdapterException(
                 'Classes have not been constructed yet. Run %s.construct()' % (
                     self.__class__.__name__))
-        if collection not in class_container:
+        if collection_name not in class_container:
             raise utils.DRFAdapterException(
-                'Class not found for collection %s' % (collection))
-        return class_container[collection]
+                'Class not found for collection %s' % (collection_name))
+        return class_container[collection_name]
 
-    def get_serializer(self, collection):
+    def get_serializer(self, endpoint, collection):
         """ Get `Serializer` class based on the given collection. """
-        return self.get_class(self.serializers, collection)
+        return self.get_class(self.serializers, endpoint, collection)
 
-    def get_view(self, collection):
+    def get_view(self, endpoint, collection):
         """ Get `ViewSet` class based on the given collection. """
-        return self.get_class(self.views, collection)
+        return self.get_class(self.views, endpoint, collection)
 
     def construct_endpoint(self, instance, spec, loc, context):
         """
@@ -305,6 +306,7 @@ class DjangoRestAdapter(NaiveAdapter):
         based on the field schema, actions, permissions and additional
         configuation (filter_fields, mixins) as specified on spec.
         """
+        endpoint = loc[0]
         parent = context.get('parent_name')
         constructed = context.get('constructed')
         if '.collection' not in constructed:
@@ -325,8 +327,8 @@ class DjangoRestAdapter(NaiveAdapter):
         view = generate_view(parent, serializer, model, actions=actions,
                              permissions=permissions, **kwargs)
         instance[self.ADAPTER_CONF] = view
-        self.serializers[parent] = serializer
-        self.views[parent] = view
+        self.serializers[endpoint + '/' + parent] = serializer
+        self.views[endpoint + '/' + parent] = view
         return instance
 
     def _classify_fields(self, field_schema):

@@ -20,11 +20,12 @@ class TestDjangoRestAdapter(unittest.TestCase):
     def test_get_class(self):
         empty = {}
         self.assertRaises(utils.DRFAdapterException, self.adapter.get_class,
-                          empty, 'something')
-        container = {'foo': 'bar'}
+                          empty, 'something', 'else')
+        container = {'api/foo': 'bar'}
         self.assertRaises(utils.DRFAdapterException, self.adapter.get_class,
-                          container, 'something')
-        self.assertEqual(self.adapter.get_class(container, 'foo'), 'bar')
+                          container, 'something', 'else')
+        self.assertEqual(self.adapter.get_class(container, 'api', 'foo'),
+                         'bar')
 
     #def test_get_permissions(self):
     #    rules = [
@@ -92,7 +93,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
     @mock.patch(
         'apimas.modeling.adapters.drf.django_rest.generate_view',
         return_value='mock_view')
-    def test_contruct_drf_collection(self, mock_view_gen):
+    def test_construct_drf_collection(self, mock_view_gen):
         mock_loc = ('api', 'collection', '.drf_collection')
         mock_instance = {
             '*': {
@@ -133,8 +134,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         instance_conf = instance.get(self.adapter_conf)
         self.assertIsNotNone(instance_conf)
         self.assertEqual(instance_conf, 'mock_view')
-        self.assertEqual(mock_adapter.views['collection'], 'mock_view')
-        self.assertEqual(mock_adapter.serializers['collection'],
+        self.assertEqual(mock_adapter.views['api/collection'], 'mock_view')
+        self.assertEqual(mock_adapter.serializers['api/collection'],
                          'mock_serializer')
         mock_adapter._get_or_import_model.assert_called_once_with(
             'api/collection', mock_loc + ('model',), None)
