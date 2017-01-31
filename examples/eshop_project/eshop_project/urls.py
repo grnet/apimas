@@ -22,9 +22,6 @@ from eshop.api_spec import API_SPEC
 
 adapter = django_rest.DjangoRestAdapter()
 adapter.construct(API_SPEC)
-adapter.apply()
 
-urlpatterns = [
-    url(r'^admin/', admin.site.urls),
-    adapter.urls
-]
+urlpatterns = adapter.urls.values()
+urlpatterns.append(url(r'^admin/', admin.site.urls))

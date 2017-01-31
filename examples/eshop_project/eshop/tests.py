@@ -15,8 +15,8 @@ class TestApplication(ApimasTestCase):
         user.groups.add(group)
         self.client.force_authenticate(user=user)
 
-    def authenticate_orders(self, collection):
+    def authenticate_api_orders(self, collection):
         self.authenticate()
 
-    def authenticate_carts(self, collection):
+    def authenticate_api_carts(self, collection):
         self.authenticate()

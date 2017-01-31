@@ -49,7 +49,7 @@ API_SPEC = {
                     '.float': {},
                 },
                 'manufacturer': {
-                    '.ref': {'to': 'manufacturers'},
+                    '.ref': {'to': 'api/manufacturers'},
                     '.drf_field': {},
                 },
             },
@@ -136,7 +136,7 @@ API_SPEC = {
                 'customer': {
                     '.required': {},
                     '.drf_field': {},
-                    '.ref': {'to': 'users'},
+                    '.ref': {'to': 'api/users'},
                 },
                 'ordered': {
                     '.drf_field': {},
@@ -146,7 +146,7 @@ API_SPEC = {
                 'products': {
                     '.required': {},
                     '.drf_field': {},
-                    '.ref': {'to': 'products', 'many': True},
+                    '.ref': {'to': 'api/products', 'many': True},
                     '.writeonly': {},
                 },
                 'products-view': {
@@ -198,7 +198,7 @@ API_SPEC = {
                     '.required': {},
                     '.drf_field': {},
                     '.ref': {
-                        'to': 'cities',
+                        'to': 'api/cities',
                     },
                 },
                 'date': {
@@ -208,7 +208,7 @@ API_SPEC = {
                 },
                 'cart': {
                     '.drf_field': {},
-                    '.ref': {'to': 'carts'},
+                    '.ref': {'to': 'api/carts'},
                     '.required': {},
                 }
             },
