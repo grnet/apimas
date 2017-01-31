@@ -20,35 +20,40 @@ TEST_CASE_FUNCTIONS = [
 ]
 
 
-def _add_test_functions(cls, adapter):
+def _add_test_functions(cls, adapter, spec):
     """
-    This method creates test functions for every collection and action
-    according to the spec.
+    This method creates test functions for every endpoint, collection and
+    action according to the spec.
 
     Each test function is added to the `ApimasTestCase` class given as
     parameter.
 
     :param cls: `ApimasTestCase` class to which test functions will be added.
     :param adapter: Adapter which descripes APIMAS spec.
+    :param spec: APIMAS specification
     """
-    structural_elements = adapter.get_structural_elements(
-        adapter.adapter_spec)
-    collections = adapter.get_structural_elements(adapter.adapter_spec.get(
-        structural_elements[0]))
-    for collection in collections:
-        func = getattr(cls, 'validate_crud_action')
-        for func_name in TEST_CASE_FUNCTIONS:
-            function = get_collection_test_method(collection, func_name)(func)
-            test_case_func_name = 'test_%s_%s' % (func_name, collection)
-            if not hasattr(cls, test_case_func_name):
-                setattr(cls, test_case_func_name, function)
+    endpoints = adapter.get_structural_elements(spec)
+    for endpoint in endpoints:
+        endpoint_spec = spec.get(endpoint)
+        collections = adapter.get_structural_elements(endpoint_spec)
+        for collection in collections:
+            func = getattr(cls, 'validate_crud_action')
+            for func_name in TEST_CASE_FUNCTIONS:
+                function = get_collection_test_method(
+                    endpoint, collection, func_name)(func)
+                test_case_func_name = 'test_%s_%s' % (func_name, collection)
+                if not hasattr(cls, test_case_func_name):
+                    setattr(cls, test_case_func_name, function)
 
 
-def get_collection_test_method(collection, action):
-    """ Get a test function, customized based on a collection and action. """
+def get_collection_test_method(endpoint, collection, action):
+    """
+    Get a test function, customized based on an endpoint, collection and
+    action.
+    """
     def wrapper(func):
         def method(self):
-            return func(self, collection, action)
+            return func(self, endpoint, collection, action)
         return method
     return wrapper
 
@@ -56,7 +61,7 @@ def get_collection_test_method(collection, action):
 def _add_urlpatterns(module, urls):
     """ Add generated urls to the module given as parameter. """
     module = get_package_module(module)
-    setattr(module, 'urlpatterns', [urls])
+    setattr(module, 'urlpatterns', urls)
 
 
 def apimas_context(urlconf_module, spec):
@@ -78,11 +83,10 @@ def apimas_context(urlconf_module, spec):
         setattr(cls, 'spec', spec)
         adapter = DjangoRestAdapter()
         adapter.construct(spec)
-        adapter.apply()
         setattr(cls, 'adapter', adapter)
-        urls = adapter.urls
+        urls = adapter.urls.values()
         _add_urlpatterns(urlconf_module, urls)
-        _add_test_functions(cls, adapter)
+        _add_test_functions(cls, adapter, spec)
         return override_settings(ROOT_URLCONF=urlconf_module)(cls)
     return wrapper
 
@@ -132,13 +136,13 @@ class ApimasTestCase(APITestCase):
         'partial_update': '.update',
     }
 
-    SETUP_METHOD_NAME_PATTERN = 'setUp_%s_%s'
+    SETUP_METHOD_NAME_PATTERN = 'setUp_%s_%s_%s'
 
-    VALIDATE_RE_METHOD_NAME_PATTERN = 'validate_response_%s_%s'
+    VALIDATE_RE_METHOD_NAME_PATTERN = 'validate_response_%s_%s_%s'
 
-    REQUEST_CONTEXT_METHOD_PATTERN = 'set_request_context_%s_%s'
+    REQUEST_CONTEXT_METHOD_PATTERN = 'set_request_context_%s_%s_%s'
 
-    AUTHENTICATE_METHOD_PATTERN = 'authenticate_%s'
+    AUTHENTICATE_METHOD_PATTERN = 'authenticate_%s_%s'
 
     def setUp(self):
         self.models = self.adapter.models
@@ -150,27 +154,32 @@ class ApimasTestCase(APITestCase):
         self.data = None
         self.content_type = None
 
-    def setUp_collection(self, collection, action):
+    def setUp_collection(self, endpoint, collection, action):
         """
-        Setup a test scenario for a particular collection and action.
+        Setup a test scenario for a particular endpoint, collection and action.
 
         A model instance corresponding to the model associated with the
-        provided collection is created along with its dependencies.
+        provided collection (which belongs to a particular endpoint), is
+        created along with its dependencies.
 
         In case of the `create` action, the instances of the dependencies
         are created only.
         """
-        method_name = self.AUTHENTICATE_METHOD_PATTERN % (collection)
+        method_name = self.AUTHENTICATE_METHOD_PATTERN % (
+            endpoint, collection)
         authentication_method = getattr(self, method_name, None)
         if authentication_method is not None:
             authentication_method(collection)
         if action == 'create':
             # We do not need to create an instance corresponding to the
             # specified collection, but only instances of the dependencies.
+            full_collection_name = endpoint + '/' + collection
             self.collection_instances = self.create_instances(
-                collection, excluded_models=[self.models.get(collection)])
+                endpoint, collection,
+                excluded_models=[self.models.get(full_collection_name)])
         else:
-            self.collection_instances = self.create_instances(collection)
+            self.collection_instances = self.create_instances(
+                endpoint, collection)
 
     def _get_response_type(self, action):
         """ Get expected response type based on the action. """
@@ -224,7 +233,7 @@ class ApimasTestCase(APITestCase):
         else:
             self._validate_response_content(data, response_structure)
 
-    def validate_response(self, collection, action, response,
+    def validate_response(self, endpoint, collection, action, response,
                           data, response_spec, instances):
         """
         It validates that the server response is as expected. The status
@@ -237,7 +246,8 @@ class ApimasTestCase(APITestCase):
         """
         response_type = self._get_response_type(action)
         spec_action = self.ACTIONS_TO_SPEC[action]
-        if not utils.action_exists(self.spec, collection, spec_action):
+        if not utils.action_exists(self.spec, endpoint, collection,
+                                   spec_action):
             self.assert_action_not_allowed(response)
             # If action is not specified on the spec, then it isn't allowed.
             return
@@ -250,7 +260,7 @@ class ApimasTestCase(APITestCase):
             response.status_code, self.STATUS_CODES[action], response.data,
             expected_structure)
 
-    def set_request_context(self, collection, action, instances):
+    def set_request_context(self, endpoint, collection, action, instances):
         """
         Create request context in order test scenario to be triggered.
 
@@ -263,22 +273,24 @@ class ApimasTestCase(APITestCase):
         """
         self.content_type = 'json'
         if action not in self.RESOURCE_ACTIONS:
-            self.url = self.get_collection_url(collection)
+            self.url = self.get_collection_url(endpoint, collection)
         else:
             instance = random.choice(instances)
-            self.url = self.get_collection_url(collection, pk=instance.pk)
+            self.url = self.get_collection_url(
+                endpoint, collection, pk=instance.pk)
         if action not in self.WRITABLE_ACTIONS:
             self.data = {}
             return
         all_fields = action != 'partial_update'
-        writable_fields = utils.get_required_fields(self.spec, collection)
+        writable_fields = utils.get_required_fields(
+            self.spec, endpoint, collection)
         self.data = utils.populate_request(
             writable_fields, self.collection_instances, all_fields=all_fields)
         if any(isinstance(v, (InMemoryUploadedFile, file))
                for v in self.data.itervalues()):
             self.content_type = 'multipart'
 
-    def create_instances(self, collection, excluded_models=None):
+    def create_instances(self, endpoint, collection, excluded_models=None):
         """
         Create instance of the model associated with the collection model
         along with its dependencies.
@@ -287,8 +299,8 @@ class ApimasTestCase(APITestCase):
         topological sort algorithm is applied on the derived graph in order
         model to be created with the right sequence.
         """
-        collections = [collection] + utils.get_ref_collections(
-            self.spec, collection)
+        collections = [endpoint + '/' + collection] + utils.get_ref_collections(
+            self.spec, endpoint, collection)
         models = {k: v for k, v in self.models.iteritems()
                   if k in collections}
         schema = utils.get_models_to_create(models.values())
@@ -310,7 +322,7 @@ class ApimasTestCase(APITestCase):
     def _validate_response(self, response_data, exposed_fields,
                            msg_prefix=''):
         """
-        It validates that the response structure follows the response spec
+        It validates that the response structure follows the response spec.
         """
         self.assertTrue(isinstance(response_data, dict))
         for field, field_spec in exposed_fields.iteritems():
@@ -363,45 +375,47 @@ class ApimasTestCase(APITestCase):
                       [status.HTTP_405_METHOD_NOT_ALLOWED,
                        status.HTTP_404_NOT_FOUND])
 
-    def get_collection_url(self, collection, pk=None):
+    def get_collection_url(self, endpoint, collection, pk=None):
         """ It forms url based on the collection and given id. """
-        structural_element = utils.get_structural_element(self.spec)
-        loc = ('', structural_element, collection)
+        loc = ('', endpoint, collection)
         if pk is not None:
             loc += (str(pk),)
         url = '/'.join(loc) + '/'
         return url
 
-    def validate_crud_action(self, collection, action):
+    def validate_crud_action(self, endpoint, collection, action):
         """
-        It triggers a test scenario for a particular collection and action.
+        It triggers a test scenario for a particular endpoint, collection and
+        action.
 
         This scenario includes the `setup`, `request creation` and
         `response validation` stages.
         """
-        method_name = self.SETUP_METHOD_NAME_PATTERN % (action, collection)
+        method_name = self.SETUP_METHOD_NAME_PATTERN % (
+            endpoint, collection, action)
         setup_method = getattr(self, method_name, self.setUp_collection)
-        setup_method(collection, action)
-        instances = self.collection_instances.get(collection)
+        setup_method(endpoint, collection, action)
+        instances = self.collection_instances.get(
+            endpoint + '/' + collection)
 
         method_name = self.REQUEST_CONTEXT_METHOD_PATTERN % (
-            action, collection)
+            endpoint, collection, action)
         request_context = getattr(
             self, method_name, self.set_request_context)
-        request_context(collection, action, instances=instances)
+        request_context(endpoint, collection, action, instances=instances)
         client_method = getattr(self.client, self.ACTIONS_TO_METHODS[action])
         response = client_method(self.url, data=self.data,
                                  format=self.content_type)
         if action not in self.WRITABLE_ACTIONS:
-            response_spec = utils.get_fields(self.spec, collection,
+            response_spec = utils.get_fields(self.spec, endpoint, collection,
                                              excluded=['.writeonly'])
         else:
-            response_spec = utils.get_fields(self.spec, collection,
+            response_spec = utils.get_fields(self.spec, endpoint, collection,
                                              included=['.required'],
                                              excluded=['.writeonly'])
         method_name = self.VALIDATE_RE_METHOD_NAME_PATTERN % (
-            action, collection)
+            endpoint, collection, action)
         validate_response = getattr(self, method_name,
                                     self.validate_response)
-        validate_response(collection, action, response, self.data,
+        validate_response(endpoint, collection, action, response, self.data,
                           response_spec, instances)

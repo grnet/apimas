@@ -98,16 +98,8 @@ def reverse_mapping():
 FIELD_TYPE_MAPPING = reverse_mapping()
 
 
-def get_structural_element(spec):
-    filter_func = lambda x: not x.startswith('.')
-    structural_elements = filter(filter_func, spec.keys())
-    assert len(structural_elements) == 1
-    return structural_elements[0]
-
-
-def action_exists(spec, collection, action):
-    structural_element = get_structural_element(spec)
-    loc = (structural_element, collection, 'actions')
+def action_exists(spec, endpoint, collection, action):
+    loc = (endpoint, collection, 'actions')
     actions = doc.doc_get(spec, loc) or {}
     return action in actions
 
@@ -140,16 +132,14 @@ def filter_field_schema(field_schema, excluded=None, included=None):
     return filtered
 
 
-def get_fields(spec, collection, excluded=None, included=None):
-    structural_element = get_structural_element(spec)
-    loc = (structural_element, collection, '*')
+def get_fields(spec, endpoint, collection, excluded=None, included=None):
+    loc = (endpoint, collection, '*')
     field_schema = doc.doc_get(spec, loc)
     return filter_field_schema(field_schema, excluded, included)
 
 
-def get_required_fields(spec, collection):
-    structural_element = get_structural_element(spec)
-    loc = (structural_element, collection, '*')
+def get_required_fields(spec, endpoint, collection):
+    loc = (endpoint, collection, '*')
     field_schema = doc.doc_get(spec, loc)
     return filter_field_schema(field_schema, included=['.required'])
 
@@ -160,9 +150,11 @@ def isrelational(field_type):
 
 def generate_ref_url(spec, instances):
     ref = spec.get('to')
+    endpoint, collection = tuple(ref.split('/'))
     ref_instances = instances.get(ref)
     random_instance = random.choice(ref_instances)
-    url = reverse(ref + '-detail', args=[random_instance.pk])
+    url = reverse(endpoint + '_' + collection + '-detail',
+                  args=[random_instance.pk])
     return [url] if spec.get('many') else url
 
 
@@ -200,8 +192,9 @@ def get_refs(field_schema, spec):
     for field, field_spec in field_schema.iteritems():
         if '.ref' in field_spec:
             ref = field_spec['.ref']['to']
+            endpoint, collection = tuple(ref.split('/'))
             refs.append(ref)
-            refs.extend(get_ref_collections(spec, ref))
+            refs.extend(get_ref_collections(spec, endpoint, collection))
         elif '.struct' in field_spec:
             refs.extend(get_refs(field_spec.get('.struct'), spec))
         elif '.structarray' in field_spec:
@@ -209,9 +202,8 @@ def get_refs(field_schema, spec):
     return refs
 
 
-def get_ref_collections(spec, collection):
-    structural_element = get_structural_element(spec)
-    loc = (structural_element, collection, '*')
+def get_ref_collections(spec, endpoint, collection):
+    loc = (endpoint, collection, '*')
     field_schema = doc.doc_get(spec, loc)
     refs = get_refs(field_schema, spec)
     return refs

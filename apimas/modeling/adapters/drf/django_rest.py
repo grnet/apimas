@@ -133,7 +133,7 @@ class DjangoRestAdapter(NaiveAdapter):
 
     def __init__(self):
         self.gen_adapter_spec = {}
-        self.urls = None
+        self.urls = {}
         self.models = {}
         self.serializers = {}
         self.views = {}
@@ -168,21 +168,26 @@ class DjangoRestAdapter(NaiveAdapter):
         """ Get `ViewSet` class based on the given collection. """
         return self.get_class(self.views, collection)
 
-    def apply(self):
+    def construct_endpoint(self, instance, spec, loc, context):
         """
-        Create django rest views based on the constructed adapter spec.
+        Constructor of '.endpoint' predicate.
+
+        It gets the generated views and it maps them with urlpatterns which
+        will later be used from django.
         """
-        if not self.adapter_spec:
+        parent_name = context.get('parent_name')
+        collections = self.get_structural_elements(instance)
+        if not collections:
             raise utils.DRFAdapterException(
-                'Cannot apply an empty adapter specification')
-        structural_elements = self.get_structural_elements(self.adapter_spec)
-        api = structural_elements[0]
+                '.endpoint with not any collection found', loc=loc)
         router = routers.DefaultRouter()
-        for collection, spec in doc.doc_get(
-                self.adapter_spec, (api,)).iteritems():
-            view = spec.get(self.ADAPTER_CONF)
-            router.register(collection, view, base_name=collection)
-        self.urls = url(r'^' + api + '/', include(router.urls))
+        for collection in collections:
+            collection_spec = instance.get(collection)
+            view = collection_spec.get(self.ADAPTER_CONF)
+            basename = parent_name + '_' + collection
+            router.register(collection, view, base_name=basename)
+        self.urls[parent_name] = url(
+            r'^' + parent_name + '/', include(router.urls))
 
     def construct_CRUD_action(self, instance, spec, loc, context, action):
         """ Adds an action to the list of allowable. """
@@ -306,7 +311,8 @@ class DjangoRestAdapter(NaiveAdapter):
             raise doc.DeferConstructor
         field_schema = doc.doc_get(instance, ('*',))
         actions = doc.doc_get(instance, ('actions', self.ADAPTER_CONF)) or []
-        model = self._get_or_import_model(parent, loc + ('model',),
+        model = self._get_or_import_model(loc[0] + '/' + parent,
+                                          loc + ('model',),
                                           context.get('top_spec'))
         model_serializers = spec.pop('model_serializers', [])
         extra_serializers = spec.pop('serializers', [])
@@ -369,7 +375,7 @@ class DjangoRestAdapter(NaiveAdapter):
         """ Construct an `.identity` field. """
         collection_name = loc[1]
         drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
-            view_name='%s-detail' % (collection_name))
+            view_name='%s-detail' % (loc[0] + '_' + collection_name))
         doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
         return instance
 
@@ -409,13 +415,15 @@ class DjangoRestAdapter(NaiveAdapter):
         ref_kwargs = instance['.ref']
         many = ref_kwargs.get('many', False)
         ref = ref_kwargs['to']
-        extra = {'view_name': '%s-detail' % (ref)}
+        endpoint, collection = tuple(ref.split('/'))
+        extra = {'view_name': '%s-detail' % (endpoint + '_' + collection)}
         if not automated:
             extra['many'] = many
             if not field_kwargs.get('read_only'):
                 # In case it is not a read only field, specify its queryset.
                 ref_model = self._get_or_import_model(
-                    ref, loc[:1] + ('.drf_collection', 'model'), top_spec)
+                    endpoint + '/' + collection,
+                    loc[:1] + ('.drf_collection', 'model'), top_spec)
                 extra['queryset'] = ref_model.objects.all()
         return extra
 
@@ -502,7 +510,9 @@ class DjangoRestAdapter(NaiveAdapter):
         top_spec = context.get('top_spec')
         model_path = loc[:2] + ('.drf_collection', 'model')
         collection = loc[1]
-        model = self._get_or_import_model(collection, model_path, top_spec)
+        full_collection_name = loc[0] + '/' + collection
+        model = self._get_or_import_model(
+            full_collection_name, model_path, top_spec)
         structures = {'.struct', '.structarray'}
         automated = False
         if onmodel:
@@ -550,15 +560,16 @@ class DjangoRestAdapter(NaiveAdapter):
         django model table as the model defined in the referenced collection
         of spec. Otherwise, an exception with explanatory message is raised.
         """
-        root_loc = loc[0:1]
         ref = doc.doc_get(instance, ('.ref', 'to'))
         django_conf = self.get_constructor_params(top_spec, loc, [])
         model = self.extract_model(source or name, django_conf, loc)
         auto = True
         try:
             model_field = model._meta.get_field(source or name)
-            path = root_loc + (ref, '.drf_collection', 'model')
-            ref_model = self._get_or_import_model(ref, path, top_spec)
+            endpoint, collection = tuple(ref.split('/'))
+            path = (endpoint, collection, '.drf_collection', 'model')
+            collection = endpoint + '/' + collection
+            ref_model = self._get_or_import_model(collection, path, top_spec)
             model_attr = _validate_relational_field(
                 name, ref_model, model_field, loc)
         except FieldDoesNotExist:
@@ -642,7 +653,9 @@ class DjangoRestAdapter(NaiveAdapter):
             onmodel = structure_params.get('onmodel', True)
             if structure in struct_doc and onmodel:
                 if structure == '.collection':
-                    params.append((structure, {'model': self.models[loc[-2]]}))
+                    collection = '/'.join(loc[:2])
+                    params.append(
+                        (structure, {'model': self.models[collection]}))
                     continue
                 source = structure_params.get('source')
                 params.append((structure, {'source': source or loc[-2]}))

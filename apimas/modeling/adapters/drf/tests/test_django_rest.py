@@ -137,7 +137,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(mock_adapter.serializers['collection'],
                          'mock_serializer')
         mock_adapter._get_or_import_model.assert_called_once_with(
-            'collection', mock_loc + ('model',), None)
+            'api/collection', mock_loc + ('model',), None)
         mock_view_gen.assert_called_once_with(
             'collection', 'mock_serializer', 'model_imported',
             actions=['a', 'b'], permissions='permissions')
@@ -189,10 +189,10 @@ class TestDjangoRestAdapter(unittest.TestCase):
 
     def test_get_ref_params(self):
         mock_instance = {
-            '.ref': {'to': 'foo'}
+            '.ref': {'to': 'api/foo'}
         }
         top_spec = {'foo': 'bar'}
-        mock_loc = ('foo', 'bar')
+        mock_loc = ('api', 'bar')
         mock_adapter = create_mock_object(
             DjangoRestAdapter, ['_get_ref_params'])
         mock_objects = mock.Mock()
@@ -201,7 +201,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         ref_params = mock_adapter._get_ref_params(
             mock_adapter, mock_instance, loc=mock_loc, top_spec=top_spec,
             automated=True, field_kwargs={})
-        self.assertEqual(ref_params, {'view_name': 'foo-detail'})
+        self.assertEqual(ref_params, {'view_name': 'api_foo-detail'})
         mock_adapter._get_or_import_model.assert_not_called
 
         field_kwargs = {'read_only': True}
@@ -209,7 +209,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
             mock_adapter, mock_instance, loc=mock_loc, top_spec=top_spec,
             automated=False, field_kwargs=field_kwargs)
         self.assertEqual(ref_params,
-                         {'view_name': 'foo-detail', 'many': False})
+                         {'view_name': 'api_foo-detail', 'many': False})
         mock_adapter._get_or_import_model.assert_not_called
 
         field_kwargs = {'read_only': False}
@@ -218,11 +218,11 @@ class TestDjangoRestAdapter(unittest.TestCase):
             mock_adapter, mock_instance, loc=mock_loc, top_spec=top_spec,
             automated=False, field_kwargs=field_kwargs)
         self.assertEqual(len(ref_params), 3)
-        self.assertEqual(ref_params['view_name'], 'foo-detail')
+        self.assertEqual(ref_params['view_name'], 'api_foo-detail')
         self.assertTrue(ref_params['many'])
         self.assertTrue(isinstance(ref_params['queryset'], mock.Mock))
         mock_adapter._get_or_import_model.assert_called_once_with(
-            'foo', ('foo', '.drf_collection', 'model'), top_spec)
+            'api/foo', ('api', '.drf_collection', 'model'), top_spec)
 
     def test_generate_field(self):
         mock_a = mock.Mock(return_value='foo_field')
@@ -445,7 +445,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_meta = mock.Mock()
         mock_model = mock.Mock(_meta=mock_meta)
         mock_adapter.extract_model.return_value = mock_model
-        mock_instance = {'.ref': {'to': 'foo_ref'}}
+        mock_instance = {'.ref': {'to': 'api/foo_ref'}}
 
         # Case A: `_validate_relational_field` is passed.
         ref_model = mock.Mock()
@@ -461,8 +461,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_ref.assert_called_once_with('foo', ref_model, mock.ANY, self.loc)
         mock_meta.get_field.assert_called_once_with('source')
         mock_adapter._get_or_import_model.assert_called_once_with(
-            'foo_ref', self.loc[:1] + ('foo_ref', '.drf_collection', 'model'),
-            {})
+            'api/foo_ref', ('api', 'foo_ref', '.drf_collection', 'model'), {})
 
         # Case B: `_meta.get_field fails, and `_validate_model_attribute` is
         # called`.
@@ -540,25 +539,27 @@ class TestDjangoRestAdapter(unittest.TestCase):
             '.collection': '.collection'
         }
         mock_model = mock.Mock()
-        models = {'key': mock_model}
+        models = {'api/key': mock_model}
         self.adapter.STRUCTURES = mock_structures
         self.adapter.models = models
         mock_spec = {
-            'key': {
-                '.collection': {'a1': 'va1'},
-                'key1': {
-                    'b': {'b1': 'vb1', 'source': 'foo'},
-                    'a': {'a2': 'va2'},
-                    'key2': {
-                        'key3': {
-                            'b': {'b2': 'vb2'},
-                            'one_more': {},
+            'api': {
+                'key': {
+                    '.collection': {'a1': 'va1'},
+                    'key1': {
+                        'b': {'b1': 'vb1', 'source': 'foo'},
+                        'a': {'a2': 'va2'},
+                        'key2': {
+                            'key3': {
+                                'b': {'b2': 'vb2'},
+                                'one_more': {},
+                            }
                         }
                     }
                 }
             }
         }
-        loc = ('key', 'key1', 'key2', 'key3', 'one_more')
+        loc = ('api', 'key', 'key1', 'key2', 'key3', 'one_more')
         output = self.adapter.get_constructor_params(mock_spec, loc, [])
         self.assertEqual(len(output), 4)
         self.assertEqual(output[0], ('b', {'source': 'key3'}))

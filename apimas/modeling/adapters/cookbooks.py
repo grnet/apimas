@@ -114,9 +114,14 @@ class NaiveAdapter(Adapter):
         if not ref:
             raise ex.ApimasAdapterException(
                 'You have to specify `to` parameter', loc=loc)
-        root_loc = loc[0]
+        segments = ref.split('/')
+        if len(segments) != 2:
+            raise ex.ApimasAdapterException(
+                'Reference collection %s cannot be understood' % (ref),
+                loc=loc)
         top_spec = context.get('top_spec', {})
-        if ref not in top_spec[root_loc]:
+        endpoint, collection = tuple(segments)
+        if collection not in top_spec[endpoint]:
             raise ex.ApimasAdapterException(
                 'Reference collection `%s` does not exist' % (ref), loc=loc)
         return self.construct_type(instance, spec, loc, context, 'ref')

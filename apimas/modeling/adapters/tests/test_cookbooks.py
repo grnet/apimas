@@ -76,17 +76,19 @@ class TestNaiveAdapter(unittest.TestCase):
         context = {'top_spec': top_spec}
         spec = {'to': 'unknown'}
         mock_loc = ('api', 'bar')
+
         self.assertRaises(ApimasAdapterException, mock_adapter.construct_ref,
                           mock_adapter, instance=mock_instance, spec={},
                           loc=mock_loc, context=context)
         mock_adapter.construct_type.assert_not_called
 
+        spec['to'] = 'api/unknown'
         self.assertRaises(ApimasAdapterException, mock_adapter.construct_ref,
                           mock_adapter, instance=mock_instance, spec=spec,
                           loc=mock_loc, context=context)
         mock_adapter.construct_type.assert_not_called
 
-        spec['to'] = 'foo'
+        spec['to'] = 'api/foo'
         mock_adapter.construct_ref(mock_adapter, instance=mock_instance,
                                    spec=spec, loc=mock_loc, context=context)
         mock_adapter.construct_type.assert_called_once_with(
