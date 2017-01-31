@@ -33,11 +33,10 @@ def get_fields_sample(field_schema):
     return random.sample(fields, size)
 
 
-def generate_random_permissions(spec):
-    structural_element = utils.get_structural_element(spec)
+def generate_random_permissions(endpoint, spec):
     permissions = []
     for collection, collection_spec in spec.get(
-            structural_element).iteritems():
+            endpoint, {}).iteritems():
         if collection.startswith('.'):
             continue
         field_schema = collection_spec.get('*')
@@ -122,7 +121,7 @@ SPEC = {
 }
 
 
-PERMISSION_RULES = generate_random_permissions(SPEC)
+PERMISSION_RULES = generate_random_permissions('api', SPEC)
 SPEC['api']['.endpoint']['permissions'] = PERMISSION_RULES
 
 
@@ -135,7 +134,7 @@ class WriteOperations(HookMixin):
     def preprocess_create(self):
         permitted_fields = get_permitted_fields(
             PERMISSION_RULES, 'mymodel', 'create')
-        field_schema = utils.get_required_fields(SPEC, 'mymodel')
+        field_schema = utils.get_required_fields(SPEC, 'api', 'mymodel')
         field_schema = {k: v for k, v in field_schema.iteritems()
                         if k not in permitted_fields}
         extra_data = utils.populate_model(MyModel, instances={}, create=False)
@@ -150,33 +149,33 @@ class WriteOperations(HookMixin):
 
 @apimas_context(__name__, SPEC)
 class TestSpec(ApimasTestCase):
-    def validate_response_create_mymodel(self, collection, action,
-                                         response, data, response_spec,
-                                         instance):
+    def validate_response_api_mymodel_create(self, endpoint, collection, action,
+                                             response, data, response_spec,
+                                             instance):
         if not get_permitted_fields(PERMISSION_RULES, collection,
                                     'update'):
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
             return
-        self.validate_response(collection, action, response, data,
+        self.validate_response(endpoint, collection, action, response, data,
                                response_spec, instance)
         response_data = response.json()
         self.assertEqual(response_data['string'], MY_STRING_CREATE)
         self.assertEqual(response_data['number'], MY_NUMBER_CREATE)
 
-    def validate_response_update_mymodel(self, collection, action,
-                                         response, data, response_spec,
-                                         instance):
+    def validate_response_api_mymodel_update(self, endpoint, collection, action,
+                                             response, data, response_spec,
+                                             instance):
         if not get_permitted_fields(PERMISSION_RULES, collection,
                                     'create'):
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
             return
-        self.validate_response(collection, action, response, data,
+        self.validate_response(endpoint, collection, action, response, data,
                                response_spec, instance)
         response_data = response.json()
         self.assertEqual(response_data['string'], MY_STRING_UPDATE)
         self.assertEqual(response_data['number'], MY_NUMBER_UPDATE)
 
-    def validate_response(self, collection, action, response, data,
+    def validate_response(self, endpoint, collection, action, response, data,
                           response_spec, instance):
         permission_action = PERMISSION_ACTIONS.get(action)
         permitted_fields = get_permitted_fields(PERMISSION_RULES, collection,
@@ -187,4 +186,5 @@ class TestSpec(ApimasTestCase):
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
             return
         super(TestSpec, self).validate_response(
-            collection, action, response, data, response_spec, instance)
+            endpoint, collection, action, response, data, response_spec,
+            instance)

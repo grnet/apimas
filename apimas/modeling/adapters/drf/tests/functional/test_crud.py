@@ -1,6 +1,6 @@
 from apimas.modeling.adapters.drf.testing import (
     apimas_context, ApimasTestCase)
-from apimas.modeling.adapters.drf.tests.utils import generate_random_spec
+from apimas.modeling.adapters.drf.tests.utils import SpecGenerator
 
 
 TEST_MODELS = [
@@ -13,7 +13,8 @@ TEST_MODELS = [
 ]
 
 
-SPEC = generate_random_spec(TEST_MODELS)
+generator = SpecGenerator()
+SPEC = generator.generate(TEST_MODELS)
 
 
 @apimas_context(__name__, SPEC)

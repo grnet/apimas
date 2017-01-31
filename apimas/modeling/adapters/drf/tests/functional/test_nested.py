@@ -4,7 +4,7 @@ from apimas.modeling.adapters.drf.testing import (
     apimas_context, ApimasTestCase)
 from apimas.modeling.adapters.drf.tests.models import MyModel
 from apimas.modeling.adapters.drf.tests.utils import (
-    generate_field_schema, ACTIONS)
+    SpecGenerator, ACTIONS)
 
 
 class MySerializer(serializers.BaseSerializer):
@@ -36,7 +36,9 @@ class MySerializer(serializers.BaseSerializer):
 
 model_fields = filter((lambda x: isinstance(x, models.Field)),
                       MyModel._meta.get_fields())
-mymodel_field_schema = generate_field_schema(model_fields, iscollection=False)
+generator = SpecGenerator()
+mymodel_field_schema = generator.generate_field_schema(
+    model_fields, iscollection=False)
 
 SPEC = {
     'api': {
