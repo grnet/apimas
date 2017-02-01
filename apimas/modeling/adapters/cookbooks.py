@@ -18,6 +18,9 @@ class NaiveAdapter(Adapter):
     PROPERTY_MAPPING = {
     }
 
+    EXTRA_PARAMS = {
+    }
+
     SKIP_FIELDS = set()
 
     def __init__(self):
@@ -314,3 +317,26 @@ class NaiveAdapter(Adapter):
             instance[self.ADAPTER_CONF] = initial if initial is not None\
                 else {}
         return instance
+
+    def get_extra_params(self, instance, predicate_type):
+        """
+        Method to get any extra parameters specified on specification for a
+        specific predicate type.
+
+        These parameters contains a default value (in case if they are not
+        specified on specification), and a mapping with a key understood by
+        adapter.
+
+        :param instance: Current constructed instance of the node.
+        :param predicate_type: Type of the constructed node, e.g. .string,
+        .integer, etc.
+
+        :returns: A dictionary with extra parameters (as they nderstood by
+        adapter).
+        """
+        params = instance.get(predicate_type, {})
+        return {
+            v['map']: params.get(k, v['default'])
+            for k, v in self.EXTRA_PARAMS.get(
+                predicate_type, {}).iteritems()
+        }
