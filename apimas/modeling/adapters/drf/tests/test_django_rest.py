@@ -266,16 +266,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
     def test_get_extra_field_kwargs(self):
         mock_adapter = create_mock_object(
             DjangoRestAdapter, ['_get_extra_field_kwargs'])
+        mock_adapter.get_extra_params.return_value = {'extra': 'value'}
         mock_adapter._get_ref_params.return_value = 'extra_ref'
-        mock_extra = {
-            '.foo': {
-                'param_a': {
-                    'default': 'bar',
-                    'map': 'mapped_param',
-                }
-            }
-        }
-        mock_adapter.EXTRA_PARAMS = mock_extra
 
         # Case A: A `.ref` field.
         field_kwargs = mock_adapter._get_extra_field_kwargs(
@@ -283,17 +275,11 @@ class TestDjangoRestAdapter(unittest.TestCase):
             automated=True, field_kwargs={})
         self.assertEqual(field_kwargs, 'extra_ref')
 
-        # Case B: A '.foo' field.
+        # Case B: A common field.
         field_kwargs = mock_adapter._get_extra_field_kwargs(
             mock_adapter, '.foo', instance={}, loc=(), context={},
             automated=True, field_kwargs={})
-        self.assertEqual(field_kwargs, {'mapped_param': 'bar'})
-
-        # Case C: A field without expected params.
-        field_kwargs = mock_adapter._get_extra_field_kwargs(
-            mock_adapter, '.bar', instance={}, loc=(), context={},
-            automated=True, field_kwargs={})
-        self.assertEqual(field_kwargs,  {})
+        self.assertEqual(field_kwargs, {'extra': 'value'})
 
     def test_default_field_constructor(self):
         mock_instance = {

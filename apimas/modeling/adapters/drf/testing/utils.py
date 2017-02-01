@@ -34,21 +34,21 @@ class NumberGenerator(Generator):
 
 class DateGenerator(Generator):
     FORMATS = {
-        True: '%Y-%m-%d',
-        False: '%Y-%m-%dT%H:%M:%S'
+        True: ['%Y-%m-%d'],
+        False: ['%Y-%m-%dT%H:%M:%S']
     }
 
     def __init__(self, isdate=False):
         self.isdate = isdate
 
-    def __call__(self, api=False, date_format=None):
+    def __call__(self, api=False, date_formats=None):
         use_tz = getattr(settings, 'USE_TZ', False)
         tzinfo = timezone(fake.timezone()) if use_tz else None
         date_obj = fake.date_object() if self.isdate else fake.date_time(
             tzinfo=tzinfo)
         if api:
-            date_format = date_format or self.FORMATS[self.isdate]
-            return datetime.strftime(date_obj, date_format)
+            date_formats = date_formats or self.FORMATS[self.isdate]
+            return datetime.strftime(date_obj, random.choice(date_formats))
         return date_obj
 
 
@@ -249,10 +249,10 @@ EXTRA_API_PARAMS = {
         'max_length': 'max_length',
     },
     '.date': {
-        'format': 'date_format',
+        'format': 'date_formats',
     },
     '.datetime': {
-        'format': 'date_format',
+        'format': 'date_formats',
     }
 }
 

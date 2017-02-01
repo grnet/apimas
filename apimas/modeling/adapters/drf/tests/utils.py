@@ -29,8 +29,8 @@ PROPERTIES = {'.required': {}}
 
 class SpecGenerator(object):
     EXTRA = {
-        '.date': {'format': '%Y-%m-%d'},
-        '.datetime': {'format': '%Y-%m-%dT%H:%M'},
+        '.date': {'format': ['%Y-%m-%d']},
+        '.datetime': {'format': ['%Y-%m-%d %H:%M']},
         '.string': {'max_length': utils.NumberGenerator(upper=255)()}
     }
 

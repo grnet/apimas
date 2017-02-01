@@ -94,14 +94,14 @@ class DjangoRestAdapter(NaiveAdapter):
         },
         '.date': {
             'format': {
-                'default': '%Y-%m-%d',
-                'map': 'format',
+                'default': ['%Y-%m-%d'],
+                'map': 'input_formats',
             }
         },
         '.datetime': {
             'format': {
-                'default': '%Y-%m-%dT%H:%M:%S',
-                'map': 'format',
+                'default': ['%Y-%m-%dT%H:%M:%S'],
+                'map': 'input_formats',
             }
         }
     }
@@ -459,11 +459,7 @@ class DjangoRestAdapter(NaiveAdapter):
             return self._get_ref_params(
                 instance, loc, context.get('top_spec'), automated,
                 field_kwargs)
-        params = instance.get(predicate_type, {})
-        return {
-            v['map']: params.get(k, v['default'])
-            for k, v in self.EXTRA_PARAMS.get(predicate_type, {}).iteritems()
-        }
+        return self.get_extra_params(instance, predicate_type)
 
     def default_field_constructor(self, instance, spec, loc, context,
                                   predicate_type):
