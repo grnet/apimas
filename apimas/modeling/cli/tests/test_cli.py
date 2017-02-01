@@ -1,6 +1,6 @@
 import unittest
 import mock
-from apimas.modeling.core import documents as doc
+from apimas.modeling.core import documents as doc, exceptions as ex
 from apimas.modeling.tests.helpers import create_mock_object
 from apimas.modeling.cli.cli import ApimasCliAdapter, BaseCommand
 from apimas.modeling.adapters.cookbooks import SKIP
@@ -56,17 +56,27 @@ class TestCliAdapter(unittest.TestCase):
         mock_a = mock.MagicMock()
         mock_b = mock.MagicMock()
         mock_c = mock.MagicMock()
-        mock_commands = {
-            'actions': [mock_a, mock_b, mock_c]
-        }
+        mock_commands = {'actions': [mock_a, mock_b, mock_c]}
         mock_instance = {self.adapter_conf: mock_commands}
         mock_schema = {
             'a': {'foo': {}},
             'b': {'bar': {}},
         }
-        mock_spec = {'.auth_format': {'format': 'mock_format'}}
-        mock_spec.update(mock_schema)
-        mock_cli.get_structural_elements.return_value = ['a', 'b']
+
+        # Case A: Missing parameter 'format'.
+        mock_spec = {'schema': mock_schema}
+        self.assertRaises(ex.ApimasAdapterException,
+                          mock_cli.construct_cli_auth, mock_cli, mock_instance,
+                          mock_spec, (), {})
+
+        # Case B: Missing parameter 'schema'.
+        mock_spec = {'format': mock_schema}
+        self.assertRaises(ex.ApimasAdapterException,
+                          mock_cli.construct_cli_auth, mock_cli, mock_instance,
+                          mock_spec, (), {})
+
+        # Case C: Construct --credentials option for every command.
+        mock_spec = {'format': 'mock_format', 'schema': mock_schema}
         mock_cli.construct_cli_auth(
             mock_cli, mock_instance, mock_spec, (), {})
         mock_option.assert_called_once

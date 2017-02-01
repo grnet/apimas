@@ -265,7 +265,6 @@ class ApimasCliAdapter(NaiveAdapter):
         '.cli_option',
         '.cli_commands',
         '.cli_auth',
-        '.auth_format'
     ]
 
     SKIP_FIELDS = {'.identity'}
@@ -331,12 +330,14 @@ class ApimasCliAdapter(NaiveAdapter):
         """
         if self.ADAPTER_CONF not in instance:
             raise doc.DeferConstructor
-        auth_format = doc.doc_get(spec, ('.auth_format', 'format'))
-        auth_modes = self.get_structural_elements(spec)
-        auth_schema = {}
-        for auth_mode in auth_modes:
-            schema = doc.doc_get(spec, (auth_mode,))
-            auth_schema[auth_mode] = schema
+        auth_format = spec.get('format')
+        if auth_format is None:
+            raise ex.ApimasAdapterException('`format` parameter is missing',
+                                            loc=loc)
+        auth_schema = spec.get('schema')
+        if auth_schema is None:
+            raise ex.ApimasAdapterException('`schema` parameter is missing',
+                                            loc=loc)
         commands = doc.doc_get(instance, (self.ADAPTER_CONF, 'actions'))
         assert commands, (
             'Loc: %s, commands have not been constructed yet.' % (str(loc)))
@@ -345,10 +346,6 @@ class ApimasCliAdapter(NaiveAdapter):
                 schema=auth_schema, file_type=auth_format))
         for command in commands:
             credential_option(command)
-        return instance
-
-    def construct_auth_format(self, instance, spec, loc, context):
-        self.init_adapter_conf(instance, initial={'format': spec})
         return instance
 
     def construct_cli_commands(self, instance, spec, loc, context):
