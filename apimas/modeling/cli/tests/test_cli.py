@@ -259,14 +259,12 @@ class TestCliAdapter(unittest.TestCase):
         self.assertEqual(mock_cli.struct_map,
                          {'test-foo_option': ('foo', 'foo_option')})
 
-    def test_contruct_option_type(self):
+    def test_construct_option_type(self):
         mock_cli = create_mock_object(
             ApimasCliAdapter, ['construct_option_type'])
         mock_cli.SKIP_FIELDS = {'foo'}
-        self.assertIsNone(mock_cli.construct_option_type(
-            mock_cli, instance={}, spec={}, loc={}, context={},
-            predicate_type='foo'))
-
+        mock_cli.get_extra_params.return_value = {'bar1': 'value_a',
+                                                  'bar2': 'value_b'}
         mock_a = mock.Mock()
         mock_a.return_value = 'test'
         mock_b = mock.Mock()
@@ -275,12 +273,20 @@ class TestCliAdapter(unittest.TestCase):
             'b': mock_b,
         }
         mock_cli.TYPE_MAPPING = type_mapping
+
+        # Case A: A field which we skip.
+        self.assertIsNone(mock_cli.construct_option_type(
+            mock_cli, instance={}, spec={}, loc={}, context={},
+            predicate_type='foo'))
+
+        # Case B: A common field.
         option_type = mock_cli.construct_option_type(
             mock_cli, instance={}, spec={}, loc={}, context={},
             predicate_type='.a')
         self.assertEqual(option_type, 'test')
         mock_b.assert_not_called
-        mock_a.assert_called_once_with()
+        mock_a.assert_called_once_with(bar1='value_a',
+                                       bar2='value_b')
 
     def test_construct_idenity(self):
         cli = ApimasCliAdapter({})

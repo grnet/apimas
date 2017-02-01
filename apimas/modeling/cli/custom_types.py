@@ -37,14 +37,16 @@ class DateTime(click.ParamType):
 
     DEFAULT_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
-    def __init__(self, date_format=None, **kwargs):
-        self.date_format = date_format or self.DEFAULT_FORMAT
+    def __init__(self, date_formats=None, **kwargs):
+        self.date_formats = date_formats or [self.DEFAULT_FORMAT]
 
     def convert(self, value, param, ctx):
-        try:
-            return datetime.strptime(value, self.date_format)
-        except ValueError as e:
-            self.fail(e.message)
+        for date_format in self.date_formats:
+            try:
+                return datetime.strptime(value, date_format)
+            except ValueError:
+                pass
+        self.fail('The given date formats are invalid')
 
 
 class Date(DateTime):
@@ -52,8 +54,8 @@ class Date(DateTime):
 
     DEFAULT_FORMAT = '%Y-%m-%d'
 
-    def __init__(self, date_format=None, **kwargs):
-        self.date_format = date_format or self.DEFAULT_FORMAT
+    def __init__(self, date_formats=None, **kwargs):
+        self.date_formats = date_formats or [self.DEFAULT_FORMAT]
 
     def convert(self, value, param, ctx):
         return super(self.__class__, self).convert(value, param, ctx).date()

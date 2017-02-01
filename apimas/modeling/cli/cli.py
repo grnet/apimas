@@ -201,6 +201,21 @@ class ApimasCliAdapter(NaiveAdapter):
         'file': functools.partial(types.File, mode='rb')
     }
 
+    EXTRA_PARAMS = {
+        '.date': {
+            'format': {
+                'default': ['%Y-%m-%d'],
+                'map': 'date_formats',
+            }
+        },
+        '.datetime': {
+            'format': {
+                'default': ['%Y-%m-%dT%H:%M:%S'],
+                'map': 'date_formats',
+            }
+        }
+    }
+
     # Map actions to commands.
     COMMANDS = {
         'list': ListCommand,
@@ -472,21 +487,12 @@ class ApimasCliAdapter(NaiveAdapter):
 
     def construct_option_type(self, instance, spec, loc, context,
                               predicate_type):
-        constructors = {
-            '.date': self._add_date_params,
-            '.datetime': self._add_date_params,
-        }
-
-        def default(instance, spec, loc, context):
-            return {}
-
         if predicate_type in self.SKIP_FIELDS:
             return None
 
-        kwargs = constructors.get(predicate_type, default)(
-            instance, spec, loc, context)
+        extra_kwargs = self.get_extra_params(instance, predicate_type)
         option_type = self.TYPE_MAPPING[predicate_type[1:]]
-        return option_type(**kwargs)
+        return option_type(**extra_kwargs)
 
     def construct_identity(self, instance, spec, loc, context):
         instance = SKIP
@@ -500,7 +506,6 @@ class ApimasCliAdapter(NaiveAdapter):
         all required keyword arguments for `click.option()` constructor.
         """
         parent_name = context.get('parent_name')
-        extra_params = {'.ref': self._add_ref_params}
         if instance == SKIP:
             return instance
         predicate_type = self.extract_type(instance)
@@ -512,16 +517,12 @@ class ApimasCliAdapter(NaiveAdapter):
         instance = self.init_adapter_conf(instance, initial={option_name: {}})
         kwargs = {'type': self.construct_option_type(
             instance, spec, loc, context, predicate_type)}
-        extra = extra_params.get(predicate_type)
-        if extra:
-            kwargs.update(extra(instance, spec, loc, context))
+        if predicate_type == '.ref':
+            kwargs.update(self._add_ref_params(instance, spec, loc, context))
         if '.required' in instance:
             kwargs.update({'required': True})
         instance[self.ADAPTER_CONF][option_name] = kwargs
         return instance
-
-    def _add_date_params(self, instance, spec, loc, context):
-        return {'date_format': spec.get('format', None)}
 
     def _add_ref_params(self, instance, spec, loc, context):
         many = doc.doc_get(instance, ('.ref', 'many'))

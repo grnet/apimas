@@ -31,8 +31,8 @@ class TestCustomTypes(unittest.TestCase):
 
     def test_datetime(self):
         value = '1985-11-12 13:14'
-        date_format = '%Y-%m-%d %H:%M'
-        datetime_obj = DateTime(date_format)
+        date_formats = ['%Y-%m-%d %H:%M', '%Y %M']
+        datetime_obj = DateTime(date_formats)
         output = datetime_obj.convert(value, '', '')
         self.assertTrue(isinstance(output, datetime.datetime))
         self.assertEqual(output.year, 1985)
@@ -46,7 +46,7 @@ class TestCustomTypes(unittest.TestCase):
 
     def test_date(self):
         value = '1985-11-12'
-        date_format = '%Y-%m-%d'
+        date_format = ['%Y-%m-%d', '%Y']
         date_obj = Date(date_format)
         output = date_obj.convert(value, '', '')
         self.assertTrue(isinstance(output, datetime.date))
