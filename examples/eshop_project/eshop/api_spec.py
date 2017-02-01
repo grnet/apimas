@@ -202,7 +202,7 @@ API_SPEC = {
                     },
                 },
                 'date': {
-                    '.datetime': {'format': '%Y-%m-%d %H:%M'},
+                    '.datetime': {'format': ['%Y-%m-%d %H:%M']},
                     '.required': {},
                     '.drf_field': {},
                 },
