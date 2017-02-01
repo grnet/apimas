@@ -22,7 +22,9 @@ class TestExtensions(unittest.TestCase):
         now_date_str = '%s-%s-%s 00:00' % (
             now.year, str(now.month).zfill(2), str(now.day).zfill(2))
 
-        normalizer = ext.DateNormalizer('%Y-%m-%d %H:%M')
+        normalizer = ext.DateNormalizer(
+            string_formats=['%Y-%m-%d %H:%M', '%Y-%m'],
+            date_format='%Y-%m-%d %H:%M')
         self.assertEqual(normalizer(now), now_str)
         self.assertEqual(normalizer(now_date), now_date_str)
 

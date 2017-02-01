@@ -1,3 +1,4 @@
+import random
 import re
 from datetime import datetime, date
 from cerberus import Validator
@@ -28,8 +29,9 @@ class DateTimeNormalizer(object):
     """
     DEFAULT_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
-    def __init__(self, date_format=None):
-        self.date_format = date_format or self.DEFAULT_FORMAT
+    def __init__(self, string_formats=None, date_format=None):
+        self.string_formats = string_formats or [self.DEFAULT_FORMAT]
+        self.date_format = date_format or random.choice(self.string_formats)
 
     def __call__(self, value):
         if isinstance(value, date) and not isinstance(value, datetime):
@@ -38,8 +40,16 @@ class DateTimeNormalizer(object):
         elif isinstance(value, datetime):
             return value.strftime(self.date_format)
         elif isinstance(value, str):
-            datetime.strptime(value, self.date_format)
+            self._to_date(value)
         return value
+
+    def _to_date(self, value):
+        for string_format in self.string_formats:
+            try:
+                return datetime.strptime(value, string_format)
+            except ValueError:
+                pass
+        raise ValueError('Given date formats are invalid')
 
 
 class DateNormalizer(DateTimeNormalizer):

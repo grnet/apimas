@@ -368,6 +368,15 @@ class ApimasClientAdapter(NaiveAdapter):
         'required': 'required',
     }
 
+    EXTRA_PARAMS = {
+        '.string': {
+            'max_length': {
+                'default': 255,
+                'map': 'maxlength',
+            }
+        },
+    }
+
     TYPE_MAPPING = {
         'integer': 'integer',
         'serial': 'integer',
@@ -451,8 +460,10 @@ class ApimasClientAdapter(NaiveAdapter):
         It constructs a dictionary corresponding to a cerberus validation
         schema along with all rules based on spec.
         """
-        def default(instance, spec, loc, context, **kwargs):
-            return instance
+        special_constructors = {
+            '.date': self._construct_date_field,
+            '.datetime': self._construct_date_field,
+        }
 
         parent_name = context.get('parent_name')
         nested_structures = {'.struct', '.structarray'}
@@ -465,43 +476,30 @@ class ApimasClientAdapter(NaiveAdapter):
         if field_type in nested_structures:
             return self.construct_nested_field(
                 instance, spec, loc, context, field_type)
-        method_name = '_add_' + field_type[1:] + '_params'
-        params = doc.doc_get(instance, (field_type,))
-        return getattr(self, method_name, default)(
-            instance, spec, loc, context, **params)
-
-    def _add_string_params(self, instance, spec, loc, context, **kwargs):
-        """
-        Add extra params translated to cerberus syntax for `.string`
-        predicates.
-        """
-        max_length = kwargs.get('max_length')
-        if max_length is not None:
-            instance[self.ADAPTER_CONF].update({'maxlength': max_length})
+        method_name = special_constructors.get(field_type)
+        if method_name is not None:
+            return method_name(instance, spec, loc, context, field_type)
+        extra_params = self.get_extra_params(instance, field_type)
+        instance[self.ADAPTER_CONF].update(extra_params)
         return instance
 
-    def _add_date_params(self, instance, spec, loc, context, **kwargs):
+    def _construct_date_field(self, instance, spec, loc, context,
+                              predicate_type):
         """
         Adds extra configuration based on the parameters of constructor.
 
         Actually, it normalizes a date object to a string which follows the
         given date format.
         """
-        date_format = kwargs.pop('format', None)
+        normalizers = {
+            '.date': (DateNormalizer, ['%Y-%m-%d']),
+            '.datetime': (DateTimeNormalizer, ['%Y-%m-%dT%H:%M:%S']),
+        }
+        normalizer, default = normalizers.get(predicate_type)
+        params = instance.get(predicate_type)
+        date_formats = params.get('format', default)
         instance[self.ADAPTER_CONF].update(
-            {'coerce': DateNormalizer(date_format)})
-        return instance
-
-    def _add_datetime_params(self, instance, spec, loc, context, **kwargs):
-        """
-        Adds extra configuration based on the parameters of constructor.
-
-        Actually, it normalizes a date object to a string which follows the
-        given datetime format.
-        """
-        date_format = kwargs.pop('format', None)
-        instance[self.ADAPTER_CONF].update(
-            {'coerce': DateTimeNormalizer(date_format)})
+            {'coerce': normalizer(string_formats=date_formats)})
         return instance
 
     def construct_ref(self, instance, spec, loc, context):

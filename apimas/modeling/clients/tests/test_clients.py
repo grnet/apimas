@@ -224,16 +224,20 @@ class TestClientAdapter(unittest.TestCase):
         mock_constructor.assert_called_once
 
     def test_construct_field(self):
-        mock_instance = {'foo': {'bar': {}}}
+        mock_instance = {'foo': {'bar': {}}, self.adapter_conf: {}}
         mock_loc = ('foo', 'bar')
         mock_client = create_mock_object(ApimasClientAdapter,
                                          ['construct_field', 'ADAPTER_CONF'])
         mock_client.init_adapter_conf.return_value = mock_instance
         mock_client.extract_type.return_value = None
+        mock_client.get_extra_params.return_value = {'extra': 'value'}
+
+        # Case A: Unspecified type.
         self.assertRaises(ApimasException, mock_client.construct_field,
                           mock_client, mock_instance, {}, mock_loc, {})
         mock_client.extract_type.assert_called_once_with(mock_instance)
 
+        # Case B: Structural elements.
         nested_structures = {'.struct', '.structarray'}
         expected = {'foo'}
         mock_client.construct_nested_field.return_value = expected
@@ -246,11 +250,24 @@ class TestClientAdapter(unittest.TestCase):
             mock_client.init_adapter_conf.assert_called_with(mock_instance)
             mock_client.extract_type.assert_called_with(mock_instance)
 
+        # Case C:  A common field.
         mock_client.extract_type.return_value = 'foo'
         instance = mock_client.construct_field(
             mock_client, mock_instance, {}, mock_loc, {})
+        self.assertEqual(instance[self.adapter_conf]['extra'], 'value')
         mock_client.init_adapter_conf.assert_called_with(mock_instance)
         mock_client.extract_type.assert_called_with(mock_instance)
+        mock_client.get_extra_params.assert_called_once
+
+        # Case D: A date/datetime field.
+        fields = {'.date', '.datetime'}
+        for field_type in fields:
+            mock_client.extract_type.return_value = field_type
+            mock_client._construct_date_field.return_value = (
+                field_type + '_returned')
+            instance = mock_client.construct_field(
+                mock_client, mock_instance, {}, mock_loc, {})
+            self.assertEqual(instance, field_type + '_returned')
 
     @mock.patch('apimas.modeling.clients.clients.RefNormalizer')
     @mock.patch(
