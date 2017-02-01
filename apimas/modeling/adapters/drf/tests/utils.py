@@ -28,6 +28,11 @@ PROPERTIES = {'.required': {}}
 
 
 class SpecGenerator(object):
+    EXTRA = {
+        '.date': {'format': '%Y-%m-%d'},
+        '.datetime': {'format': '%Y-%m-%dT%H:%M'},
+        '.string': {'max_length': utils.NumberGenerator(upper=255)()}
+    }
 
     def __init__(self, endpoint=None, permissions=None):
         self.endpoint = endpoint or utils.generate_random_string(
@@ -79,6 +84,8 @@ class SpecGenerator(object):
                 predicate_type = '.' + utils.FIELD_TYPE_MAPPING[type(
                     model_field)]
                 field_node = {'.drf_field': {}, predicate_type: {}}
+                field_node[predicate_type].update(
+                    self.EXTRA.get(predicate_type, {}))
             else:
                 spec_field = random.choice(rel_field_constructors)(
                     model_field)

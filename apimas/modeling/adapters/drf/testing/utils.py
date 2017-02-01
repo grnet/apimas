@@ -244,19 +244,25 @@ def get_sample_field_schema(field_schema):
     return dict(random.sample(field_schema.items(), sample_size))
 
 
-def _get_extra_string_params(spec, predicate_type):
-    return {'max_length': spec.get(predicate_type).get('max_length')}
-
-
-def _get_extra_date_params(spec, predicate_type):
-    return {'date_format': spec.get(predicate_type).get('format')}
-
-
 EXTRA_API_PARAMS = {
-    '.string': _get_extra_string_params,
-    '.date': _get_extra_date_params,
-    '.datetime': _get_extra_date_params,
+    '.string': {
+        'max_length': 'max_length',
+    },
+    '.date': {
+        'format': 'date_format',
+    },
+    '.datetime': {
+        'format': 'date_format',
+    }
 }
+
+
+def _get_extra_params(spec, predicate_type):
+    params = spec.get(predicate_type, {})
+    return {
+        v: params.get(k)
+        for k, v in EXTRA_API_PARAMS.get(predicate_type, {}).iteritems()
+    }
 
 
 def populate_request(field_schema, instances, all_fields=True):
@@ -268,8 +274,7 @@ def populate_request(field_schema, instances, all_fields=True):
         if '.readonly' in spec or '.identity' in spec or '.serial' in spec:
             continue
         predicate_type = adapter.extract_type(spec)
-        method = EXTRA_API_PARAMS.get(predicate_type)
-        extra_params = method(spec, predicate_type) if method else {}
+        extra_params = _get_extra_params(spec, predicate_type)
         if isrelational(predicate_type):
             predicate_kwargs = spec.get(predicate_type)
             kwargs[field_name] = RELATIONAL_CONSTRUCTORS[predicate_type](

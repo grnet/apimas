@@ -82,6 +82,30 @@ class DjangoRestAdapter(NaiveAdapter):
         ('required', 'read_only')
     ]
 
+    # Dictionary which contains expected extra parameters for some types.
+    # Defines a mapping of the APIMAS parameter with that of adapter, and a
+    # default value if it is optional.
+    EXTRA_PARAMS = {
+        '.string': {
+            'max_length': {
+                'default': 255,
+                'map': 'max_length',
+            }
+        },
+        '.date': {
+            'format': {
+                'default': '%Y-%m-%d',
+                'map': 'format',
+            }
+        },
+        '.datetime': {
+            'format': {
+                'default': '%Y-%m-%dT%H:%M:%S',
+                'map': 'format',
+            }
+        }
+    }
+
     PROPERTY_MAPPING = {
         'readonly': 'read_only',
         'writeonly': 'write_only',
@@ -429,21 +453,17 @@ class DjangoRestAdapter(NaiveAdapter):
                 extra['queryset'] = ref_model.objects.all()
         return extra
 
-    def _get_string_params(self, instance):
-        params = instance.get('.string')
-        max_length = params.get('max_length')
-        return {'max_length': max_length}
-
     def _get_extra_field_kwargs(self, predicate_type, instance, loc, context,
                                 automated, field_kwargs):
         if predicate_type == '.ref':
             return self._get_ref_params(
                 instance, loc, context.get('top_spec'), automated,
                 field_kwargs)
-        elif predicate_type == '.string':
-            return self._get_string_params(instance)
-        else:
-            return {}
+        params = instance.get(predicate_type, {})
+        return {
+            v['map']: params.get(k, v['default'])
+            for k, v in self.EXTRA_PARAMS.get(predicate_type, {}).iteritems()
+        }
 
     def default_field_constructor(self, instance, spec, loc, context,
                                   predicate_type):
