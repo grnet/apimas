@@ -34,7 +34,10 @@ SPEC = {
                                 'string': {
                                     '.required': {},
                                     '.drf_field': {},
-                                    '.string': {},
+                                    '.choices': {
+                                        'allowed': ['foo', 'bar'],
+                                        'display': ['displayed', 'fdaf']
+                                    },
                                 },
                                 'text': {
                                     '.drf_field': {},
