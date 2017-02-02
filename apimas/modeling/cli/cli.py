@@ -190,6 +190,7 @@ class ApimasCliAdapter(NaiveAdapter):
         'integer': types.IntParamType,
         'serial': types.IntParamType,
         'string': types.StringParamType,
+        'choices': types.Choice,
         'email': Email,
         'boolean': types.BoolParamType,
         'biginteger': types.IntParamType,
@@ -202,6 +203,12 @@ class ApimasCliAdapter(NaiveAdapter):
     }
 
     EXTRA_PARAMS = {
+        '.choices': {
+            'allowed': {
+                'default': [],
+                'map': 'choices',
+            },
+        },
         '.date': {
             'format': {
                 'default': ['%Y-%m-%d'],

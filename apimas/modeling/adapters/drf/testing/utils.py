@@ -62,6 +62,10 @@ def generate_random_email(api=False):
     return fake.email()
 
 
+def generate_choices_field(api=False, choices=None):
+    return random.choice(choices or [])
+
+
 def file_generator(api=False):
     content = str(fake.text())
     mime_type = fake.mime_type()
@@ -82,20 +86,23 @@ RANDOM_GENERATORS = {
     'datetime': DateGenerator(isdate=False),
     'date': DateGenerator(isdate=True),
     'boolean': generate_random_boolean,
-    'file': file_generator
+    'file': file_generator,
+    'choices': generate_choices_field,
 }
 
-
-def reverse_mapping():
-    mapping = {}
-    for k, v in DjangoRestAdapter.TYPE_MAPPING.iteritems():
-        if isinstance(v, Iterable):
-            mapping.update({a: k for a in v})
-        else:
-            mapping[v] = k
-    return mapping
-
-FIELD_TYPE_MAPPING = reverse_mapping()
+FIELD_TYPE_MAPPING = {
+    models.AutoField: 'serial',
+    models.TextField: 'string',
+    models.CharField: 'string',
+    models.EmailField: 'email',
+    models.IntegerField: 'integer',
+    models.BigIntegerField: 'biginteger',
+    models.FloatField: 'float',
+    models.DateTimeField: 'datetime',
+    models.DateField: 'date',
+    models.BooleanField: 'boolean',
+    models.FileField: 'file',
+}
 
 
 def action_exists(spec, endpoint, collection, action):
@@ -247,6 +254,9 @@ def get_sample_field_schema(field_schema):
 EXTRA_API_PARAMS = {
     '.string': {
         'max_length': 'max_length',
+    },
+    '.choices': {
+        'allowed': 'choices',
     },
     '.date': {
         'format': 'date_formats',

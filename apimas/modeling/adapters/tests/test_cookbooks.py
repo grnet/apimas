@@ -118,6 +118,30 @@ class TestNaiveAdapter(unittest.TestCase):
             instance={}, spec={}, loc=mock_loc, context=context)
         self.assertEqual(output, {})
 
+    def test_construct_choices(self):
+        mock_adapter = create_mock_object(NaiveAdapter, ['construct_choices'])
+
+        # Case A: Parameter `allowed` not specified.
+        self.assertRaises(ApimasAdapterException,
+                          mock_adapter.construct_choices, mock_adapter,
+                          instance={}, spec={}, loc=(), context=())
+        mock_adapter.construct_type.assert_not_called
+
+        # Case B: Parameter `allowed` specified but it is invalid.
+        self.assertRaises(ApimasAdapterException,
+                          mock_adapter.construct_choices, mock_adapter,
+                          instance={}, spec={'allowed': 'invalid'}, loc=(),
+                          context={})
+        mock_adapter.construct_type.assert_not_called
+
+        # Case C: Construction succeedeed
+        instance = mock_adapter.construct_choices(
+            mock_adapter, instance={}, spec={'allowed': ['foo', 'bar']},
+            loc=(), context={})
+        mock_adapter.construct_type.assert_called_once_with(
+            {}, {'allowed': ['foo', 'bar']}, (), {}, 'choices')
+        self.assertTrue(isinstance(instance, mock.Mock))
+
     def test_construct_property(self):
         mock_loc = ('foo', 'bar')
         mock_adapter = create_mock_object(
@@ -198,7 +222,8 @@ class TestNaiveAdapter(unittest.TestCase):
                     autospec=True) as mock_func:
                 mock_func.return_value = mock_instance
                 for predicate_type in getattr(self.adapter, v):
-                    if predicate_type in ['.identity', '.ref']:
+                    # Fields with special handling.
+                    if predicate_type in ['.identity', '.ref', '.choices']:
                         continue
                     func = getattr(
                         self.adapter, 'construct_' + predicate_type[1:])

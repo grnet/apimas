@@ -92,6 +92,16 @@ class DjangoRestAdapter(NaiveAdapter):
                 'map': 'max_length',
             }
         },
+        '.choices': {
+            'allowed': {
+                'default': [],
+                'map': 'allowed',
+            },
+            'display': {
+                'default': [],
+                'map': 'display',
+            }
+        },
         '.date': {
             'format': {
                 'default': ['%Y-%m-%d'],
@@ -120,6 +130,7 @@ class DjangoRestAdapter(NaiveAdapter):
         'biginteger': serializers.IntegerField,
         'float': serializers.FloatField,
         'string': serializers.CharField,
+        'choices': serializers.ChoiceField,
         'email': serializers.EmailField,
         'boolean': serializers.BooleanField,
         'date': serializers.DateField,
@@ -137,6 +148,7 @@ class DjangoRestAdapter(NaiveAdapter):
         'biginteger': models.BigIntegerField,
         'float': models.FloatField,
         'string': (models.CharField, models.TextField),
+        'choices': models.CharField,
         'email': models.EmailField,
         'boolean': models.BooleanField,
         'date': models.DateField,
@@ -423,7 +435,8 @@ class DjangoRestAdapter(NaiveAdapter):
                 instance, name, predicate_type, model, onmodel=automated,
                 **field_kwargs)
         else:
-            if not automated:
+            # In case of a `.choices` field, we create a drf-field manually.
+            if not automated or predicate_type == '.choices':
                 field_kwargs.update(self.get_default_properties(
                     predicate_type, field_kwargs))
                 drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
@@ -459,7 +472,14 @@ class DjangoRestAdapter(NaiveAdapter):
             return self._get_ref_params(
                 instance, loc, context.get('top_spec'), automated,
                 field_kwargs)
-        return self.get_extra_params(instance, predicate_type)
+        extra_params = self.get_extra_params(instance, predicate_type)
+        if predicate_type == '.choices':
+            # In case of a `.choices` field, we merge the parameters of
+            # allowed and display into a list of tuples.
+            allowed, display = (extra_params.pop('allowed'),
+                                extra_params.pop('display'))
+            extra_params['choices'] = zip(allowed, display) or allowed
+        return extra_params
 
     def default_field_constructor(self, instance, spec, loc, context,
                                   predicate_type):

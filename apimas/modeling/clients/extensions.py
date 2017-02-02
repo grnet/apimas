@@ -1,5 +1,6 @@
 import random
 import re
+from collections import Iterable
 from datetime import datetime, date
 from cerberus import Validator
 from requests.compat import urljoin
@@ -60,6 +61,9 @@ class ApimasValidator(Validator):
     """
     Extends cerberus `Validator` by adding a new type, i.e. `file`, `email`.
     """
+    def _validate_type_choices(self, value):
+        return not (isinstance(value, Iterable) and not isinstance(value, str))
+
     def _validate_type_file(self, value):
         return isinstance(value, file)
 

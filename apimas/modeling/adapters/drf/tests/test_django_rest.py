@@ -281,6 +281,24 @@ class TestDjangoRestAdapter(unittest.TestCase):
             automated=True, field_kwargs={})
         self.assertEqual(field_kwargs, {'extra': 'value'})
 
+        # Case C: A choices field, with empty display list.
+        mock_adapter.get_extra_params.return_value = {'allowed': [1, 2],
+                                                      'display': []}
+        field_kwargs = mock_adapter._get_extra_field_kwargs(
+            mock_adapter, '.choices', instance={}, loc=(), context={},
+            automated=True, field_kwargs={})
+        self.assertEqual(field_kwargs, {'choices': [1, 2]})
+        self.assertEqual(len(field_kwargs), 1)
+
+        # Case D: A choices field, with a non-empty display list.
+        mock_adapter.get_extra_params.return_value = {'allowed': [1, 2],
+                                                      'display': ['foo', 'bar']}
+        field_kwargs = mock_adapter._get_extra_field_kwargs(
+            mock_adapter, '.choices', instance={}, loc=(), context={},
+            automated=True, field_kwargs={})
+        self.assertEqual(field_kwargs, {'choices': [(1, 'foo'), (2, 'bar')]})
+        self.assertEqual(len(field_kwargs), 1)
+
     def test_default_field_constructor(self):
         mock_instance = {
             '.string': {},

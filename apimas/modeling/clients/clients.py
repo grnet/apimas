@@ -375,6 +375,12 @@ class ApimasClientAdapter(NaiveAdapter):
                 'map': 'maxlength',
             }
         },
+        '.choices': {
+            'allowed': {
+                'default': [],
+                'map': 'allowed',
+            },
+        },
     }
 
     TYPE_MAPPING = {
@@ -383,6 +389,7 @@ class ApimasClientAdapter(NaiveAdapter):
         'biginteger': 'integer',
         'float': 'float',
         'string': 'string',
+        'choices': 'choices',
         'email': 'email',
         'boolean': 'boolean',
         'date': 'string',

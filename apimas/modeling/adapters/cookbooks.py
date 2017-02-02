@@ -229,6 +229,19 @@ class NaiveAdapter(Adapter):
                 loc=loc)
         return instance
 
+    def construct_choices(self, instance, spec, loc, context):
+        """
+        Constuctor for `.ref` predicate.
+
+        This maps predicate to the specified type according to mapping.
+        """
+        allowed = spec.get('allowed')
+        if not isinstance(allowed, list):
+            raise ex.ApimasAdapterException(
+                '`choices` property requires a list of allowed values.',
+                loc=loc)
+        return self.construct_type(instance, spec, loc, context, 'choices')
+
     def construct_blankable(self, instance, spec, loc, context):
         """
         Constuctor for `.blankable` predicate.
