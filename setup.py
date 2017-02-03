@@ -25,7 +25,7 @@ setup(
     install_requires=INSTALL_REQUIRES,
     entry_points={
         'console_scripts': {
-            'apimas=apimas.modeling.cli.cli:main'
+            'apimas=apimas.cmd:main'
         }
     },
     scripts=['auto/builder/docker/home/bin/mkdeb'],
