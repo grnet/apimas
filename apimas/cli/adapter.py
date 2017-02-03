@@ -3,8 +3,7 @@ import click
 from click import types
 from apimas import documents as doc, exceptions as ex
 from apimas.cli import (ListCommand, RetrieveCommand, CreateCommand,
-                        UpdateCommand, DeleleCommand, base_group,
-                        abort_if_false)
+                        UpdateCommand, DeleleCommand, abort_if_false)
 from apimas.cli.custom_types import (
     Email, Json, Credentials, Date, DateTime)
 from apimas.adapters.cookbooks import NaiveAdapter, SKIP
@@ -12,6 +11,11 @@ from apimas.adapters.cookbooks import NaiveAdapter, SKIP
 
 def to_option(name):
     return '--' + name
+
+
+@click.group(name='group')
+def base_command():
+    pass
 
 
 class ApimasCliAdapter(NaiveAdapter):
@@ -114,10 +118,14 @@ class ApimasCliAdapter(NaiveAdapter):
         self.clients = clients
         self._struct_map = {}
         self.commands = {}
+        self.endpoint_groups = {}
 
     def get_commands(self):
         """ Get a list of commands for all collections. """
-        return self.clients
+        return self.commands
+
+    def get_base_command(self):
+        return base_command
 
     def get_collection_commands(self, endpoint, collection):
         """
@@ -132,6 +140,27 @@ class ApimasCliAdapter(NaiveAdapter):
             raise ex.ApimasException(
                 'Commands not found for collection `%s`' % (collection_name))
         return self.commands[collection_name]
+
+    def get_or_create_endpoint_group(self, endpoint):
+        """
+        Gets a group of commands for a specific endpoint.
+
+        If a group does not exist for a specific endpoint, then it is created
+        and it's returned.
+
+        :param endpoint: Name of the node which is an endpoint.
+        :returns: A group of commands. Each command corresponds to an action
+        performed on a collection which belongs to the endpoint.
+        """
+        def group():
+            pass
+
+        if endpoint not in self.endpoint_groups:
+            base_cmd = self.get_base_command()
+            endpoint_group = base_cmd.group(name=endpoint)(group)
+            self.endpoint_groups[endpoint] = endpoint_group
+            return endpoint_group
+        return self.endpoint_groups[endpoint]
 
     def option_allowed(self, action, spec, option_constructor):
         """
@@ -263,7 +292,8 @@ class ApimasCliAdapter(NaiveAdapter):
                     else self._struct_map[option_name]
                 command.register_option_mapping(
                     option_name.replace('-', '_'), path)
-        return base_group.command(name=loc[-2] + '-' + action)(command)
+        endpoint_group = self.get_or_create_endpoint_group(loc[0])
+        return endpoint_group.command(loc[-2] + '-' + action)(command)
 
     def construct_list(self, instance, spec, loc, context):
         """

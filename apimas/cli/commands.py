@@ -1,7 +1,5 @@
 import json
 import click
-from apimas import utils
-from apimas.clients.adapter import ApimasClientAdapter
 from apimas import documents as doc, exceptions as ex
 
 
@@ -19,11 +17,6 @@ def handle_exception(func):
             else:
                 click.secho(e.message, fg='red')
     return wrapper
-
-
-@click.group(name='apimas')
-def base_group():
-    pass
 
 
 class BaseCommand(object):
@@ -171,18 +164,3 @@ class DeleleCommand(BaseCommand):
     def __call__(self, resource_id, **kwargs):
         self.add_credentials(kwargs)
         self.client.delete(resource_id)
-
-
-def main():
-    data = utils.load_config()
-    root_url = data['root']
-    spec = data['spec']
-    client_gen = ApimasClientAdapter(root_url)
-    client_gen.construct(spec)
-    cli = ApimasCliAdapter(client_gen.get_clients())
-    cli.construct(spec)
-    base_group()
-
-
-if __name__ == '__main__':
-    main()

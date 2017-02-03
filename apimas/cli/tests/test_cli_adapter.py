@@ -23,6 +23,34 @@ class TestCliAdapter(unittest.TestCase):
             mock_adapter, endpoint='api', collection='collection')
         self.assertEquals(value, mock_commands['api/collection'])
 
+    def test_get_or_create_endpoint_group(self):
+        mock_cli = create_mock_object(ApimasCliAdapter,
+                                      ['get_or_create_endpoint_group'])
+        mock_cli.endpoint_groups = {}
+        mock_cmd = mock.Mock()
+        mock_cli.get_base_command.return_value = mock_cmd
+        mock_command = mock.Mock()
+        mock_cmd.group.return_value = mock_command
+
+        # Case A: Endpoint group already exists.
+        mock_cli.endpoint_groups = {'foo': 'test'}
+        endpoint_group = mock_cli.get_or_create_endpoint_group(
+            mock_cli, 'foo')
+        self.assertEqual(len(mock_cli.endpoint_groups), 1)
+        self.assertEqual(mock_cli.endpoint_groups['foo'], endpoint_group)
+        mock_cmd.group.assert_not_called
+        mock_command.assert_not_called
+
+        # Case B: Endpoint group does not exist and we create it.
+        mock_cli.endpoint_groups = {}
+        endpoint_group = mock_cli.get_or_create_endpoint_group(
+            mock_cli, 'foo')
+        self.assertTrue(isinstance(endpoint_group, mock.Mock))
+        mock_cmd.group.assert_called_once_with(name='foo')
+        mock_command.assert_called_once
+        self.assertEqual(len(mock_cli.endpoint_groups), 1)
+        self.assertEqual(mock_cli.endpoint_groups['foo'], endpoint_group)
+
     def test_option_allowed(self):
         cli_adapter = ApimasCliAdapter(clients={})
         self.assertFalse(cli_adapter.option_allowed(
@@ -202,8 +230,7 @@ class TestCliAdapter(unittest.TestCase):
         mock_option.assert_called_once
         mock_b.assert_called_once_with('argument_ret')
 
-    @mock.patch('apimas.cli.adapter.base_group')
-    def test_construct_command(self, mock_group):
+    def test_construct_command(self):
         mock_cli = create_mock_object(
             ApimasCliAdapter,
             ['construct_command', 'ADAPTER_CONF', 'OPTION_CONSTRUCTORS'])
@@ -232,6 +259,8 @@ class TestCliAdapter(unittest.TestCase):
         command_name = 'foo'
         mock_obj = mock.MagicMock()
         mock_obj.return_value = 'test'
+        mock_group = mock.Mock()
+        mock_cli.get_or_create_endpoint_group.return_value = mock_group
         mock_group.command.return_value = mock_obj
         for action in ['create', 'list', 'update', 'retrieve']:
             mock_cli.option_allowed.return_value = action != 'delete'
