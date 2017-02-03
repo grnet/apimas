@@ -91,7 +91,7 @@ class ApimasClient(object):
     TODO: Support additional actions.
     """
 
-    def __init__(self, endpoint, schema, **credentials):
+    def __init__(self, endpoint, schema):
         self.endpoint = endpoint
         self.validation_schema = schema
         self.api_validator = ApimasValidator(self.validation_schema)
