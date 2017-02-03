@@ -9,6 +9,20 @@ from apimas.modeling.adapters.cookbooks import SKIP
 class TestCliAdapter(unittest.TestCase):
     adapter_conf = ApimasCliAdapter.ADAPTER_CONF
 
+    def test_get_collection_commands(self):
+        mock_adapter = create_mock_object(ApimasCliAdapter,
+                                          ['get_collection_commands'])
+        mock_adapter.commands = {}
+        self.assertRaises(ex.ApimasException,
+                          mock_adapter.get_collection_commands,
+                          mock_adapter, endpoint='api',
+                          collection='collection')
+        mock_commands = {'api/collection': 'value'}
+        mock_adapter.commands = mock_commands
+        value = mock_adapter.get_collection_commands(
+            mock_adapter, endpoint='api', collection='collection')
+        self.assertEquals(value, mock_commands['api/collection'])
+
     def test_option_allowed(self):
         cli_adapter = ApimasCliAdapter(clients={})
         self.assertFalse(cli_adapter.option_allowed(
@@ -89,15 +103,17 @@ class TestCliAdapter(unittest.TestCase):
         mock_option_ret.assert_any_call(mock_c)
 
     def test_construct_cli_commands(self):
+        mock_loc = ('foo', 'bar', '.cli_commands')
         mock_cli = create_mock_object(
             ApimasCliAdapter, ['construct_cli_commands', 'ADAPTER_CONF'])
+        mock_cli.commands = {}
         mock_instance = {
             self.adapter_conf: {'actions': set()}
         }
         mock_context = {'parent_name': 'foo'}
         mock_cli.init_adapter_conf.return_value = mock_instance
         instance = mock_cli.construct_cli_commands(
-            mock_cli, instance={}, spec={}, loc=(), context=mock_context)
+            mock_cli, instance={}, spec={}, loc=mock_loc, context=mock_context)
         self.assertEqual(instance, mock_instance)
         mock_cli.init_adapter_conf.assert_called_once_with(
             {}, initial={'actions': set()})
@@ -115,7 +131,7 @@ class TestCliAdapter(unittest.TestCase):
         mock_cli.init_adapter_conf.return_value = instance_and_conf
         mock_cli.construct_command.return_value = 'foo_bar'
         instance = mock_cli.construct_cli_commands(
-            mock_cli, instance=initial_instance, spec={}, loc=(),
+            mock_cli, instance=initial_instance, spec={}, loc=mock_loc,
             context=mock_context)
         self.assertEqual(len(instance), 2)
         instance_conf = instance.get(mock_cli.ADAPTER_CONF)
@@ -127,9 +143,9 @@ class TestCliAdapter(unittest.TestCase):
             initial_instance, initial={'actions': set()})
         self.assertEqual(mock_cli.construct_command.call_count, 2)
         mock_cli.construct_command.assert_any_call(
-            instance_and_conf, 'foo', {}, (), 'a', 'foo')
+            instance_and_conf, 'foo', {}, mock_loc, 'a', 'foo')
         mock_cli.construct_command.assert_any_call(
-            instance_and_conf, 'foo', {}, (), 'b', 'bar')
+            instance_and_conf, 'foo', {}, mock_loc, 'b', 'bar')
 
     @mock.patch('click.option')
     @mock.patch('click.argument')

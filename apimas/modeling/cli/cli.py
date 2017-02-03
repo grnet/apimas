@@ -281,13 +281,25 @@ class ApimasCliAdapter(NaiveAdapter):
     def __init__(self, clients):
         self.clients = clients
         self.struct_map = {}
-        self.commands = []
+        self.commands = {}
 
     def get_commands(self):
+        """ Get a list of commands for all collections. """
+        return self.clients
+
+    def get_collection_commands(self, endpoint, collection):
         """
-        Get a list commands
+        Get all commands to interact with a specific collection which belongs
+        to a specific endpoint.
+
+        :raises: ApimasException if commands are not found for the selected
+        collection.
         """
-        return self.commands
+        collection_name = endpoint + '/' + collection
+        if collection_name not in self.commands:
+            raise ex.ApimasException(
+                'Commands not found for collection `%s`' % (collection_name))
+        return self.commands[collection_name]
 
     def option_allowed(self, action, spec, option_constructor):
         """
@@ -365,9 +377,12 @@ class ApimasCliAdapter(NaiveAdapter):
         parent_name = context.get('parent_name')
         instance = self.init_adapter_conf(instance, initial={'actions': set()})
         commands = doc.doc_get(instance, ('actions', self.ADAPTER_CONF)) or {}
+        collection_name = loc[0] + '/' + parent_name
+        self.commands[collection_name] = []
         for action, command in commands.iteritems():
             command = self.construct_command(
                 instance, parent_name, spec, loc, action, command)
+            self.commands[collection_name].append(command)
             instance[self.ADAPTER_CONF]['actions'].add(command)
         return instance
 
