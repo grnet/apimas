@@ -1,7 +1,7 @@
 import mock
 import unittest
 from django.core.exceptions import FieldDoesNotExist
-from apimas.core import documents as doc
+from apimas import documents as doc
 from apimas.backends.drf import utils
 from apimas.backends.drf import django_rest
 from apimas.backends.drf.django_rest import DjangoRestAdapter

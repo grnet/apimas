@@ -1,7 +1,7 @@
 from os.path import expanduser, join, isfile
 import yaml
 from cerberus import Validator
-from apimas.core.exceptions import ApimasException
+from apimas.exceptions import ApimasException
 
 
 HOME_DIR = expanduser("~")

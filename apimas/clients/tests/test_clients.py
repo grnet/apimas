@@ -6,7 +6,7 @@ from requests.exceptions import HTTPError
 from apimas.clients import (
     ApimasClient, ApimasClientAdapter, requests, get_subdocuments,
     to_cerberus_paths, TRAILING_SLASH, ApimasValidator)
-from apimas.core.exceptions import (
+from apimas.exceptions import (
     ApimasException, ApimasClientException)
 from apimas.testing.helpers import create_mock_object
 from apimas.adapters.cookbooks import NaiveAdapter

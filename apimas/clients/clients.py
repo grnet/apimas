@@ -2,7 +2,7 @@ from copy import deepcopy
 import requests
 from requests.exceptions import HTTPError
 from requests.compat import urljoin, quote
-from apimas.core import documents as doc, exceptions as ex
+from apimas import documents as doc, exceptions as ex
 from apimas.adapters.cookbooks import NaiveAdapter
 from apimas.clients.auth import ApimasClientAuth
 from apimas.clients.extensions import (

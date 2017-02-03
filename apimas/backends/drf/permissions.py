@@ -1,8 +1,8 @@
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.permissions import BasePermission
-from apimas.core.exceptions import ApimasException
-from apimas.core.documents import ANY, AnyPattern, doc_to_ns
-from apimas.permissions.tabmatch import Tabmatch
+from apimas.exceptions import ApimasException
+from apimas.documents import ANY, AnyPattern, doc_to_ns
+from apimas.tabmatch import Tabmatch
 
 
 class ApimasPermissions(BasePermission):

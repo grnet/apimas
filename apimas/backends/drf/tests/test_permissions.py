@@ -1,10 +1,10 @@
 import unittest
 import mock
 from django.contrib.auth.models import AnonymousUser
-from apimas.core import documents as doc
+from apimas import documents as doc
 from apimas.testing.helpers import create_mock_object
 from apimas.backends.drf.permissions import ApimasPermissions
-from apimas.permissions.tabmatch import Tabmatch
+from apimas.tabmatch import Tabmatch
 
 
 class TestPermissions(unittest.TestCase):

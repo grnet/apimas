@@ -6,8 +6,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.settings import api_settings
 from rest_framework.utils import model_meta
 from rest_framework.utils.serializer_helpers import ReturnDict
-from apimas.core import exceptions as ex
-from apimas.core.documents import ANY
+from apimas import exceptions as ex
+from apimas.documents import ANY
 from apimas.backends.drf import utils
 
 

@@ -1,6 +1,6 @@
 import unittest
 import mock
-from apimas.core.exceptions import ApimasClientException
+from apimas.exceptions import ApimasClientException
 from apimas.clients.auth import HTTPTokenAuth, ApimasClientAuth
 
 

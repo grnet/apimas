@@ -4,7 +4,7 @@ from django.conf.urls import url, include
 from django.core.exceptions import FieldDoesNotExist
 from rest_framework import serializers
 from rest_framework import routers
-from apimas.core import documents as doc
+from apimas import documents as doc
 from apimas.backends.drf import utils
 from apimas.backends.drf.serializers import (
     generate_container_serializer, generate_model_serializer)

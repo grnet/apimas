@@ -1,4 +1,4 @@
-from documents import (
+from apimas.documents import (
     random_doc, doc_pop, doc_match_levels, doc_iter, doc_construct,
     doc_set, doc_get, Prefix)
 

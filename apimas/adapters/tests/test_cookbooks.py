@@ -1,7 +1,7 @@
 import mock
 import unittest
-from apimas.core import documents as doc
-from apimas.core.exceptions import (
+from apimas import documents as doc
+from apimas.exceptions import (
     ApimasException, ApimasAdapterException)
 from apimas.adapters.cookbooks import NaiveAdapter
 from apimas.testing.helpers import create_mock_object

@@ -1,6 +1,6 @@
 import unittest
 import mock
-from apimas.core import documents as doc, exceptions as ex
+from apimas import documents as doc, exceptions as ex
 from apimas.testing.helpers import create_mock_object
 from apimas.cli.cli import ApimasCliAdapter, BaseCommand
 from apimas.adapters.cookbooks import SKIP

@@ -1,5 +1,5 @@
 import importlib
-from apimas.core.exceptions import ApimasAdapterException
+from apimas.exceptions import ApimasAdapterException
 
 
 AUTH_CLASSES_LOOKUP_FIELD = 'authentication_classes'

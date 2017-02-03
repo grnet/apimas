@@ -1,4 +1,4 @@
-from apimas.core import documents as doc
+from apimas import documents as doc
 
 prefix = doc.Prefix('abc')
 

@@ -8,7 +8,7 @@ from django.core.urlresolvers import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from faker import Factory
 from pytz import timezone
-from apimas.core import documents as doc
+from apimas import documents as doc
 from apimas.backends.drf.django_rest import DjangoRestAdapter
 
 

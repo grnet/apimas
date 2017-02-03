@@ -1,5 +1,5 @@
 from collections import namedtuple
-from apimas.core.documents import (
+from apimas.documents import (
     doc_set, doc_match_levels, doc_iter, ANY, Prefix, Regex)
 
 

@@ -1,6 +1,6 @@
 from requests import Response
 from requests.exceptions import HTTPError
-from apimas.core.errors import GenericException
+from apimas.errors import GenericException
 
 
 class ApimasException(GenericException):

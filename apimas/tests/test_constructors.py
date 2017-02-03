@@ -1,7 +1,7 @@
 # XXX: temporary test file until we have proper unit testing
 
-from documents import *
-from constructors import *
+from apimas.documents import *
+from apimas.constructors import *
 from pprint import pprint
 
 

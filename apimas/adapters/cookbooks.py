@@ -1,4 +1,4 @@
-from apimas.core import documents as doc, exceptions as ex
+from apimas import documents as doc, exceptions as ex
 from apimas.adapters import Adapter
 
 

@@ -6,7 +6,7 @@ from apimas import utils
 from apimas.cli.custom_types import (
     Email, Json, Credentials, Date, DateTime)
 from apimas.clients import ApimasClientAdapter
-from apimas.core import documents as doc, exceptions as ex
+from apimas import documents as doc, exceptions as ex
 from apimas.adapters.cookbooks import NaiveAdapter, SKIP
 
 
