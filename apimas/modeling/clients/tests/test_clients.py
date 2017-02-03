@@ -5,7 +5,7 @@ import mock
 from requests.exceptions import HTTPError
 from apimas.modeling.clients import (
     ApimasClient, ApimasClientAdapter, requests, get_subdocuments,
-    to_cerberus_paths, TRAILING_SLASH)
+    to_cerberus_paths, TRAILING_SLASH, ApimasValidator)
 from apimas.modeling.core.exceptions import (
     ApimasException, ApimasClientException)
 from apimas.modeling.tests.helpers import create_mock_object
@@ -188,19 +188,23 @@ class TestClientAdapter(unittest.TestCase):
         mock_client = create_mock_object(ApimasClientAdapter, ['get_client'])
         mock_client.clients = {}
         self.assertRaises(ApimasException, mock_client.get_client,
-                          mock_client, 'collection')
-        mock_clients = {'collection': 'value'}
+                          mock_client, endpoint='api', collection='collection')
+        mock_clients = {'api/collection': 'value'}
         mock_client.clients = mock_clients
-        value = mock_client.get_client(mock_client, 'collection')
-        self.assertEquals(value, mock_clients['collection'])
+        value = mock_client.get_client(mock_client, endpoint='api',
+                                       collection='collection')
+        self.assertEquals(value, mock_clients['api/collection'])
 
     @mock.patch(
         'apimas.modeling.adapters.cookbooks.NaiveAdapter.construct_collection')
-    def test_construct_collection(self, mock_constructor):
+    @mock.patch('apimas.modeling.clients.clients.ApimasValidator')
+    def test_construct_collection(self, mock_validator, mock_constructor):
         mock_client = create_mock_object(
             ApimasClientAdapter, ['construct_collection', 'ADAPTER_CONF'],
             ismagic=True)
+        mock_client.clients = {}
         mock_client.__class__.__bases__ = (NaiveAdapter,)
+        mock_client.root_url = 'http://example.com'
         mock_instance = {
             '*': {
                 'field1': {
@@ -212,16 +216,27 @@ class TestClientAdapter(unittest.TestCase):
                 }
             }
         }
+        context = {'parent_name': 'foo'}
         loc = ('api', 'collection', '.collection')
         mock_constructor.return_value = mock_instance
         instance = mock_client.construct_collection(
-            mock_client, mock_instance, {}, loc, context={})
+            mock_client, mock_instance, {}, loc, context=context)
         self.assertEqual(len(instance), 2)
         instance_conf = instance.get(mock_client.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)
         self.assertEqual(instance_conf['field1'], {'foo': 'bar'})
         self.assertEqual(instance_conf['field2'], {'bar': 'foo'})
         mock_constructor.assert_called_once
+
+        # Assert client construction.
+        self.assertEqual(len(mock_client.clients), 1)
+        client = mock_client.clients.get('api/foo')
+        self.assertTrue(isinstance(client, ApimasClient))
+        self.assertEqual(client.endpoint, 'http://example.com/api/foo/')
+
+        self.assertTrue(isinstance(client.api_validator, mock.Mock))
+        mock_validator.assert_called_once_with({'field1': {'foo': 'bar'},
+                                                'field2': {'bar': 'foo'}})
 
     def test_construct_field(self):
         mock_instance = {'foo': {'bar': {}}, self.adapter_conf: {}}

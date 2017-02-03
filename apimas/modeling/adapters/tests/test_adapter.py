@@ -10,9 +10,6 @@ class TestAdapter(unittest.TestCase):
     def test_construct(self):
         self.assertRaises(NotImplementedError, self.adapter.construct, {})
 
-    def test_apply(self):
-        self.assertRaises(NotImplementedError, self.adapter.apply)
-
     @mock.patch('apimas.modeling.adapters.utils.default_constructor')
     def test_get_constructors(self, mock_constructor):
         mock_method = mock.Mock()

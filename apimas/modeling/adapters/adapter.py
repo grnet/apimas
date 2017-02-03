@@ -65,9 +65,6 @@ class Adapter(object):
     def construct(self, spec):
         raise NotImplementedError('`gen_adapter_spec()` must be implemented')
 
-    def apply(self):
-        raise NotImplementedError('`apply()` must be implemeneted')
-
     def get_constructors(self):
         return {predicate[1:]: getattr(
             self, self.CONSTRUCTOR_PREFIX + '_' + predicate[1:],

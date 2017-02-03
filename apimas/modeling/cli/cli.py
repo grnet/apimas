@@ -378,7 +378,8 @@ class ApimasCliAdapter(NaiveAdapter):
         """
         assert len(loc) == 4
         self.init_adapter_conf(instance)
-        command = self.COMMANDS[action](self.clients.get(loc[-3]))
+        collection = loc[0] + '/' + loc[-3]
+        command = self.COMMANDS[action](self.clients.get(collection))
         if action in self.RESOURCE_ACTIONS:
             command = click.argument('resource_id')(command)
         if action in self.CRITICAL_ACTIONS:
@@ -551,7 +552,6 @@ def main():
     spec = data['spec']
     client_gen = ApimasClientAdapter(root_url)
     client_gen.construct(spec)
-    client_gen.apply()
     cli = ApimasCliAdapter(client_gen.get_clients())
     cli.construct(spec)
     base_group()

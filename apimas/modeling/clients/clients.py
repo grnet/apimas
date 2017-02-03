@@ -412,37 +412,19 @@ class ApimasClientAdapter(NaiveAdapter):
     def get_clients(self):
         return self.clients
 
-    def get_client(self, collection):
+    def get_client(self, endpoint, collection):
         """
-        Retrieve client according to resource name.
+        Retrieve client according to a collection and the endpoint to which
+        it belongs.
 
         :raises: ApimasException if client is not found for the selected
         resource.
         """
-        if collection not in self.clients:
+        collection_name = endpoint + '/' + collection
+        if collection_name not in self.clients:
             raise ex.ApimasException(
-                'Client not found for resource `%s`' % (collection))
-        return self.clients[collection]
-
-    def apply(self):
-        """
-        Apply generated cerberus specification and create `ApimasClient`
-        objects for every resource defined in the specification.
-        """
-        if not self.adapter_spec:
-            raise ex.ApimasException(
-                'Cannot create clients from an empty spec')
-
-        structural_elements = self.get_structural_elements(self.adapter_spec)
-        assert len(structural_elements) == 1
-        for collection, spec in doc.doc_get(
-                self.adapter_spec, (structural_elements[0],)).iteritems():
-            schema = spec.get(self.ADAPTER_CONF, {})
-            endpoint = urljoin(
-                self.root_url, TRAILING_SLASH.join(
-                    [structural_elements[0], collection]))
-            endpoint += TRAILING_SLASH
-            self.clients[collection] = ApimasClient(endpoint, schema)
+                'Client not found for resource `%s`' % (collection_name))
+        return self.clients[collection_name]
 
     def construct_collection(self, instance, spec, loc, context):
         """
@@ -457,7 +439,13 @@ class ApimasClientAdapter(NaiveAdapter):
         schema = {field_name: schema.get(self.ADAPTER_CONF, {})
                   for field_name, schema in doc.doc_get(
                       instance, ('*',)).iteritems()}
+        collection = context.get('parent_name')
+        endpoint = urljoin(
+            self.root_url, TRAILING_SLASH.join([loc[0], collection]))
+        endpoint += TRAILING_SLASH
         instance[self.ADAPTER_CONF] = schema
+        client = ApimasClient(endpoint, schema)
+        self.clients[loc[0] + '/' + collection] = client
         return instance
 
     def construct_field(self, instance, spec, loc, context):
