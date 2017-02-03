@@ -31,7 +31,8 @@ class SpecGenerator(object):
     EXTRA = {
         '.date': {'format': ['%Y-%m-%d']},
         '.datetime': {'format': ['%Y-%m-%d %H:%M']},
-        '.string': {'max_length': utils.NumberGenerator(upper=255)()}
+        '.string': {'max_length': utils.NumberGenerator(lower=1,
+                                                        upper=255)()}
     }
 
     def __init__(self, endpoint=None, permissions=None):

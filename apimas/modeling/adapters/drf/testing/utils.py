@@ -21,15 +21,14 @@ class Generator(object):
 
 
 class NumberGenerator(Generator):
-    def __init__(self, upper=10, negative=False, isfloat=False):
+    def __init__(self, upper=10, lower=0, isfloat=False):
         self.upper = upper
-        self.negative = negative
+        self.lower = lower
         self.isfloat = isfloat
 
     def __call__(self, api=False):
-        lower = -self.upper if self.negative else 0
-        return random.randint(lower, self.upper) if not self.isfloat\
-            else random.uniform(lower, self.upper)
+        return random.randint(self.lower, self.upper) if not self.isfloat\
+            else random.uniform(self.lower, self.upper)
 
 
 class DateGenerator(Generator):
