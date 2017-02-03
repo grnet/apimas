@@ -280,7 +280,7 @@ class ApimasCliAdapter(NaiveAdapter):
 
     def __init__(self, clients):
         self.clients = clients
-        self.struct_map = {}
+        self._struct_map = {}
         self.commands = {}
 
     def get_commands(self):
@@ -428,7 +428,7 @@ class ApimasCliAdapter(NaiveAdapter):
                     continue
                 command = option_constructor(option_name, params)(command)
                 path = (field_name,) if '.struct' not in spec\
-                    else self.struct_map[option_name]
+                    else self._struct_map[option_name]
                 command.register_option_mapping(
                     option_name.replace('-', '_'), path)
         return base_group.command(name=loc[-2] + '-' + action)(command)
@@ -500,8 +500,8 @@ class ApimasCliAdapter(NaiveAdapter):
                 continue
             for nested, params in schema.get(self.ADAPTER_CONF).iteritems():
                 option_kwargs.update({option_name + '-' + nested: params})
-                self.struct_map[option_name + '-' + nested] = (
-                    parent_name,) + self.struct_map.get(nested, (nested,))
+                self._struct_map[option_name + '-' + nested] = (
+                    parent_name,) + self._struct_map.get(nested, (nested,))
         instance[self.ADAPTER_CONF].update(option_kwargs)
         return instance
 

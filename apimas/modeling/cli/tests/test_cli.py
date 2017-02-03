@@ -257,7 +257,7 @@ class TestCliAdapter(unittest.TestCase):
     def test_construct_struct_option(self):
         mock_cli = create_mock_object(
             ApimasCliAdapter, ['construct_struct_option', 'ADAPTER_CONF'])
-        mock_cli.struct_map = {}
+        mock_cli._struct_map = {}
         mock_loc = ('foo', 'bar')
 
         mock_instance = {
@@ -282,7 +282,7 @@ class TestCliAdapter(unittest.TestCase):
         self.assertIsNotNone(instance_conf)
         self.assertEqual(len(instance_conf), 1)
         self.assertEqual(instance_conf['test-foo_option'], {'a': {}})
-        self.assertEqual(mock_cli.struct_map,
+        self.assertEqual(mock_cli._struct_map,
                          {'test-foo_option': ('foo', 'foo_option')})
 
     def test_construct_option_type(self):
