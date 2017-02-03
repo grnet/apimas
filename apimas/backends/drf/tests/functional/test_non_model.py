@@ -1,6 +1,6 @@
-from apimas.adapters.drf.testing import (
+from apimas.backends.drf.testing import (
     apimas_context, ApimasTestCase)
-from apimas.adapters.drf.tests.utils import ACTIONS
+from apimas.backends.drf.tests.utils import ACTIONS
 
 
 def get_value(instance):
@@ -15,7 +15,7 @@ SPEC = {
         'mymodel': {
             '.collection': {},
             '.drf_collection': {
-                'model': 'apimas.adapters.drf.tests.models.MyModel',
+                'model': 'apimas.backends.drf.tests.models.MyModel',
             },
             '*': {
                 'data': {

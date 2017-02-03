@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class TestApp(AppConfig):
-    name = 'apimas.adapters.drf.tests'
+    name = 'apimas.backends.drf.tests'

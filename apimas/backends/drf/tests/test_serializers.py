@@ -1,6 +1,6 @@
 import mock
 import unittest
-from apimas.adapters.drf.serializers import get_paths
+from apimas.backends.drf.serializers import get_paths
 
 
 class TestSerializers(unittest.TestCase):

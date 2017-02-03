@@ -1,6 +1,6 @@
 import mock
 import unittest
-from apimas.adapters.drf import views, utils
+from apimas.backends.drf import views, utils
 
 
 side_effect = lambda x: 'imported_' + x
@@ -11,7 +11,7 @@ class TestViews(unittest.TestCase):
     @mock.patch.object(views, 'get_filtering_options')
     @mock.patch.object(views, 'gen_apimas_permission_cls')
     @mock.patch.object(views, 'get_bases_classes')
-    @mock.patch('apimas.adapters.drf.utils.import_object')
+    @mock.patch('apimas.backends.drf.utils.import_object')
     def test_generate_view(self, mock_import, mock_bases,
                            mock_apimas_perm, mock_filtering):
         mock_import.side_effect = side_effect

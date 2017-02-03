@@ -1,11 +1,11 @@
 import random
 from rest_framework import status
-from apimas.adapters.drf.testing import (
+from apimas.backends.drf.testing import (
     apimas_context, ApimasTestCase)
-from apimas.adapters.drf.testing import utils
-from apimas.adapters.drf.tests.utils import ACTIONS
-from apimas.adapters.drf.mixins import HookMixin
-from apimas.adapters.drf.tests.models import MyModel
+from apimas.backends.drf.testing import utils
+from apimas.backends.drf.tests.utils import ACTIONS
+from apimas.backends.drf.mixins import HookMixin
+from apimas.backends.drf.tests.models import MyModel
 
 
 PERMISSION_ACTIONS = {
@@ -61,8 +61,8 @@ SPEC = {
         'mymodel': {
             '.collection': {},
             '.drf_collection': {
-                'model': 'apimas.adapters.drf.tests.models.MyModel',
-                'hook_class': 'apimas.adapters.drf.tests.functional.test_hooks.WriteOperations',
+                'model': 'apimas.backends.drf.tests.models.MyModel',
+                'hook_class': 'apimas.backends.drf.tests.functional.test_hooks.WriteOperations',
             },
             '*': {
                 'id': {

@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from apimas.adapters.drf import mixins
+from apimas.backends.drf import mixins
 
 
 class ReadOnlyModelViewSet(mixins.RetrieveModelMixin,

@@ -1,6 +1,6 @@
 import mock
 import unittest
-from apimas.adapters.drf import utils
+from apimas.backends.drf import utils
 
 
 class TestUtils(unittest.TestCase):

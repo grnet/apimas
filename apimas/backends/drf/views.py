@@ -1,7 +1,7 @@
 from rest_framework import filters, viewsets
-from apimas.adapters.drf import (
+from apimas.backends.drf import (
     utils, mixins as view_mixins, viewsets as apimas_viewsets)
-from apimas.adapters.drf.permissions import ApimasPermissions
+from apimas.backends.drf.permissions import ApimasPermissions
 
 
 FILTERING_BACKENDS = {

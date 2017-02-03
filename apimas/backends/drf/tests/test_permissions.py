@@ -3,7 +3,7 @@ import mock
 from django.contrib.auth.models import AnonymousUser
 from apimas.core import documents as doc
 from apimas.testing.helpers import create_mock_object
-from apimas.adapters.drf.permissions import ApimasPermissions
+from apimas.backends.drf.permissions import ApimasPermissions
 from apimas.permissions.tabmatch import Tabmatch
 
 

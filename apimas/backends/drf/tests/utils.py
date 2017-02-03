@@ -1,8 +1,8 @@
 import copy
 import random
 from django.db import models
-from apimas.adapters.drf.utils import import_object
-from apimas.adapters.drf.testing import utils
+from apimas.backends.drf.utils import import_object
+from apimas.backends.drf.testing import utils
 
 
 COLLECTION_TEMPLATE = {
