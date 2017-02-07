@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import unittest
 import mock
 from requests.exceptions import HTTPError
@@ -172,6 +174,10 @@ class TestClients(unittest.TestCase):
 
         doc = {}
         self.assertEquals(to_cerberus_paths(doc), [])
+
+    def test_unicode(self):
+        endpoint = self.client.format_endpoint(u"ύνικοδε")
+        self.assertIsInstance(endpoint, str)
 
 
 class TestClientAdapter(unittest.TestCase):

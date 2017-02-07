@@ -209,6 +209,8 @@ class ApimasClient(object):
 
         Example: endpoint/<pk>/
         """
+        if isinstance(resource_id, unicode):
+            resource_id = resource_id.encode("utf-8")
         return urljoin(self.endpoint, quote(
             str(resource_id))) + TRAILING_SLASH
 
