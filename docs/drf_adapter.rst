@@ -187,7 +187,6 @@ Example:
 
     adapter = DjangoRestAdapter()
     adapter.construct(API_SPEC)
-    adapter.apply()
 
     urlpatterns = [
         adapter.urls

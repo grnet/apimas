@@ -62,7 +62,6 @@ methods to interact with the API:
 
     adapter = ApimasClientAdapter('http://localhost:8000')
     adapter.construct(API_SPEC)
-    adapter.apply()
 
     clients = adapters.clients
     foo_client = adapter.get_client('foo')
