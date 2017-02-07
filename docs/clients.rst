@@ -165,20 +165,27 @@ The CLI-adapter constructs a set of commands for every collection.
 For example, for the collection `foo`, we have the following commands
 corresponding to every action as specified on specification:
 
-- ``apimas foo-list``
-- ``apimas foo-retrieve``
-- ``apimas foo-create``
-- ``apimas foo-update``
-- ``apimas foo-delete``
+- ``apimas api foo-list``
+- ``apimas api foo-retrieve``
+- ``apimas api foo-create``
+- ``apimas api foo-update``
+- ``apimas api foo-delete``
 
 Apparently, these five commands use the same client object internally,
 that is, the client object which is responsible for interacting with
-collection ``foo``.
+the collection ``foo``. Note that sub-command ``api`` stands for the
+endpoint (i.e. ``api``) in which collection is located.
 
 Also note that if one action is not specified on specification, the
 corresponding command is not created. For instance, if we remove the
 ``.list`` predicate, there will not be the ``apimas foo-list``
 command.
+
+Generally, the generated command has the following format:
+
+.. code-block:: shell
+
+    apimas <endpoint> <collection>-<action> --<option1> --<option2>
 
 Command options
 ---------------
@@ -194,7 +201,7 @@ Example:
 
 .. code-block:: shell
 
-    apimas foo-create --text foo --number 1
+    apimas api foo-create --text foo --number 1
 
 In the above example, we use the ``foo-create`` command to create a
 new resource of collection foo, setting text as `foo` and number as 1.
@@ -234,7 +241,7 @@ option and it creates a mapping with the name of the API field.
 
 .. code-block:: shell
 
-    apimas foo-create --text-option foo --number-option 1
+    apimas api foo-create --text-option foo --number-option 1
 
 However, the HTTP request which is going to be made by the client,
 has still the structure as defined by the specification.
@@ -300,7 +307,7 @@ Example:
 
 .. code-block:: shell
 
-    apimas foo-create --foo-age 1 --foo-name myname --bar '[{"age": 1, "name": "myname"}]'
+    apimas api foo-create --foo-age 1 --foo-name myname --bar '[{"age": 1, "name": "myname"}]'
 
 Resource actions
 ----------------
@@ -313,9 +320,9 @@ Example:
 
 .. code-block:: shell
 
-    apimas foo-update bar --data foo --number 1
-    apimas foo-retrieve bar
-    apimas foo-delete bar
+    apimas api foo-update bar --data foo --number 1
+    apimas api foo-retrieve bar
+    apimas api foo-delete bar
 
 We performed update, retrieve and delete actions on a resource of
 collection `foo`, identified by the name **"bar"**.
@@ -382,11 +389,11 @@ Now you are ready to execute all commands:
 
 .. code-block:: shell
 
-    apimas foo-list --credentials ~/mycredentials.yaml
-    apimas foo-retrieve bar --credentials ~/mycredentials.yaml
-    apimas foo-create --text foo --number 1 --credentials ~/mycredentials.yaml
-    apimas foo-update bar --text foo --number 1 --credentials ~/mycredentials.yaml
-    apimas foo-delete bar --credentials ~/credentials.yaml
+    apimas api foo-list --credentials ~/mycredentials.yaml
+    apimas api foo-retrieve bar --credentials ~/mycredentials.yaml
+    apimas api foo-create --text foo --number 1 --credentials ~/mycredentials.yaml
+    apimas api foo-update bar --text foo --number 1 --credentials ~/mycredentials.yaml
+    apimas api foo-delete bar --credentials ~/credentials.yaml
 
 Multiple Authentication Modes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
