@@ -1,5 +1,5 @@
-Quickstart - Writing APIMAS Specification
-=========================================
+Write APIMAS Specification
+==========================
 
 Before you read this section, you should take a look at the
 introduction of APIMAS `specification <specification.html>`__.
