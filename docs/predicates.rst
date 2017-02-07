@@ -116,6 +116,23 @@ Predicate         Description
 ``.boolean``      Parent node is either true or false.
 ``.email``        Parent node is an email address.
 ``.serial``       Parent node is a serial, non-writable integer number.
+``.choices``      Parent node can take a list of allowed values as specified
+                  by the parameter ``allowed``.
+
+                      .. code-block:: python
+
+                          'foo': {
+                              '.choices': {
+                                  'allowed': [1, 'bar']
+                              }
+                          }
+                      Parent node can be either 1 or 'bar'.
+
+                  **Parameters**:
+                      `allowed`: A list of acceptable values for the parent.
+
+                      `display`: A list  of the displayed values of the node.
+
 ``.ref``          Parent node points to the web location of another resource.
 
                   **Parameters**:
