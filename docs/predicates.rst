@@ -112,6 +112,7 @@ Predicate         Description
 
                   **Parameters**:
                       `maxlength`: The upper bound of string's size (optional).
+                      The default is 255.
 ``.boolean``      Parent node is either true or false.
 ``.email``        Parent node is an email address.
 ``.serial``       Parent node is a serial, non-writable integer number.
@@ -131,11 +132,17 @@ Predicate         Description
                   
                    
                   **Parameters**:
-                      `format`:  A string representing the output format.
+                      `format`:  A list of string representing the allowed
+                      input formats of the date. (optional).
+                      By default only `ISO-8601 <http://www.iso.org/iso/home/standards/iso8601.htm>`__
+                      is allowed.
 ``.datetime``     Parent node is a datetime, represented by a string.
 
                   **Parameters**:
-                      `format`:  A string representing the output format.
+                      `format`:  A list of strings representing the allowed.
+                      input formats of the datetime.
+                      By default only `ISO-8601 <http://www.iso.org/iso/home/standards/iso8601.htm>`__
+                      is allowed.
 ``.struct``       Parent node is a structure which consists of another field
                   schema, i.e. a set of fields with their types and properties.
 
