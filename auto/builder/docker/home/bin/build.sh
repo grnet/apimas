@@ -63,6 +63,9 @@ for source_name in "${source_vars}"; do
         elif [ -z "${release_tag}" ]; then
             release_tag="${var}"
             if [ -n "${release_tag}" ]; then
+                if [ "${release_tag}" = "%now" ]; then
+                    release_tag=$(date --utc -Imin | cut -d+ -f 1 | sed -e 's/[^0-9]/./g')
+                fi
                 release_tag_opt="-r ${release_tag}"
             fi
         fi
