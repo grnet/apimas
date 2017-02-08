@@ -236,7 +236,7 @@ class NaiveAdapter(Adapter):
         This maps predicate to the specified type according to mapping.
         """
         allowed = spec.get('allowed')
-        if not isinstance(allowed, list):
+        if not isinstance(allowed, (list, tuple)):
             raise ex.ApimasAdapterException(
                 '`choices` property requires a list of allowed values.',
                 loc=loc)
