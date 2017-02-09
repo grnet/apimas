@@ -1,4 +1,4 @@
-from apimas.modeling.adapters.drf import mixins
+from apimas.backends.drf import mixins
 from eshop.models import Order
 
 
