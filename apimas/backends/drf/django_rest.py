@@ -664,21 +664,6 @@ class DjangoRestAdapter(NaiveAdapter):
                 name, model, source or name, loc)
         return model_attr, model, automated
 
-    def validate_intersectional_pairs(self, properties):
-        """
-        Validate properties of fields.
-
-        There are some properties that cannot be set together, such as
-        `required` and `readonly`. This method checks for such violations and
-        raises an exception in this case.
-        """
-        for field_name, prop in properties.iteritems():
-            for u, v in self.NON_INTERSECTIONAL_PAIRS:
-                if prop.get(u, False) and prop.get(v, False):
-                    raise utils.DRFAdapterException(
-                        'Field `%s` cannot be both %s and %s' % (
-                            field_name, u, v))
-
     def get_constructor_params(self, spec, loc, params):
         """
         Get constructor params for all the constructors that represent a
