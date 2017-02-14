@@ -91,7 +91,7 @@ class Credentials(click.File):
         }
         f = super(self.__class__, self).convert(value, param, ctx)
         if self.file_type not in file_loaders:
-            self.fail('`%s` format is not supported' % (self.file_type))
+            self.fail('{!r} format is not supported'.format(self.file_type))
         credentials = file_loaders[self.file_type](f)
         return self.parse_credentials(credentials)
 
@@ -111,15 +111,15 @@ class Credentials(click.File):
             auth_type, auth_schema = default, credentials.get(default, None)
         if auth_type not in self.schema:
             self.fail(
-                '`%s` is not part of supported authentication schemas' % (
+                '{!r} is not part of supported authentication schemas'.format(
                     auth_type))
         if not auth_schema:
             self.fail(
-                'Cannot find `%s` as authentication schema' % (auth_type))
+                'Cannot authentication schema of find {!r}'.format(auth_type))
 
         if isinstance(auth_type, dict) or set(auth_schema).difference(
                 self.schema[auth_type]):
             self.fail(
-                'Schema of `%s` does not conform to the specification' % (
+                'Schema of {!r} does not conform to the specification'.format(
                     auth_type))
         return auth_type, auth_schema

@@ -37,8 +37,8 @@ def _validate_model_type(api_field_name, model_field, django_field_type,
         matches = isinstance(model_field, django_field_type)
     if not matches:
         raise utils.DRFAdapterException(
-            'Field %s is not %s type in your django model' % (
-                repr(api_field_name), repr(django_field_type)), loc=loc)
+            'Field {!r} is not a {!r} in your django model'.format(
+                api_field_name, django_field_type), loc=loc)
     return model_field
 
 
@@ -50,7 +50,7 @@ def _validate_relational_field(api_field_name, ref_model, model_field,
     """
     if model_field.related_model is not ref_model:
         raise utils.DRFAdapterException(
-            'Model field of %s is not related to %s.' % (
+            'Model field {!r} is not related to {!r}.'.format(
                 model_field.name, ref_model), loc=loc)
     return model_field
 
@@ -61,7 +61,7 @@ def _validate_model_attribute(api_field_name, model, model_attr_name,
     model_attr = getattr(model, model_attr_name, None)
     if model_attr is None:
         raise utils.DRFAdapterException(
-            'Attribute %s (%s) not found in model %s' % (
+            'Attribute {!r} ({!r}) not found in model {!r}'.format(
                 model_attr_name, api_field_name, model.__name__), loc=loc)
     return model_attr
 
@@ -190,11 +190,11 @@ class DjangoRestAdapter(NaiveAdapter):
         collection_name = endpoint + '/' + collection
         if not class_container:
             raise utils.DRFAdapterException(
-                'Classes have not been constructed yet. Run %s.construct()' % (
-                    self.__class__.__name__))
+                'Classes have not been constructed yet.'
+                ' Run {!s}.construct()`'.format(self.__class__.__name__))
         if collection_name not in class_container:
             raise utils.DRFAdapterException(
-                'Class not found for collection %s' % (collection_name))
+                'Class not found for collection {!r}'.format(collection_name))
         return class_container[collection_name]
 
     def get_serializer(self, endpoint, collection):
@@ -216,7 +216,7 @@ class DjangoRestAdapter(NaiveAdapter):
         collections = self.get_structural_elements(instance)
         if not collections:
             raise utils.DRFAdapterException(
-                '.endpoint with not any collection found', loc=loc)
+                '.endpoint without any collection found.', loc=loc)
         router = routers.DefaultRouter()
         for collection in collections:
             collection_spec = instance.get(collection)
@@ -504,8 +504,8 @@ class DjangoRestAdapter(NaiveAdapter):
         onmodel = spec.get('onmodel', True)
         if instance_source and onmodel:
             raise utils.DRFAdapterException(
-                'You don\'t have to specify `instance_source` if'
-                ' `onmodel` is set', loc=loc)
+                '`instance_source` and `onmodel=True` are mutually'
+                ' exclusive.', loc=loc)
         field_kwargs = {k: v for k, v in spec.iteritems() if k != 'onmodel'}
         field_kwargs.update(doc.doc_get(instance, path) or {})
         field_kwargs.update(self._get_extra_field_kwargs(
@@ -586,8 +586,8 @@ class DjangoRestAdapter(NaiveAdapter):
         type_predicate = self.extract_type(instance)
         if type_predicate is None:
             raise utils.DRFAdapterException(
-                'Cannot construct drf field `%s` without specifying its'
-                ' type' % (parent), loc=loc)
+                'Cannot construct drf field {!r} without specifying its'
+                ' type'.format(parent), loc=loc)
         return field_constructors.get(
             type_predicate, self.default_field_constructor)(
                 instance, spec, loc, context, type_predicate)
@@ -636,7 +636,7 @@ class DjangoRestAdapter(NaiveAdapter):
         """
         if property_name not in self.PROPERTY_MAPPING:
             raise utils.DRFAdapterException(
-                'Unknown property `%s`' % (property_name), loc=loc)
+                'Unknown property {!r}'.format(property_name), loc=loc)
         self.init_adapter_conf(instance)
         instance[self.ADAPTER_CONF].update(
             {self.PROPERTY_MAPPING[property_name]: True})
@@ -653,7 +653,7 @@ class DjangoRestAdapter(NaiveAdapter):
         automated = True
         if model is None:
             raise utils.DRFAdapterException(
-                'Invalid argument, model cannot be `None`', loc=loc)
+                'Invalid argument, model cannot be `None`.', loc=loc)
         try:
             model_field = model._meta.get_field(source or name)
             model_attr = _validate_model_type(name, model_field,
@@ -724,6 +724,6 @@ class DjangoRestAdapter(NaiveAdapter):
         related_field = model._meta.get_field(related_field)
         if related_field.related_model is None:
             raise utils.DRFAdapterException(
-                'Field %s is not related with another model' % (
-                    repr(related_field)), loc=loc)
+                'Field {!r} is not related with another model'.format(
+                    related_field), loc=loc)
         return related_field.related_model

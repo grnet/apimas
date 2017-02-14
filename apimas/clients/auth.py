@@ -38,13 +38,13 @@ class ApimasClientAuth(AuthBase):
         if self.auth_type is None:
             return r
         if self.auth_type not in self.AUTHENTICATION_BACKENDS:
-            raise ApimasClientException('%s auth type is not supported' % (
-                repr(self.auth_type)))
+            raise ApimasClientException(
+                '{!r} auth type is not supported'.format(self.auth_type))
         try:
             auth = self.AUTHENTICATION_BACKENDS[self.auth_type](
                 **self.credentials)
         except TypeError:
             raise ApimasClientException(
-                'Given credentials do not match with the `%s` auth type' % (
-                    self.auth_type))
+                'Given credentials do not match with that of {!r} auth'
+                ' type'.format(self.auth_type))
         return auth(r)

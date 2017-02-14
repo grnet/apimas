@@ -27,8 +27,8 @@ def lookup_value(field_name, source, instance):
 
     if source is None:
         raise ex.ApimasException(
-            'Cannot retrieve instance value for the field `%s` given a'
-            ' NoneType source' % (field_name))
+            'Cannot retrieve instance value for the field {!r} given a'
+            ' NoneType source'.format(field_name))
 
     attrs = source.split(',')
     for attr in attrs:
@@ -38,7 +38,7 @@ def lookup_value(field_name, source, instance):
         else:
             raise ex.ApimasException(
                 'Cannot retrieve instance value of the'
-                ' field %s given the source `%s`' % (field_name, source))
+                ' field {!r} given the source {!r}'.format(field_name, source))
     return instance
 
 
@@ -95,7 +95,8 @@ class ContainerSerializer(serializers.BaseSerializer):
         fields = getattr(meta_cls, 'extra_fields', [])
         if not (fields or model_fields):
             raise ex.ApimasException(
-                '`extra_fields` and `model_fields` attributes are unspecified')
+                '`extra_fields` and `model_fields` attributes are not'
+                ' specified')
         if not (self.model_ser_cls or self.ser_cls):
             raise ex.ApimasException(
                 'A `ContainerSerializer` must define a `ModelSerializer` class'
@@ -409,7 +410,7 @@ class ApimasSerializer(serializers.Serializer):
         out = drf_field.update(instance, value, **kwargs) if instance\
             else drf_field.create(value, **kwargs)
         if out and new_instance:
-            raise ex.ApimasException('Found multiple instances')
+            raise ex.ApimasException('Multiple instances found')
         if not new_instance:
             return out
 
@@ -636,6 +637,8 @@ def classify_model_fields(model_fields):
         if isinstance(value, serializers.Field):
             drf_fields[field_name] = value
         else:
-            assert isinstance(value, dict)
+            assert isinstance(value, dict), (
+                'A dictionary of serializer field properties is expected.'
+                ' A {!r} found'.format(str(type(value))))
             field_properties[field_name] = value
     return field_properties, drf_fields

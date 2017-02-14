@@ -58,7 +58,7 @@ class NaiveAdapter(Adapter):
         if not field_schema:
             raise ex.ApimasAdapterException(
                 'A collection must define its field schema.'
-                ' Empty collection found: %s' % (loc[-2]), loc=loc)
+                ' Empty collection found: {!r}'.format(loc[-2]), loc=loc)
         return instance
 
     def construct_type(self, instance, spec, loc, context, field_type=None):
@@ -71,7 +71,7 @@ class NaiveAdapter(Adapter):
         self.init_adapter_conf(instance)
         if field_type not in self.TYPE_MAPPING:
             raise ex.ApimasAdapterException(
-                'Unknown field type: `%s`' % (field_type), loc=loc)
+                'Unknown field type: {!r}'.format(field_type), loc=loc)
         field_schema = {'type': self.TYPE_MAPPING[field_type]}
         instance[self.ADAPTER_CONF].update(field_schema)
         return instance
@@ -80,12 +80,13 @@ class NaiveAdapter(Adapter):
         if not spec:
             raise ex.ApimasAdapterException(
                 'A structure must define its field schema.'
-                ' Empty structure found: %s' % (loc[-2]), loc=loc)
+                ' Empty structure found: {!r}'.format(loc[-2]), loc=loc)
         for k, v in spec.iteritems():
             if not isinstance(v, dict):
+                msg = ('Not known properties for field {!r} of struct {!r}.'
+                       ' A dict with the schema of structure must be provided.')
                 raise ex.ApimasAdapterException(
-                    'Not known properties for field `%s` of struct `%s`' % (
-                        k, loc[-2]), loc=loc)
+                    msg.format(k, loc[-2]), loc=loc)
 
     def construct_struct(self, instance, spec, loc, context):
         """
@@ -119,14 +120,14 @@ class NaiveAdapter(Adapter):
                 'You have to specify `to` parameter', loc=loc)
         segments = ref.split('/')
         if len(segments) != 2:
-            raise ex.ApimasAdapterException(
-                'Reference collection %s cannot be understood' % (ref),
-                loc=loc)
+            msg = ('Reference target {!r} cannot be understood',
+                   'Must be of the form: <endpoint>/<collection>.')
+            raise ex.ApimasAdapterException(msg.format(ref), loc=loc)
         top_spec = context.get('top_spec', {})
         endpoint, collection = tuple(segments)
         if collection not in top_spec[endpoint]:
             raise ex.ApimasAdapterException(
-                'Reference collection `%s` does not exist' % (ref), loc=loc)
+                'Reference targe {!r} does not exist.'.format(ref), loc=loc)
         return self.construct_type(instance, spec, loc, context, 'ref')
 
     def construct_serial(self, instance, spec, loc, context):
@@ -221,12 +222,11 @@ class NaiveAdapter(Adapter):
         properties = self.PROPERTIES.intersection(constructors)
         if len(properties) > 1:
             raise ex.ApimasAdapterException(
-                '.identity field `%s` can only be readonly' % (loc[-2]),
+                '.identity field {!r} can only be readonly'.format(loc[-2]),
                 loc=loc)
         if properties != set(['.readonly']):
-            raise ex.ApimasAdapterException(
-                '.identity field `%s` is always a readonly field' % (loc[-2]),
-                loc=loc)
+            msg = '`.identity` field {!r} is always a readonly field.'
+            raise ex.ApimasAdapterException(msg.format(loc[-2]), loc=loc)
         return instance
 
     def construct_choices(self, instance, spec, loc, context):
@@ -298,7 +298,7 @@ class NaiveAdapter(Adapter):
         """
         if property_name not in self.PROPERTY_MAPPING:
             raise ex.ApimasAdapterException(
-                'Unknown property name %s' % (property_name), loc=loc)
+                'Unknown property {!r}'.format(property_name), loc=loc)
         constructed = context.get('constructed')
         predicate_type = self.extract_type(instance)
         if predicate_type not in constructed:
@@ -318,8 +318,8 @@ class NaiveAdapter(Adapter):
         """
         types = set(self.TYPES.intersection(instance.keys()))
         if len(types) > 1:
-            raise ex.ApimasException('Type is ambiguous. %s found: %s' % (
-                len(types), str(types)))
+            msg = 'Type is ambiguous. {!r} found: {!s}'
+            raise ex.ApimasException(msg.format(len(types), str(types)))
         return None if not types else types.pop()
 
     def init_adapter_conf(self, instance, initial=None):

@@ -246,7 +246,7 @@ class ApimasClient(object):
             subschema = subschema.get('schema', {}).get('schema', {})
             if not subschema:
                 raise ex.ApimasClientException(
-                    'Field `%s` cannot be validated' % (str(tuple(path))))
+                    'Field {!r} cannot be validated'.format(str(tuple(path))))
             validated_docs = []
             for subdoc in subdata:
                 validated_docs.append(self.partial_validate(

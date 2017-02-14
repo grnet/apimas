@@ -220,8 +220,8 @@ class ApimasTestCase(APITestCase):
             raise ValueError('expected_structure must be in the form of '
                              '(response_type, response_structure)')
 
-        msg = ('Response status codes are not equal, %s != %s.'
-               ' Response content: %s' % (
+        msg = ('Response status codes are not equal, {!r} != {!r}.'
+               ' Response content: {!r}'.format(
                    status_code, expected_status_code, data))
         self.assertEqual(status_code, expected_status_code,
                          msg=msg_prefix + msg)
@@ -326,8 +326,8 @@ class ApimasTestCase(APITestCase):
         """
         self.assertTrue(isinstance(response_data, dict))
         for field, field_spec in exposed_fields.iteritems():
-            msg = ('Field %s unexpectedly is not included in the'
-                   ' response data %s' % (repr(field), response_data))
+            msg = ('Field {!r} unexpectedly is not included in the'
+                   ' response data {!r}'.format(field, response_data))
             self.assertIn(field, response_data, msg=msg)
             value = response_data.get(field)
             if '.struct' in field_spec:

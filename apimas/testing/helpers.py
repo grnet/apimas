@@ -15,8 +15,9 @@ def create_mock_object(cls, isolated_attrs, ismagic=False):
     for attr in isolated_attrs:
         cls_attr = cls.__dict__.get(attr)
         if cls_attr is None:
-            raise AttributeError('Attribute %s cannot found on class %s' % (
-                attr, cls.__name__))
+            raise AttributeError(
+                'Attribute {!r} cannot found on class {!r}'.format(
+                    attr, cls.__name__))
         kwargs[attr] = cls_attr
     return mock.Mock(spec=cls, **kwargs) if not ismagic else\
         mock.MagicMock(spec=cls, **kwargs)

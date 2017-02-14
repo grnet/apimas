@@ -138,7 +138,8 @@ class ApimasCliAdapter(NaiveAdapter):
         collection_name = endpoint + '/' + collection
         if collection_name not in self.commands:
             raise ex.ApimasException(
-                'Commands not found for collection `%s`' % (collection_name))
+                'Commands not found for collection {!r}'.format(
+                    collection_name))
         return self.commands[collection_name]
 
     def get_or_create_endpoint_group(self, endpoint):
@@ -220,7 +221,8 @@ class ApimasCliAdapter(NaiveAdapter):
                                             loc=loc)
         commands = doc.doc_get(instance, (self.ADAPTER_CONF, 'actions'))
         assert commands, (
-            'Loc: %s, commands have not been constructed yet.' % (str(loc)))
+            'Loc: {!r}, commands have not been constructed yet.'.format(
+                str(loc)))
         credential_option = click.option(
             '--credentials', required=True, type=Credentials(
                 schema=auth_schema, file_type=auth_format))

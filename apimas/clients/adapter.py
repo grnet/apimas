@@ -72,7 +72,7 @@ class ApimasClientAdapter(NaiveAdapter):
         collection_name = endpoint + '/' + collection
         if collection_name not in self.clients:
             raise ex.ApimasException(
-                'Client not found for resource `%s`' % (collection_name))
+                'Client not found for collection {!r}'.format(collection_name))
         return self.clients[collection_name]
 
     def construct_collection(self, instance, spec, loc, context):
@@ -114,7 +114,7 @@ class ApimasClientAdapter(NaiveAdapter):
         field_type = self.extract_type(instance)
         if not field_type:
             raise ex.ApimasException(
-                'You have to specify field type for field `%s`' % (
+                'You have to specify field type for field {!r}'.format(
                     parent_name))
         self.init_adapter_conf(instance)
         if field_type in nested_structures:
