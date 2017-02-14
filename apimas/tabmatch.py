@@ -38,9 +38,11 @@ class Tabmatch(object):
                 tab_val = getattr(tab_row, name)
                 row_val = getattr(row, name)
 
-                if (row_val.endswith('*') and tab_val.startswith(row_val[:-1])):
+                if (row_val.endswith('*') and tab_val.startswith(
+                        row_val[:-1])):
                     item[name] = tab_val if name in expand else row_val
-                elif (tab_val.endswith('*') and row_val.startswith(tab_val[:-1])):
+                elif (tab_val.endswith('*') and row_val.startswith(
+                        tab_val[:-1])):
                     item[name] = tab_val
                 elif tab_val == row_val:
                     item[name] = tab_val
@@ -60,31 +62,3 @@ class Tabmatch(object):
         matches = doc_match_levels(self.rules_doc, pattern_sets,
                                    expand_levels)
         return (self.Row(*path) for path in matches if len(path) == depth)
-
-
-def test():
-    tb = Tabmatch(['one', 'two', 'three'])
-    tb.update([tb.Row(one='hella', two='two', three='hooves')])
-    tb.update([tb.Row(one='hellish', two='taint', three='saw')])
-    tb.update([tb.Row(one='hello', two='there', three='friend')])
-    tb.update([tb.Row(one=Prefix('foo'), two=ANY, three='blam')])
-    pattern_sets = [
-        ['alpha', Prefix('hel'), 'one'],
-        [Regex('th.r[ae]'), 'bom', Prefix('t')],
-    ]
-    print "RULES"
-    print tb.rules_doc
-    print "PATTERNS"
-    print pattern_sets
-    expand = []
-    print "EXPAND", expand
-    print list(tb.multimatch(pattern_sets, expand=[]))
-    expand = ['one', 'two', 'three']
-    print "EXPAND", expand
-    expand_levels = {tb.name_levels[name] for name in expand}
-    print list(tb.multimatch(pattern_sets, expand=expand))
-
-
-if __name__ == '__main__':
-    test()
-
