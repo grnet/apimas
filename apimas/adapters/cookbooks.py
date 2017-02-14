@@ -83,8 +83,8 @@ class NaiveAdapter(Adapter):
                 ' Empty structure found: {!r}'.format(loc[-2]), loc=loc)
         for k, v in spec.iteritems():
             if not isinstance(v, dict):
-                msg = ('Not known properties for field {!r} of struct {!r}.'
-                       ' A dict with the schema of structure must be provided.')
+                msg = ('Not known properties for field {!r} of struct {!r}. A'
+                       ' dict with the schema of structure must be provided.')
                 raise ex.ApimasAdapterException(
                     msg.format(k, loc[-2]), loc=loc)
 
@@ -120,7 +120,7 @@ class NaiveAdapter(Adapter):
                 'You have to specify `to` parameter', loc=loc)
         segments = ref.split('/')
         if len(segments) != 2:
-            msg = ('Reference target {!r} cannot be understood',
+            msg = ('Reference target {!r} cannot be understood'
                    'Must be of the form: <endpoint>/<collection>.')
             raise ex.ApimasAdapterException(msg.format(ref), loc=loc)
         top_spec = context.get('top_spec', {})
