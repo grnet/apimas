@@ -158,7 +158,7 @@ class TestSpec(ApimasTestCase):
             return
         self.validate_response(endpoint, collection, action, response, data,
                                response_spec, instance)
-        response_data = response.json()
+        response_data = response.data
         self.assertEqual(response_data['string'], MY_STRING_CREATE)
         self.assertEqual(response_data['number'], MY_NUMBER_CREATE)
 
@@ -171,7 +171,7 @@ class TestSpec(ApimasTestCase):
             return
         self.validate_response(endpoint, collection, action, response, data,
                                response_spec, instance)
-        response_data = response.json()
+        response_data = response.data
         self.assertEqual(response_data['string'], MY_STRING_UPDATE)
         self.assertEqual(response_data['number'], MY_NUMBER_UPDATE)
 
