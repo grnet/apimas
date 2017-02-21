@@ -1,4 +1,4 @@
-# A namespace package.
+# A namespace package
 try:
     import pkg_resources
     pkg_resources.declare_namespace(__name__)

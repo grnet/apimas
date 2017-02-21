@@ -9,7 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from faker import Factory
 from pytz import timezone
 from apimas import documents as doc
-from apimas.backends.drf.django_rest import DjangoRestAdapter
+from apimas.drf.django_rest import DjangoRestAdapter
 
 
 fake = Factory.create()

@@ -5,9 +5,9 @@ from django.core.urlresolvers import reverse
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework.test import APITestCase
 from rest_framework import status
-from apimas.backends.drf.utils import get_package_module
-from apimas.backends.drf.django_rest import DjangoRestAdapter
-from apimas.backends.drf.testing import utils
+from apimas.drf.utils import get_package_module
+from apimas.drf.django_rest import DjangoRestAdapter
+from apimas.drf.testing import utils
 
 
 TEST_CASE_FUNCTIONS = [

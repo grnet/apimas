@@ -5,10 +5,10 @@ from django.core.exceptions import FieldDoesNotExist
 from rest_framework import serializers
 from rest_framework import routers
 from apimas import documents as doc
-from apimas.backends.drf import utils
-from apimas.backends.drf.serializers import (
+from apimas.drf import utils
+from apimas.drf.serializers import (
     generate_container_serializer, generate_model_serializer)
-from apimas.backends.drf.views import generate_view
+from apimas.drf.views import generate_view
 from apimas.adapters.cookbooks import NaiveAdapter
 
 

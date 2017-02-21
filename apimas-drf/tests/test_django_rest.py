@@ -2,9 +2,9 @@ import mock
 import unittest
 from django.core.exceptions import FieldDoesNotExist
 from apimas import documents as doc
-from apimas.backends.drf import utils
-from apimas.backends.drf import django_rest
-from apimas.backends.drf.django_rest import DjangoRestAdapter
+from apimas.drf import utils
+from apimas.drf import django_rest
+from apimas.drf.django_rest import DjangoRestAdapter
 from apimas.testing.helpers import create_mock_object
 
 
@@ -55,10 +55,10 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(instance_actions, [action, action])
 
     @mock.patch(
-        'apimas.backends.drf.django_rest.generate_container_serializer',
+        'apimas.drf.django_rest.generate_container_serializer',
         return_value='mock_container')
     @mock.patch(
-        'apimas.backends.drf.django_rest.generate_model_serializer',
+        'apimas.drf.django_rest.generate_model_serializer',
         return_value='mock_model')
     def test_generate_serializer(self, mock_model_ser, mock_container_ser):
         mock_adapter = create_mock_object(
@@ -91,7 +91,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_container_ser.assert_called_once
 
     @mock.patch(
-        'apimas.backends.drf.django_rest.generate_view',
+        'apimas.drf.django_rest.generate_view',
         return_value='mock_view')
     def test_construct_drf_collection(self, mock_view_gen):
         mock_loc = ('api', 'collection', '.drf_collection')

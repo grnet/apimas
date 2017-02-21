@@ -26,7 +26,7 @@ Alternatively, install apimas from github repository:
 .. code-block:: shell
 
     git clone https://github.com/grnet/apimas
-    cd apimas
+    cd apimas/apimas
     python setup.py install
 
 

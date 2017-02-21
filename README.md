@@ -1,27 +1,34 @@
-APIMAS
-=====
+API Modelling and Serving
+=========================
 
-API Modelling mechanism
------------------------
+apimas provides an intuitive way to build scalable REST APIs and
+serving your application. The goal of apimas is to provide a flexible
+way for building, modifying and extending your application without
+the cumbersome management due to the complexity and the size of it.
 
-API Modelling mechanism provides an intuitive way to build scalable
-REST APIs. The goal of this mechanism is to provide a flexible way
-for building, modifying and extending a REST API without the
-cumbersome management due to the application complexity.
+Trying it out
+-------------
 
+## apimas
 
-## Installation
+Explore apimas package to find out how to model your REST API, and
+build and deploy your application.
 
-In a virtualenv, run the following command which will install apimas
-along with its dependencies:
+### Installation
 
-```
-python setup.py install
-```
-
-or via pip:
 ```
 pip install apimas
+```
+
+## apimas-drf
+
+For apimas support for building django applications,
+you should checkout apimas-drf package. 
+
+### Installation
+
+```
+pip install apimas-drf
 ```
 
 

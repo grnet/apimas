@@ -1,10 +1,9 @@
 from django.db import models
 from rest_framework import serializers
-from apimas.backends.drf.testing import (
+from apimas.drf.testing import (
     apimas_context, ApimasTestCase)
-from apimas.backends.drf.tests.models import MyModel
-from apimas.backends.drf.tests.utils import (
-    SpecGenerator, ACTIONS)
+from tests.models import MyModel
+from tests.utils import SpecGenerator, ACTIONS
 
 
 class MySerializer(serializers.BaseSerializer):
@@ -50,8 +49,8 @@ SPEC = {
         'my_collection': {
             '.collection': {},
             '.drf_collection': {
-                'model': 'apimas.backends.drf.tests.models.RefModel',
-                'model_serializers': ['apimas.backends.drf.tests.functional.test_nested.MySerializer']
+                'model': 'tests.models.RefModel',
+                'model_serializers': ['tests.functional.test_nested.MySerializer']
             },
             '*': {
                 'id': {

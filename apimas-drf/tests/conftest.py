@@ -38,7 +38,7 @@ def pytest_configure():
             'django.contrib.staticfiles',
             'rest_framework',
             'rest_framework.authtoken',
-            'apimas.backends.drf.tests.apps.TestApp',
+            'tests.apps.TestApp',
         ),
         PASSWORD_HASHERS=(
             'django.contrib.auth.hashers.MD5PasswordHasher',

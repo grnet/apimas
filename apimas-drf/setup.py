@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-import os
 
 with open("version.txt") as f:
     PACKAGE_NAME, VERSION = \
@@ -20,13 +19,8 @@ setup(
     license='Affero GPL v3',
     author='GRNET S.A.',
     author_email='apimas@dev.grnet.gr',
-    description='API Modelling And Serving',
-    packages=find_packages(exclude=['examples']),
+    description='APIMAS support for django applications',
+    packages=find_packages(exclude=['examples', 'tests']),
+    namespace_packages=['apimas'],
     install_requires=INSTALL_REQUIRES,
-    entry_points={
-        'console_scripts': {
-            'apimas=apimas.cmd:main'
-        }
-    },
-    scripts=['auto/builder/docker/home/bin/mkdeb'],
 )

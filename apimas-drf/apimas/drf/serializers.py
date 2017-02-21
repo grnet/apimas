@@ -8,7 +8,7 @@ from rest_framework.utils import model_meta
 from rest_framework.utils.serializer_helpers import ReturnDict
 from apimas import exceptions as ex
 from apimas.documents import ANY
-from apimas.backends.drf import utils
+from apimas.drf import utils
 
 
 def lookup_value(field_name, source, instance):

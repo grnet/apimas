@@ -2,12 +2,20 @@ Create server-side applications
 *******************************
 
 You can easily build a server-side application by using a backend
-which supports APIMAS. Currently, APIMAS provides
-`django rest framework`_ framework to build REST APIs on top of
-`django`_ application.
+which supports APIMAS. Currently, there is a package named ``apimas-drf``
+which taking advantage of `django rest framework`_ framework to build REST
+APIs on top of a `django`_ application.
 
 .. _django rest framework: http://www.django-rest-framework.org/
 .. _django: https://www.djangoproject.com/
+
+Installation
+============
+In a virtualenv, run the following command to install apimas-drf:
+
+.. code-block:: console
+
+    pip install apimas-drf
 
 
 Quickstart-Create a django application

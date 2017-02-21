@@ -1,28 +1,9 @@
-APIMAS
-=====
+apimas-drf
+==========
 
-API Modelling mechanism
------------------------
-
-API Modelling mechanism provides an intuitive way to build scalable
-REST APIs. The goal of this mechanism is to provide a flexible way
-for building, modifying and extending a REST API without the
-cumbersome management due to the application complexity.
-
-
-## Installation
-
-In a virtualenv, run the following command which will install apimas
-along with its dependencies:
-
-```
-python setup.py install
-```
-
-or via pip:
-```
-pip install apimas
-```
+apimas-drf allows you to create django applications using
+[django-rest-framework](http://www.django-rest-framework.org/)
+behind the scenes to build your API.
 
 
 Copyright and license

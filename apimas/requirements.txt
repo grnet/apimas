@@ -1,9 +1,5 @@
-Django>=1.8,<1.9
-djangorestframework>=3.3.3
-django-filter>=0.12
 cerberus
 click
 pyyaml
 tabulate
 requests
-mock
