@@ -5,6 +5,7 @@ from apimas.exceptions import ApimasException
 
 
 HOME_DIR = expanduser("~")
+DEFAULT_FILENAME = join(HOME_DIR, '.apimas')
 
 
 VALIDATION_SCHEMA = {
@@ -17,15 +18,31 @@ VALIDATION_SCHEMA = {
 }
 
 
-def load_config(path=None, config_file=".apimas"):
-    filepath = join(path or HOME_DIR, config_file)
-    if not isfile(filepath):
-        raise ApimasException('.apimas file not found')
+def _load_document(path):
+    if not isfile(path):
+        msg = 'Given path {!r} is not a file'.format(path)
+        raise ApimasException(message=msg)
 
-    with open(filepath) as data_file:
-        data = yaml.load(data_file)
+    with open(path) as data_file:
+        try:
+            return yaml.safe_load(data_file)
+        except yaml.YAMLError as e:
+            msg = 'File cannot be understood: {!s}.'.format(str(e))
+            raise ApimasException(message=msg)
+
+
+def _validate_document(document):
+    if not isinstance(document, dict):
+        raise ApimasException('File cannot be understood. It seems not to be'
+                              ' a document.')
     validator = Validator(VALIDATION_SCHEMA)
-    is_valid = validator.validate(data)
+    is_valid = validator.validate(document)
     if not is_valid:
         raise ApimasException(validator.errors)
-    return data
+    return document
+
+
+def configure(path):
+    path = DEFAULT_FILENAME if not path else expanduser(path)
+    document = _load_document(path)
+    return _validate_document(document)
