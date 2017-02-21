@@ -1,5 +1,5 @@
 from django.contrib.auth.models import Group
-from apimas.backends.drf.testing import (
+from apimas.drf.testing import (
     ApimasTestCase, apimas_context)
 from eshop.api_spec import API_SPEC
 from eshop.models import UserProfile

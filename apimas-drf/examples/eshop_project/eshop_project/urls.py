@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.conf.urls import url
 from django.contrib import admin
-from apimas.backends.drf import django_rest
+from apimas.drf import django_rest
 from eshop.api_spec import API_SPEC
 
 
