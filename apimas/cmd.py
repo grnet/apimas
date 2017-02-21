@@ -1,6 +1,6 @@
 import click
 from click import types
-from apimas import utils, exceptions as ex
+from apimas import config, exceptions as ex
 from apimas.cli.adapter import ApimasCliAdapter
 from apimas.clients.adapter import ApimasClientAdapter
 
@@ -18,10 +18,10 @@ class ApimasCLI(click.MultiCommand):
     def get_command(self, ctx, name):
         config_file = ctx.params.get('config')
         try:
-            config = utils.configure(path=config_file)
+            conf = config.configure(path=config_file)
         except ex.ApimasException as e:
             raise click.BadOptionUsage(str(e))
-        root_url, spec = config['root'], config['spec']
+        root_url, spec = conf['root'], conf['spec']
         cli = _construct_cli(root_url, spec)
         if name is None:
             return cli.get_base_command()
