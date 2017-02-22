@@ -12,6 +12,19 @@ from apimas.modeling.adapters.drf.views import generate_view
 from apimas.modeling.adapters.cookbooks import NaiveAdapter
 
 
+def utc_time_field_init(self, **kwargs):
+    kwargs['format'] = '%Y-%m-%dT%H-%M-%SZ'
+    super(UTCDateTimeField, self).__init__(**kwargs)
+
+
+class UTCDateTimeField(models.DateTimeField):
+    __init__ = utc_time_field_init
+
+
+class UTCDateField(models.DateField):
+    __init__ = utc_time_field_init
+
+
 def handle_exception(func):
     def wrapper(*args, **kwargs):
         try:
@@ -95,8 +108,8 @@ class DjangoRestAdapter(NaiveAdapter):
         'string': serializers.CharField,
         'email': serializers.EmailField,
         'boolean': serializers.BooleanField,
-        'date': serializers.DateField,
-        'datetime': serializers.DateTimeField,
+        'date': UTCDateField,
+        'datetime': UTCDateTimeField,
         'structarray': serializers.ListSerializer,
         'struct': serializers.Serializer,
         'ref': serializers.HyperlinkedRelatedField,
