@@ -135,10 +135,11 @@ creates the CLI for you based on your specification. This is
 ``ApimasCliAdapter`` class which introduces two new predicates
 a) ``.cli_commands``, b) ``.cli_option``.
 
-But first, you have to create a configuration file ``.apimas``
-on your home directory, written in yaml syntax. For example,
+But first, you have to create a configuration file, say ``.apimas``
+on a directory of your choice, written in yaml syntax. For example,
 
 .. code-block:: yaml
+    :caption: myloc/.apimas
 
     root: http:localhost:8000
     spec:
@@ -161,19 +162,21 @@ on your home directory, written in yaml syntax. For example,
                     .update: {}
                     .delete: {}
 
-The CLI-adapter constructs a set of commands for every collection.
-For example, for the collection `foo`, we have the following commands
-corresponding to every action as specified on specification:
+The CLI-adapter constructs a set of commands for every collection
+based on that file. For example, for the collection `foo`, we have the
+following commands corresponding to every action as specified on
+specification:
 
-- ``apimas api foo-list``
-- ``apimas api foo-retrieve``
-- ``apimas api foo-create``
-- ``apimas api foo-update``
-- ``apimas api foo-delete``
+- ``apimas --config myloc/.apimas api foo-list``
+- ``apimas --config myloc/.apimas api foo-retrieve``
+- ``apimas --config myloc/.apimas api foo-create``
+- ``apimas --config myloc/.apimas api foo-update``
+- ``apimas --config myloc/.apimas api foo-delete``
 
 Apparently, these five commands use the same client object internally,
 that is, the client object which is responsible for interacting with
-the collection ``foo``. Note that sub-command ``api`` stands for the
+the collection ``foo``. Option ``--config`` tells apimas where to find
+the configuration file. Note that sub-command ``api`` stands for the
 endpoint (i.e. ``api``) in which collection is located.
 
 Also note that if one action is not specified on specification, the
