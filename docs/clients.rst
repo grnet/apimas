@@ -34,7 +34,7 @@ methods to interact with the API:
 
 .. code-block:: python
 
-    from apimas.modeling.clients import ApimasClientAdapter
+    from apimas.clients import ApimasClientAdapter
 
     API_SPEC = {
         'api': {

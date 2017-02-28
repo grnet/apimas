@@ -190,7 +190,7 @@ Example:
 .. code-block:: python
     :caption: urls.py
     
-    from apimas.modeling.adapters.drf.django_rest import DjangoRestAdapter
+    from apimas.drf.django_rest import DjangoRestAdapter
     from myapp.spec import API_SPEC
 
     adapter = DjangoRestAdapter()
@@ -361,7 +361,7 @@ You can do this as follows:
 
 .. code-block:: python
 
-    from apimas.modeling.adapters.drf.mixins import HookMixin
+    from apimas.drf.mixins import HookMixin
 
     class RestOperations(HookMixin):
     

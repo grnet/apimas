@@ -13,13 +13,13 @@ Submodules
 apimas.constructors module
 --------------------------
 
-.. automodule:: apimas.modeling.core.constructors
+.. automodule:: apimas.constructors
     :members:
 
 apimas.documents module
 -----------------------
 
-.. automodule:: apimas.modeling.core.documents
+.. automodule:: apimas.documents
     :members:
 
 
