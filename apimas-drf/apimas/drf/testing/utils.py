@@ -65,7 +65,7 @@ def generate_choices_field(api=False, choices=None):
     return random.choice(choices or [])
 
 
-def file_generator(api=False):
+def generate_random_file(api=False):
     content = str(fake.text())
     mime_type = fake.mime_type()
     file_name = fake.file_name()
@@ -85,7 +85,7 @@ RANDOM_GENERATORS = {
     'datetime': DateGenerator(isdate=False),
     'date': DateGenerator(isdate=True),
     'boolean': generate_random_boolean,
-    'file': file_generator,
+    'file': generate_random_file,
     'choices': generate_choices_field,
 }
 
