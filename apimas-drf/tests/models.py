@@ -14,7 +14,7 @@ class MyModel(models.Model):
 
 
 class ModelFile(models.Model):
-    file_field = models.FileField(upload_to='foo')
+    file_field = models.FileField(upload_to='.apimas_tests')
 
 
 class OneToOneModel(models.Model):
