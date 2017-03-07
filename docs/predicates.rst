@@ -113,6 +113,7 @@ Predicate         Description
                   **Parameters**:
                       `maxlength`: The upper bound of string's size (optional).
                       The default is 255.
+``.text``         Parent node is a text.
 ``.boolean``      Parent node is either true or false.
 ``.email``        Parent node is an email address.
 ``.serial``       Parent node is a serial, non-writable integer number.

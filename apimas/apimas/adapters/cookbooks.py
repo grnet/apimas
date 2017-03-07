@@ -166,7 +166,15 @@ class NaiveAdapter(Adapter):
 
     def construct_string(self, instance, spec, loc, context):
         """
-        Constuctor for `.ref` predicate.
+        Constuctor for `.string` predicate.
+
+        This maps predicate to the specified type according to mapping.
+        """
+        return self.construct_type(instance, spec, loc, context, 'string')
+
+    def construct_text(self, instance, spec, loc, context):
+        """
+        Constuctor for `.text` predicate.
 
         This maps predicate to the specified type according to mapping.
         """

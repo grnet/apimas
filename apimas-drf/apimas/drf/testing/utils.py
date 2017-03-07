@@ -1,6 +1,5 @@
 from copy import deepcopy
 import random
-from collections import Iterable
 from datetime import datetime
 from django.db import models
 from django.conf import settings
@@ -78,6 +77,7 @@ def generate_random_boolean(api=False):
 
 RANDOM_GENERATORS = {
     'string': generate_random_string,
+    'text': generate_random_string,
     'email': generate_random_email,
     'integer': NumberGenerator(),
     'biginteger': NumberGenerator(),
@@ -91,7 +91,7 @@ RANDOM_GENERATORS = {
 
 FIELD_TYPE_MAPPING = {
     models.AutoField: 'serial',
-    models.TextField: 'string',
+    models.TextField: 'text',
     models.CharField: 'string',
     models.EmailField: 'email',
     models.IntegerField: 'integer',

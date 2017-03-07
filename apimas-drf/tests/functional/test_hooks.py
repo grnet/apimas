@@ -77,7 +77,7 @@ SPEC = {
                 },
                 'text': {
                     '.drf_field': {},
-                    '.string': {},
+                    '.text': {},
                     '.required': {},
                 },
                 'number': {

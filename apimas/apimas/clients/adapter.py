@@ -38,6 +38,7 @@ class ApimasClientAdapter(NaiveAdapter):
         'biginteger': 'integer',
         'float': 'float',
         'string': 'string',
+        'text': 'string',
         'choices': 'choices',
         'email': 'email',
         'boolean': 'boolean',

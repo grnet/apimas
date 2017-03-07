@@ -26,6 +26,7 @@ class ApimasCliAdapter(NaiveAdapter):
         'integer': types.IntParamType,
         'serial': types.IntParamType,
         'string': types.StringParamType,
+        'text': types.StringParamType,
         'choices': types.Choice,
         'email': Email,
         'boolean': types.BoolParamType,

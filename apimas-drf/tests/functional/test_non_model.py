@@ -40,8 +40,8 @@ SPEC = {
                                     },
                                 },
                                 'text': {
+                                    '.text': {},
                                     '.drf_field': {},
-                                    '.string': {},
                                     '.required': {},
                                 },
                                 'number': {
