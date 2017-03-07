@@ -62,7 +62,7 @@ class ApimasValidator(Validator):
     Extends cerberus `Validator` by adding a new type, i.e. `file`, `email`.
     """
     def _validate_type_choices(self, value):
-        return not (isinstance(value, Iterable) and not isinstance(value, str))
+        return isinstance(value, (bool, int, long, float, str, unicode))
 
     def _validate_type_file(self, value):
         return isinstance(value, file)
