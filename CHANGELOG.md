@@ -6,39 +6,29 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
-- max_length` parameter for `.string` fields.
-- Informative messages when an error occurs during the conversion
-  of specification into implementation.
-- Multiple endpoints specified on one specification. Therefore, in order
-  to refer to a collection, you also need to provide the endpoint to which
-  it belongs.
-- `.choices` field predicate.
-- Subcommands for every endpoint, provided by CLI adapter.
-- An optional `--config` option for `apimas` command to specify the
-  location of specification.
-- `.text` field predicate.
+- Specification can now specify multiple endpoints.
+- Informative error messages when handling the specification.
+- CLI subcommands for every endpoint.
+- An optional `--config` CLI option to specify the location of
+  specification.
+- New field predicates: `.choices` and `.text`.
+- New `max_length` parameter for `.string` fields.
 
 ### Changed
-- `mkdeb` script is installed together with the apimas.
+- The DRF-specific code is split off in a separate package `apimas_drf`.
+- `.endpoint` is no longer top-level; it now describes its parent node.
+- A reference to a collection must now be prefixed by its endpoint.
 - API of testing utility methods used by developers.
-- `.endpoint` is no longer top-level. It describes the parent node based
-  on specification.
-- Each implementation item (e.g. a client object, a drf view) is associated
-  with an endpoint and a collection.
-- `format` parameter of `.date` and `.datetime` fields gets a list
-  string formats of the respective date and datetime fields instead of only
-  one.
-- Parameters of `.cli_auth` is changed. Now, it gets two parameters
-  a) `format`, i.e. the format of the file where credentials are stored
-  (e.g. JSON or YAML), b) `schema`, i.e. the schema of credentials.
-- Remove `apply()` method from every adapter class.
-- Package is split into two namespace packages: a) `apimas` package which
-  includes interfaces for creating an adapter, CLI and client adapters, and
-  puppet and scripts for deploying an application, and creating Debian packages.
-  b) `apimas_drf` which provides an adapter for creating a Django application.
+- `format` parameter of `.date` and `.datetime` fields now expects a list of
+  string formats.
+- `.cli_auth` now gets two parameters:
+  a) `format` (the credentials file format),
+  b) `schema` (the credentials schema).
+- Adapter method `apply()` is removed; its functionality is merged into
+  construct().
+- `mkdeb` script is installed along with apimas.
 
 ### Fixed
-- Old-style python string formatting is replaced with the new one. 
-- Data validation (from client side) between two consecutive client calls.
+- Client side data validation between two consecutive calls.
 
 [Unreleased]: https://github.com/grnet/apimas/
