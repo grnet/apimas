@@ -43,3 +43,4 @@ Contents
    predicates
    drf_adapter
    clients
+   license
