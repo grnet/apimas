@@ -51,7 +51,7 @@ namespace with path-value pairs, or any other equivalent
 representation. The documents tool-kit in APIMAS uses the python dict
 form and can also convert to and from the namespace representation.
 
-For example, namespace representation:
+For example, in "namespace" representation:
 
 .. code-block:: python
 
@@ -62,7 +62,7 @@ For example, namespace representation:
         'webstore/api/products/*/reviews/*/text/body': '.unicode',
     }
 
-Python ``dict`` representation:
+in Python ``dict`` representation:
 
 .. code-block:: python
 
@@ -88,7 +88,7 @@ Python ``dict`` representation:
     }
 
 
-`YAML <https://en.wikipedia.org/wiki/YAML>`_ representation:
+in `YAML <https://en.wikipedia.org/wiki/YAML>`_ representation:
 
 .. code-block:: python
 
@@ -163,14 +163,18 @@ a precise context.
 APIMAS Configuration
 --------------------
 
-To summarize, the composition of structural elements and predicates
-should form a specification as explained above which is completely
-understood by the application. However, based on the needs of each
-application, this specification is extendable and customizable.
-This means that the developer can attach implementation-specific
-details which are only understood by the current application which
-reads the specification. For instance, for a Django application a
-Django model can be bound to a specific collection like follows:
+The composition of structural elements and predicates as above
+forms a specification for the API that should be completely
+understood by all applications.
+
+However, implementations of the API will necessarily require
+additional application-, or even deployment-specific settings,
+which we will collectively refer to as *configuration*.
+
+Each application may invent its own predicates and build its
+configuration in a document similar to the specification.
+For instance, for a Django application a model can be bound to a
+specific collection like this:
 
 .. code-block:: python
 
@@ -178,13 +182,9 @@ Django model can be bound to a specific collection like follows:
         'webstore/api/products/.drf_collection/model': 'myapp.models.MyModel',
     }
 
-Recall that each application can define its own predicates, therefore,
-for instance, ``.drf_collection`` is a predicate
-for Django-rest-framework applications and it's parametrized with
-``model`` parameter. Apparently, the above example cannot be
-understood by another application, e.g. Flask, thus, it is something
-that 'configures' the specification ONLY for Django-rest-framework
-applications and this is the reason why it is called "Configuration".
+Here, ``.drf_collection`` is a predicate for Django-rest-framework
+applications and it's has a ``model`` parameter.
 
-The configuration may be merged with the specification or be another
-document and then later merged by the application behind the scenes.
+For practicality, the application may choose to merge the specification
+document and the configuration document into a single working document
+containing both.

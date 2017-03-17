@@ -1,10 +1,10 @@
 Create server-side applications
 *******************************
 
-You can easily build a server-side application by using a backend
-which supports APIMAS. Currently, there is a package named ``apimas-drf``
-which taking advantage of `django rest framework`_ framework to build REST
-APIs on top of a `django`_ application.
+You can easily build a server-side application by using an APIMAS
+backend. Currently, the only backend supported is ``apimas-drf``
+which is uses `django rest framework`_ to build REST APIs on top of
+a `django`_ application.
 
 .. _django rest framework: http://www.django-rest-framework.org/
 .. _django: https://www.djangoproject.com/
@@ -21,21 +21,19 @@ In a virtualenv, run the following command to install apimas-drf:
 Quickstart-Create a django application
 =======================================
 
-At this point, it is assumed that your are familiar with django basic
-concepts and have a little experience with developing django
-applications.
+At this point, we assume that you are familiar with django basic
+concepts and have some experience with developing django applications.
 
 Starting point
 --------------
 
-As a starting point, you have to define your django-models. These are
-the base of your application, and based on that and specification,
-APIMAS will generate code implementing your application's REST API.
+As a starting point, you have to define your django models.
+Based on your models and your specification,
+APIMAS will create the classes implementing the application's REST API.
 
-Note that we have already created an APIMAS specification based on the
-guide in this `section <writing_spec.html>`__. Thus, imagine we have a
-collection of resources named `foo`, where all REST operation are
-allowed.
+According to the guide in `section <writing_spec.html>`__, you can
+specify a collection of resources named `foo`, where all REST
+operations are allowed:
 
 
 .. code-block:: python
@@ -64,8 +62,8 @@ allowed.
         }
     }
 
-Given that specification, you have to create the corresponding
-django-model on your ``models.py`` file.
+Given the specification above, you have to create the corresponding
+django-model in the project's ``models.py`` file.
 
 .. code-block:: python
 
@@ -78,11 +76,10 @@ django-model on your ``models.py`` file.
 Enrich APIMAS specification
 ---------------------------
 
-What is next, all you have to do is to define `'foo'` as a collection
-which use `django rest framework` backend and `text` and `number`, the
-corresponding fields that are exposed to the API.
-
-To do that, enrich your specification as follows:
+In order to link the specification of the collection to the django model
+you have to declare `'foo'` as a `django rest framework` collection
+and `text` and `number` as fields, using the predicates
+``.drf_collection`` and ``.drf_field``, respectively:
 
 .. code-block:: python
 
@@ -118,8 +115,8 @@ To do that, enrich your specification as follows:
 In the above example, we introduced two new predicates which are not
 included in the APIMAS standard predicates: a) ``.drf_collection``, b)
 ``.drf_field``. These predicates are understood only by the
-`django-rest-framework` backend, which is responsible for translating
-this specification on implementation.
+`django-rest-framework` backend, which is responsible for implementing
+this specification.
 
 
 Set permissions
@@ -277,7 +274,7 @@ typical example a developer has to make the following classes:
 
 Even when using `django-rest-framework` which facilitates the
 development of the REST API, the developer typically has to create
-something like the following:
+boilerplate such as:
 
 ``serializers.py``
 
@@ -290,7 +287,7 @@ something like the following:
 
         class Meta:
             model = Foo
-            fields - ('number', 'text')
+            fields = ('number', 'text')
 
 ``views.py``
 
@@ -304,9 +301,9 @@ something like the following:
         serializer_class = FooSerializer
         queryset = Foo.objects.all()
 
-Even though, in the above examples, things seem to be easy, the
-management of such an application might be cumbersome if more entities
-were introduced or the complexity of data representation of an entity
+Even though in the above examples things seem to be easy, the
+management of such an application may become cumbersome if more entities
+are introduced or the complexity of data representation of an entity is
 increased, e.g. if we have an entity with 30 fields, and each field
 behaves differently according to the state of the entity (e.g.
 non-accessible in read operations).
@@ -352,10 +349,11 @@ following work flow:
 Customize your application
 --------------------------
 
-However, you are able to customize and extent the above behaviour and
-add your own logic to your application. Specifically, APIMAS provides
-two hooks for every action (before interacting with db and after) for
-extending the logic of your application or executing arbitrary code
+If the default behaviour above does not suit the application,
+you are able to customize and extent it by adding your own logic.
+Specifically, APIMAS provides two hooks for every action
+(before interacting with the database and after)
+for extending the logic of your application or executing arbitrary code
 (e.g. executing a query or sending an email to an external agent).
 You can do this as follows:
 
@@ -445,16 +443,15 @@ hook class like below:
                                   context.validated_data['number'])
             self.stash(extra={'another_text': another_value})
 
-What we've got here is that we got the context of action, via
-``self.unstash()`` method, then we computed the value of
-``another_text`` using a method of (based on the logic of our
-application), and finally, we told APIMAS (``self.stash()``) that
-should add extra data to the model instance (another_text), apart from
-that sent by client.
+Here we get the context of the action via the ``self.unstash()`` method,
+then we compute the value of ``another_text`` according to some
+application logic, and finally, we tell APIMAS (``self.stash()``) that
+it should add extra data to the model instance (``another_text``),
+in addition to those sent by the client.
 ``self.unstash()`` returns a namedtuple with the following fields:
 
 - ``instance``: Model instance to interact.
-- ``data``: Dictionary of raw data, as sent by client.
+- ``data``: Dictionary of raw data, as sent by the client.
 - ``validated_data``: Dictionary of de-serialized, validated data.
 - ``extra``: A dictionary with extra data, you wish to add to your
   model.
@@ -466,8 +463,8 @@ initialized. For instance, in the ``preprocess_create()`` hook,
 created yet.
 
 The last part is to declare the use of the hook class. You have to
-provide the ``hook_class`` parameter of the ``.drf_collection``
-predicate.
+provide an argument to the ``hook_class`` parameter of the
+``.drf_collection`` predicate.
 
 .. code-block:: python
 
@@ -542,9 +539,9 @@ Then, in your specification, specify the following parameter in
     }
 
 ``model_serializers`` tells APIMAS that the classes specified should
-be base classes of the generated serializer class, which are placed to
-the lowest level of hierarchy. Therefore, in the above example, the
-hierarchy of the generated class is as follows:
+be base classes for the generated serializer class, which are placed to
+the lowest level of the inheritance hierarchy. Therefore, in the above
+example, the hierarchy of the generated class is as follows:
 
 .. digraph:: foo
     
@@ -552,9 +549,8 @@ hierarchy of the generated class is as follows:
 
     "BaseSerialzer" -> "MySerializer" -> "GeneratedSerializer";
 
-Apparently, if you specify more than one classes on your
-``model_serializers``, note that the left class is base of the right
-class.
+If you specify more than one classes on your ``model_serializers``,
+then the classes on the right will inherit the classes on the left.
 
 Further information about writable structure fields can be found in
 the official documentation of django-rest-framework, 
@@ -562,17 +558,15 @@ the official documentation of django-rest-framework,
 
 Add more actions to your API
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-You are able to specify which CRUD actions are allowed to be performed
-on your collections. Currently, the declaration of additional actions
-is not supported yet. Therefore, if you wish to add additional actions
-to your API, for example:
+You can have additional actions to your API apart from the CRUD
+ones you declare in the specification. For example:
 
 .. code-block:: rest
 
     POST foo/1/myaction/
 
-You need to write your own ViewSet class in which your extra action
-will be included. For instance:
+To implement ``myaction`` you need to write your own ViewSet class
+that includes a method with the action's name. For instance:
 
 .. code-block:: python
 
@@ -586,10 +580,10 @@ will be included. For instance:
             # My code.
             ..
 
-Similarly with the example of serializers, the final part is to define
-the ``mixins`` parameter of your ``.drf_collection`` predicate, which
-acts exactly the same, that is, your class will be base of the
-generated class.
+Next, you need to include the module path of your ViewSet mixin class in
+the ``mixins`` parameter of your ``.drf_collection`` predicate.
+APIMAS will inherit from your class and the extra action method
+will appear in the generated final ViewSet class.
 
 .. code-block:: python
 
@@ -606,35 +600,35 @@ You can find more information about extra actions
 
 .. note::
 
-    The intuition of specifying the bases of the generated class,
-    encourage the resusability of your code. For instance, you
+    Specifying bases and mixins for the generated viewse class
+    enhances the resusability of your code. For instance, you
     may have a custom ViewSet class which is shared amongst all your
-    collections. Therefore, there is no need to write your own class
-    for every class you want to customize, but instead, you simply
-    declare the class you want to reuse on your specification.
+    collections. Instead of copying the same code over and over across
+    different hooks, you can declare a common mixin for all of them
+    within your specification.
 
 
 django-rest-framework fields
 ----------------------------
 
-By default, django-rest adapter tries to map a structural element,
-pointed as ``.drf_field`` to field specified in your model, either as
-an attribute or a function. However, it is not necessary to have 1 to
-1 mapping between your API and storage configuration. For instance,
-you may want to
+By default, the django-rest adapter reads all REST resource properties
+predicated with ``.drf_field`` and tries to map each of them to an
+attribute or function on your django model.
+It is not necessary to have 1 to 1 mapping between your API and storage
+configuration. For instance, you may want to:
 
 - expose a field with different name as that specified in your model.
 - define fields in your API which are not intended to be stored in
   your db.
-- create structural responses.
+- create responses with arbitrary structure.
 
 Examples:
 
 Define the name of source field explicitly
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-In this example, we expose a model field named ``text`` with different
-name to the API, namely ``api_text``. For this purpose, we define the
-parameter ``source`` of ``.drf_field`` predicate.
+In this example, we create an ``api_text`` property on a REST resource
+that is mapped to a differently named ``text`` field on a django model,
+using the ``source`` parameter of the ``.drf_field`` predicate:
 
 
 .. code-block:: python
@@ -668,9 +662,11 @@ parameter ``source`` of ``.drf_field`` predicate.
 Use non-model fields
 ^^^^^^^^^^^^^^^^^^^^
 
-In this field, we add one more field (named "extra_field") to our
-specification which is a string field and it does not have any storage
-representation (parameter ``onmodel: False``, on ``.drf_field``).
+You can create REST resource properties that are not mapped to any of
+the django model fields. In the following example, we add a string
+property named "extra_field" to our specification that is not to be
+saved to or retrieved from the model, by specifying ``onmodel: False``
+to the ``.drf_field`` predicate.
 
 .. code-block:: python
 
@@ -698,18 +694,18 @@ representation (parameter ``onmodel: False``, on ``.drf_field``).
         },
     }
 
-Therefore, a server is aware of the existence of non-model fields, it
-validates them, but it ignores them during write-operations
-(obviously, because they are not part of the model). However, you are
-able to handle them via the hooks APIMAS provides. In addition, by
-default, when performing a read-operation such as list or retrieve,
-the django-rest adapter will try to extract the value of such fields.
-For this reason, if you want these fields to be readable, you must
-provide the ``instance_source`` parameter on ``.drf_field`` predicate,
-which is only applicable when ``onmodel`` has been set as False. This
-parameter takes a function which must return the value of the field,
-given ``instance`` as parameter.
+A non-model property is validated but there is no automatic handling of
+it during write actions. You have to handle it via the hooks provided
+by APIMAS.
 
+When processing read actions such as list or retrieve, the django-rest
+adapter will seek to call a function to extract the value of non-model
+properties since there is no model for them.
+If you want non-model fields to be readable, you must provide an
+argument to the ``instance_source`` parameter on the ``.drf_field``
+predicate. The parameter is enabled only when ``onmodel`` is False.
+``instance_source`` must be the module path of a function that accepts
+a model instance as input and returns the property value.
 
 
 .. code-block:: python
@@ -753,11 +749,11 @@ given ``instance`` as parameter.
         },
     }
 
-Create structural responses
+Create structured responses
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Apart from the things already mentioned, one additional reason for
-having non-model fields is to serve responses in a structural way. For
-instance, instead of returning the following response:
+having non-model fields is to create responses with arbitrary structure.
+For instance, instead of returning the following response:
 
 .. code-block:: json
 
@@ -777,9 +773,8 @@ you wish to return this:
         }
     }
 
-Apparently, your django-model is not aware of the node "data". Thus,
-to make such a response, you format your specification as the one
-below:
+Your django-model is not aware of the node "data".
+Therefore, you need to format your specification as:
 
 .. code-block:: python
 
@@ -806,14 +801,14 @@ below:
         },
     }
 
-where node "data" is a non-model drf structural field, which consists
+where node "data" is a structured non-model property consisting
 of model fields "api_text" and "number".
 
 .. warning::
 
-    All fields which are stored to the db must be declared
-    to a particular node. They must not be scattered around different
-    nodes of specification.
+    All fields on a model must be exposed to the same REST location.
+    They must not be scattered among different nodes in the
+    specification.
 
 APIMAS permissions
 ------------------
@@ -835,37 +830,32 @@ of a set of rules. Each rule contains the following information:
 
 Set permission rules
 ^^^^^^^^^^^^^^^^^^^^
-On every permission rule, you have to specify the above information
-which describe what are the prerequisites for a valid rule.
-
-Example
+Consider the following example rule:
 
 .. code-block:: python
 
     rule = ('foo', 'create', 'admin', 'text', 'open', 'section 1.1')
 
-The above rule indicates that an admin user (role) is authorized to
-create (action) a new resource of `foo` type (collection) when the
-state is `open`, and providing only the field `text` (field).
-`section 1.1` is a comment made by the developer and it is ignored.
+The rule indicates that a request for the collection `foo`,
+which is asking to `create` a new resource, and is issued by an `admin`,
+is allowed to create a `text` property when the collection is in
+an `open` state. `section 1.1` is a comment made by the developer and
+it is ignored.
 
-Now the developer decides that an admin user can also write one more
-field e.g. `number`, on create operations.
-
-This is done by setting one more rule, that is:
+To enable writing another field `number`, write one more rule:
 
 .. code-block:: python
 
     rule = ('foo', 'create', 'admin', 'text', 'open', 'section 1.1')
     rule2 = ('foo', 'create', 'admin', 'number', 'open', 'section 1.1')
 
-or by creating pattern matches:
+or write a pattern to match the two properties:
 
 .. code-block:: python
 
     rule = ('foo', 'create', 'admin', 'text|number', 'open', 'section 1.1')
 
-Supported APIMAS matches are:
+Supported APIMAS operators for matching are:
 
 - ``*``: Any pattern.
 - ``?``: Pattern indicated by a regular expression.
@@ -906,13 +896,13 @@ Example:
 APIMAS permissions -- Roles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You have to inform django-rest adapter which are the roles of the user
-(authenticated entity that performs the request). The django-rest
-adapter is informed about the user instance (in the context of
-the request). However, it is unaware of how to extract the roles of
-the user. For this reason, you have to create a property named
-``apimas_roles`` on your user model (as specified in your django
-settings). This property **must** return a list of strings.
+In order to check against the roles specified in permission rules, you
+have assign to roles to an authenticated user by setting them as a list of
+strings named ``apimas_roles`` on your user instance as in:
+
+.. code-block:: python
+
+    request.user.apimas_roles = ['admin', 'dev']
 
 
 .. code-block:: python
@@ -927,11 +917,10 @@ settings). This property **must** return a list of strings.
 Unauthenticated users
 """""""""""""""""""""
 
-Unauthenticated parties are indicated with a role named **anonymous**.
-This is particular useful, if your application does not have users.
-Therefore, if you want a collection to be public, i.e.
-unauthenticated users are able to consume it, then set something like
-this:
+Requests by unauthenticated users are matched by the ``anonymous`` role
+in permission rules. Using anonymous roles you can make part of your API
+public. For example, the following rule allows anyone to create ``foo``
+resources as long as ``foo`` is in an ``open`` state:
 
 .. code-block:: python
 
@@ -952,26 +941,10 @@ field(s) are allowed to be handled. For instance:
 APIMAS permissions -- States
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An application may have a list of states which characterize a
-particular entity. A common fact when having different states is that
-different rules are applied or are valid for different states. For
-example, a user can create or update a form when its status is 'open',
-but they are not authorized to update the same form when its status is
-'submitted'. Apparently, we can consider the previous statement as
-a permission rule. The problem here is that the django-rest adapter
-does not know about the existing states of an entity, and how a
-specific state is considered as valid (because it depends on the
-business logic of the application).
-
-Therefore, to deal with this issue, an application with different
-states for its entities has to specify some class methods, bound to
-the model associated with the collection. These callables simply
-check if a particular state is valid. Also, note that some actions
-are performed on a particular resource (such as update, delete or
-retrieve), while others on the set of resources, i.e. collection
-(create or list). Hence, different callables must be triggered to
-check the satisfiability of a state. These callables **must** have
-the following signature:
+States are matched if calling a class method on the model associated
+with the request returns true. There is a different method for checking
+a state for collection (list, create) versus resource requests.
+The names and signatures of the methods are as follows:
 
 .. code-block:: python
 
@@ -985,11 +958,11 @@ the following signature:
         # your code. Return True or False.
         ...
 
-Example, imagine you have the following permission rules:
+For example, imagine you have the following permission rules:
 
 .. code-block:: python
 
-    rule = ('foo', 'update', 'anonymous', '*', 'open', 'section 1.1')
+    rule = ('foo', 'create', 'anonymous', '*', 'open', 'section 1.1')
     rule2 = ('foo', 'update', 'anonymous', 'number', 'submitted', 'section 1.1')
 
 In the above example, in the case of an update operation, the methods
@@ -997,12 +970,12 @@ listed below will be triggered to check if states 'open' or
 'submitted' are satisfied:
 
 - ``check_state_collection_open()``
-- ``check_state_collection_submitted()``
+- ``check_state_resource_submitted()``
 
-If none of the states is valid, then an HTTP_403 error is returned. If
-only one state is satisfied, then the django-rest adapter checks which
+If none of the states is matched, then an HTTP_403 error is returned. If
+only one state is matched, then the django-rest adapter checks which
 fields can be handled in this state, e.g. when the state is 'open', an
-anonymous user can handle all fields, while when the state is
+anonymous user can set all fields, while when the state is
 'submitted' only the field 'number' can be updated.
 
 django-rest adapter predicates

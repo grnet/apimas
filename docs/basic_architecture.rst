@@ -1,7 +1,7 @@
 Basic Architecture
 ==================
 
-APIMAS assumes applications work like this:
+APIMAS assumes applications are set up like this:
 
 1. There is a REST API at a location ``/<prefix>/api/*``
    with any static files available at ``/<prefix>/static/*``
@@ -12,8 +12,8 @@ APIMAS assumes applications work like this:
    The object type is defined as a set of fields with a name and
    type, including field types that refer to fields of other resources.
 
-   Each resource collection may accept the following operations
-   that communicate JSON data back and forth:
+   For each resource collection there are built in operations that accept
+   and return JSON data.
 
    - ``POST /<prefix>/api/<resource>/  data: {key:val...} -> <url>``
 
@@ -25,6 +25,9 @@ APIMAS assumes applications work like this:
      The resource is initialized to the fields provided.
 
    - ``GET /<prefix>/api/<resource>/  filter: {}``
+
+     .. there is not enough documentation about filtering, ordering,
+        and pagination input
 
      List the resource collection according to filters, ordering,
      and pagination input.
@@ -41,15 +44,13 @@ APIMAS assumes applications work like this:
 
      Remove the identified resource from the collection.
 
-   - ``POST /<prefix>/api/<resource>/<id>/actions/<action>  data:{key:val...}``
-
-     Execute application-provided actions with input.
-
    - ``GET /<prefix>/api/<resource>/<id>/fields/<field> -> val``
 
-     Resource fields are accessible recursively under ``fields/<field>``
-     by their name. The value when retrieving is the same that would be
-     retrieved from the parent resource in under the field key
+     Resource fields are accessible recursively by their name
+     under ``fields/<field>``.
+     The value when retrieving is the same
+     that would be retrieved from the parent resource
+     under the corresponding field key
      ``({<field>:<value>})``
 
    - ``PUT /<prefix>/api/<resource>/<id>/fields/<field> val``
@@ -62,14 +63,24 @@ APIMAS assumes applications work like this:
    - ``[Collection] /<prefix>/api/<resource>/<id>/fields/<field>/*``
 
      If a resource field is a collection then all above operations are
-     potentially available recursively.
+     optionally available recursively.
 
      Resource fields that are themselves collections are not equivalent
-     to global resources. They are embedded on their parent resource and
-     are retrieved and set along with the parent.
+     to top-level resources. They are embedded on their parent resource
+     and are retrieved and set along with the parent.
+     Designers of APIs that need their collections to scale should make
+     them top-level. Nested collections are supported to help data
+     organization and convenience.
+
+Built-in operations can be overridden for customization.
+The application may also create new named actions:
+
+   - ``POST /<prefix>/api/<resource>/<id>/actions/<action>  data:{key:val...}``
+
+     Execute application-provided actions with input.
 
 
-2. Each (global) REST resource corresponds to a Data View that connects
+2. Each top-level REST resource corresponds to a Data View that connects
    the API with the data store.
 
    The data view modelling completely defines the REST behaviour of the
@@ -83,12 +94,14 @@ APIMAS assumes applications work like this:
 3. The Data Storage layer models the actual representation of data in
    storage. There should be no native way to store data. The Data View
    layer should support adapting various storage layers for exposition
-   to the REST API locations. For example, django models may be one way
+   to the REST API locations. For example, Django models may be one way
    to model actual storage representation.
+
 
 4. The primary responsibility of the application is to hook at the Data
    View layer and provide storage and business logic. This logic must
    implement the hooks corresponding to all actions defined in 1.
+
 
 5. However, the framework should provide various data store-to-view
    adapters (e.g. for Django, mongodb, S3). These adapters should
