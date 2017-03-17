@@ -85,7 +85,6 @@ corresponding fields that are exposed to the API.
 To do that, enrich your specification as follows:
 
 .. code-block:: python
-    :emphasize-lines: 6,7,8,12,16
 
          API_SPEC = {
         'api': {
@@ -133,7 +132,6 @@ add the following configuration on your specification.
 
 
 .. code-block:: python
-    :emphasize-lines: 3,4,5
 
          API_SPEC = {
         'api': {
@@ -185,10 +183,9 @@ of URL patterns and views (``urlpatterns``). This mapping is
 specified specify on your ``URLconf`` module (typically, the
 ``urls.py`` file on your django-project).
 
-Example:
+For example, in ``urls.py`` file:
 
 .. code-block:: python
-    :caption: urls.py
     
     from apimas.drf.django_rest import DjangoRestAdapter
     from myapp.spec import API_SPEC
@@ -245,8 +242,9 @@ a django-developer has to create the corresponding django forms and
 views in order to map url patterns with implementation. Hence, for a
 typical example a developer has to make the following classes:
 
+``models.py``:
+
 .. code-block:: python
-    :caption: models.py
 
     from django.db import models
 
@@ -254,8 +252,8 @@ typical example a developer has to make the following classes:
         text = models.CharField(max_length=30)
         number = models.IntegerField()
 
+``forms.py``
 .. code-block:: python
-    :caption: forms.py
 
     from django import forms
     from myapp.models import Foo
@@ -266,8 +264,8 @@ typical example a developer has to make the following classes:
             model = Foo
             fields = ('number', 'text',)
 
+``views.py``
 .. code-block:: python
-   :caption: views.py
 
    import json
    from django.http import HttpResponse
@@ -281,8 +279,9 @@ Even when using `django-rest-framework` which facilitates the
 development of the REST API, the developer typically has to create
 something like the following:
 
+``serializers.py``
+
 .. code-block:: python
-    :caption: serializers.py
 
     from rest_framework import serializers
     from myapp.models import Foo
@@ -293,8 +292,9 @@ something like the following:
             model = Foo
             fields - ('number', 'text')
 
+``views.py``
+
 .. code-block:: python
-    :caption: views.py
 
     from rest_framework import viewsets
     from myapp.serializers import FooSerializer
@@ -713,7 +713,6 @@ given ``instance`` as parameter.
 
 
 .. code-block:: python
-    :caption: mymodule.py
 
     def myfunc(instance):
         # Code which retrieves the value of a non-model field based on

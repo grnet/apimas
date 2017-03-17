@@ -136,10 +136,11 @@ creates the CLI for you based on your specification. This is
 a) ``.cli_commands``, b) ``.cli_option``.
 
 But first, you have to create a configuration file, say ``.apimas``
-on a directory of your choice, written in yaml syntax. For example,
+on a directory of your choice, written in yaml syntax.
+
+For example, in ``myloc/.apimas``:
 
 .. code-block:: yaml
-    :caption: myloc/.apimas
 
     root: http:localhost:8000
     spec:
@@ -349,7 +350,6 @@ specification.
 Example:
 
 .. code-block:: yaml
-    :emphasize-lines: 8,9,10,11,12,13
 
     root: http:localhost:8000
     spec:
@@ -381,8 +381,9 @@ Example:
 Then, your file where your credentials are stored should be as
 follows:
 
+``mycredentials.yaml``
+
 .. code-block:: yaml
-    :caption: ~/mycredentials.yaml
 
     basic:
         username: myusername
@@ -402,12 +403,12 @@ Multiple Authentication Modes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you need multiple authentication modes, then you should specify all
-of them on your specification. For example, add the highlighted lines
-in your specification. This points that a client can be authenticated
-with two possible authentication modes, i.e. ``basic`` and ``token``.
+of them on your specification. Then, you should add the ``.cli_auth``
+predicate to your specification. In the following example, a client can
+be authenticated with two possible authentication modes, i.e. ``basic``
+and ``token``.
 
 .. code-block:: yaml
-    :emphasize-lines: 7,8
 
     .cli_auth:
         format: yaml
@@ -426,8 +427,9 @@ authentication mode is used.
 
 For example:
 
+``credentials.yaml``
+
 .. code-block:: yaml
-    :caption: ~/credentials.yaml
 
     default: token
     basic:

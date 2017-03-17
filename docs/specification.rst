@@ -38,10 +38,10 @@ where:
 Given an API location path as above, a rule of thumb is
 for each segment in the path:
 
-  - The last segment is a value
-  - If a segment has ``'*'`` in it, it is a resource
-  - If a segment has ``'*'`` in it, its parent is a collection
-  - All remaining segments are probably nested resources
+- The last segment is a value
+- If a segment has ``'*'`` in it, it is a resource
+- If a segment has ``'*'`` in it, its parent is a collection
+- All remaining segments are probably nested resources
 
 
 In APIMAS, the specification of an API is a document object following
@@ -51,10 +51,9 @@ namespace with path-value pairs, or any other equivalent
 representation. The documents tool-kit in APIMAS uses the python dict
 form and can also convert to and from the namespace representation.
 
-For example:
+For example, namespace representation:
 
 .. code-block:: python
-    :caption: Namespace representation
 
     spec_namespace = {
         'webstore/.endpoint': {},
@@ -63,9 +62,9 @@ For example:
         'webstore/api/products/*/reviews/*/text/body': '.unicode',
     }
 
+Python ``dict`` representation:
 
 .. code-block:: python
-    :caption: Python dict representation
 
     spec_dict = {
         'webstore': {
@@ -89,8 +88,9 @@ For example:
     }
 
 
+`YAML <https://en.wikipedia.org/wiki/YAML>`_ representation:
+
 .. code-block:: python
-    :caption: Yaml representation
 
     spec_yaml = yaml.load("""
         webstore:

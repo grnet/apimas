@@ -1,5 +1,5 @@
-APIMAS standard predicates
-==========================
+APIMAS Predicates
+=================
 
 As explained in the previous `section <specification.html>`__,
 an APIMAS specification contains structural elements with their respective
