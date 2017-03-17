@@ -604,9 +604,10 @@ generated class.
 You can find more information about extra actions
 `here <http://www.django-rest-framework.org/api-guide/viewsets/#marking-extra-actions-for-routing>`__.
 
-.. rubric::
-    Note that the intuition of specifying the bases of the generated
-    class, encourage the resusability of your code. For instance, you
+.. note::
+
+    The intuition of specifying the bases of the generated class,
+    encourage the resusability of your code. For instance, you
     may have a custom ViewSet class which is shared amongst all your
     collections. Therefore, there is no need to write your own class
     for every class you want to customize, but instead, you simply
@@ -809,8 +810,9 @@ below:
 where node "data" is a non-model drf structural field, which consists
 of model fields "api_text" and "number".
 
-.. rubric::
-    Warning: All fields which are stored to the db must be declared
+.. warning::
+
+    All fields which are stored to the db must be declared
     to a particular node. They must not be scattered around different
     nodes of specification.
 

@@ -175,7 +175,9 @@ Predicate         Description
                       key and their description as defined by the use of predicates.
 ================= =================================================================
 
-.. rubric:: Note that every field **must** be described with at most one type.
+.. note::
+
+    Every field **must** be described with at most one type.
 
 Properties predicates
 ^^^^^^^^^^^^^^^^^^^^^
@@ -196,7 +198,8 @@ Predicate         Description
 ``.nullable``     The parent node can have null values.
 ================= =================================================================
 
-.. rubric::
-    Note that some predicates are mutually exclusive. Specifically a
+.. note::
+
+    Some predicates are mutually exclusive. Specifically a
     node cannot be described as both ``.readonly`` and ``writeonly``
     or ``.required`` and ``.readonly``.
