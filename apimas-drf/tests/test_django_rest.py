@@ -100,7 +100,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
                 'foo': {},
                 'bar': {},
             },
-            'actions': {
+            '.actions': {
                 self.adapter_conf: ['a', 'b']
             },
             self.adapter_conf: {},
@@ -130,7 +130,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
             loc=mock_loc, context=context)
         self.assertEqual(len(instance), 3)
         self.assertIn('*', instance)
-        self.assertIn('actions', instance)
+        self.assertIn('.actions', instance)
         instance_conf = instance.get(self.adapter_conf)
         self.assertIsNotNone(instance_conf)
         self.assertEqual(instance_conf, 'mock_view')

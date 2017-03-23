@@ -34,6 +34,7 @@ class Adapter(object):
         '.nullable',
         '.readonly',
         '.writeonly',
+        '.actions',
     ])
 
     TYPES = frozenset([

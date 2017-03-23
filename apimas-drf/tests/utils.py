@@ -51,7 +51,7 @@ class SpecGenerator(object):
             collection_spec = copy.deepcopy(COLLECTION_TEMPLATE)
             collection_spec['.drf_collection']['model'] = model
             collection_spec['*'] = field_schema
-            collection_spec['actions'] = ACTIONS
+            collection_spec['.actions'] = ACTIONS
             spec[self.endpoint][collection_name] = collection_spec
             spec[self.endpoint].update(
                 {'.endpoint': {'permissions': self.permissions}})

@@ -319,6 +319,15 @@ class NaiveAdapter(Adapter):
             property_name, property_name): True})
         return instance
 
+    def construct_actions(self, instance, spec, loc, context):
+        """
+        Constuctor for `.actions` predicate.
+
+        It's a namespace predicate within which we define which REST actions
+        are allowed to be performed on a collection.
+        """
+        return instance
+
     def extract_type(self, instance):
         """
         Method for extracting a predicate whose semantic refers to a type of

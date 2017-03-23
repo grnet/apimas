@@ -94,7 +94,7 @@ class TestCliAdapter(unittest.TestCase):
         mock_a = mock.MagicMock()
         mock_b = mock.MagicMock()
         mock_c = mock.MagicMock()
-        mock_commands = {'actions': [mock_a, mock_b, mock_c]}
+        mock_commands = {'.actions': [mock_a, mock_b, mock_c]}
         mock_instance = {self.adapter_conf: mock_commands}
         mock_schema = {
             'a': {'foo': {}},
@@ -132,7 +132,7 @@ class TestCliAdapter(unittest.TestCase):
             ApimasCliAdapter, ['construct_cli_commands', 'ADAPTER_CONF'])
         mock_cli.commands = {}
         mock_instance = {
-            self.adapter_conf: {'actions': set()}
+            self.adapter_conf: {'.actions': set()}
         }
         mock_context = {'parent_name': 'foo'}
         mock_cli.init_adapter_conf.return_value = mock_instance
@@ -140,10 +140,10 @@ class TestCliAdapter(unittest.TestCase):
             mock_cli, instance={}, spec={}, loc=mock_loc, context=mock_context)
         self.assertEqual(instance, mock_instance)
         mock_cli.init_adapter_conf.assert_called_once_with(
-            {}, initial={'actions': set()})
+            {}, initial={'.actions': set()})
 
         initial_instance = {
-            'actions': {
+            '.actions': {
                 self.adapter_conf: {
                     'a': 'foo',
                     'b': 'bar',
@@ -161,10 +161,10 @@ class TestCliAdapter(unittest.TestCase):
         instance_conf = instance.get(mock_cli.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)
         self.assertEqual(len(instance_conf), 1)
-        self.assertEqual(instance_conf['actions'], {'foo_bar'})
+        self.assertEqual(instance_conf['.actions'], {'foo_bar'})
 
         mock_cli.init_adapter_conf.assert_called_with(
-            initial_instance, initial={'actions': set()})
+            initial_instance, initial={'.actions': set()})
         self.assertEqual(mock_cli.construct_command.call_count, 2)
         mock_cli.construct_command.assert_any_call(
             instance_and_conf, 'foo', {}, mock_loc, 'a', 'foo')
@@ -178,7 +178,7 @@ class TestCliAdapter(unittest.TestCase):
             ApimasCliAdapter, ['construct_action', 'ADAPTER_CONF'])
         mock_cli.clients = {}
         actions = {'foo'}
-        mock_loc = ('foo', 'bar', 'actions', 'action')
+        mock_loc = ('foo', 'bar', '.actions', 'action')
         mock_cli.CRITICAL_ACTIONS = actions
         mock_cli.RESOURCE_ACTIONS = actions
         mock_command = mock.MagicMock()

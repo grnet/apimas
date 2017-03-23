@@ -115,7 +115,7 @@ SPEC = {
                     '.drf_field': {},
                 }
             },
-            'actions': ACTIONS
+            '.actions': ACTIONS
         },
     }
 }

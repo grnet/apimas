@@ -350,7 +350,7 @@ class DjangoRestAdapter(NaiveAdapter):
         if '.collection' not in constructed:
             raise doc.DeferConstructor
         field_schema = doc.doc_get(instance, ('*',))
-        actions = doc.doc_get(instance, ('actions', self.ADAPTER_CONF)) or []
+        actions = doc.doc_get(instance, ('.actions', self.ADAPTER_CONF)) or []
         model = self._get_or_import_model(loc[0] + '/' + parent,
                                           loc + ('model',),
                                           context.get('top_spec'))

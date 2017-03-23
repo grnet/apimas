@@ -105,7 +105,7 @@ FIELD_TYPE_MAPPING = {
 
 
 def action_exists(spec, endpoint, collection, action):
-    loc = (endpoint, collection, 'actions')
+    loc = (endpoint, collection, '.actions')
     actions = doc.doc_get(spec, loc) or {}
     return action in actions
 

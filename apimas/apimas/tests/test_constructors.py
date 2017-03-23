@@ -78,13 +78,13 @@ spec = {
                 },
                 'contribution': {
                     '.collection': {},
-                    'actions': contribution_actions_spec,
+                    '.actions': contribution_actions_spec,
                     '*': {
                         'data': contribution_data_spec, 
                     },
                 },
             },
-            'actions': negotiation_actions_spec,
+            '.actions': negotiation_actions_spec,
         },
     },
 }

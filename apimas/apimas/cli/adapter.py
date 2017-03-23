@@ -217,7 +217,7 @@ class ApimasCliAdapter(NaiveAdapter):
         if auth_schema is None:
             raise ex.ApimasAdapterException('`schema` parameter is missing',
                                             loc=loc)
-        commands = doc.doc_get(instance, (self.ADAPTER_CONF, 'actions'))
+        commands = doc.doc_get(instance, (self.ADAPTER_CONF, '.actions'))
         assert commands, (
             'Loc: {!r}, commands have not been constructed yet.'.format(
                 str(loc)))
@@ -236,15 +236,15 @@ class ApimasCliAdapter(NaiveAdapter):
         appropriate options to them based on field schema.
         """
         parent_name = context.get('parent_name')
-        instance = self.init_adapter_conf(instance, initial={'actions': set()})
-        commands = doc.doc_get(instance, ('actions', self.ADAPTER_CONF)) or {}
+        instance = self.init_adapter_conf(instance, initial={'.actions': set()})
+        commands = doc.doc_get(instance, ('.actions', self.ADAPTER_CONF)) or {}
         collection_name = loc[0] + '/' + parent_name
         self.commands[collection_name] = []
         for action, command in commands.iteritems():
             command = self.construct_command(
                 instance, parent_name, spec, loc, action, command)
             self.commands[collection_name].append(command)
-            instance[self.ADAPTER_CONF]['actions'].add(command)
+            instance[self.ADAPTER_CONF]['.actions'].add(command)
         return instance
 
     def construct_action(self, instance, spec, loc, context, action):
