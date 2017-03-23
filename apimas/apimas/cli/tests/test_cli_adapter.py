@@ -66,10 +66,6 @@ class TestCliAdapter(unittest.TestCase):
         self.assertFalse(cli_adapter.option_allowed(
             action='foo', spec={}, option_constructor='bar'))
 
-        spec = {'.indexable'}
-        self.assertTrue(cli_adapter.option_allowed(
-            action='foo', spec=spec, option_constructor='bar'))
-
     @mock.patch('click.option')
     def test_add_format_option(self, mock_option):
         cli_adapter = ApimasCliAdapter(clients={})

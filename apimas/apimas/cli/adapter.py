@@ -171,15 +171,12 @@ class ApimasCliAdapter(NaiveAdapter):
         There are some cases that an option cannot be applied. For instance,
         if a command is associated with write operations, e.g. create, update,
         there should not be options for `readonly` fields.
-
-        Similarly, if a command corresponds to read operations,
-        options corresponding to `indexable` fields should should be created.
         """
         if option_constructor is None:
             return False
         if action in self.WRITE_ACTIONS and '.readonly' in spec:
             return False
-        if action in self.READ_ACTIONS and '.indexable' not in spec:
+        if action in self.READ_ACTIONS:
             return False
         return True
 

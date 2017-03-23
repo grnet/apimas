@@ -178,7 +178,7 @@ class NaiveAdapter(Adapter):
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context, 'string')
+        return self.construct_type(instance, spec, loc, context, 'text')
 
     def construct_email(self, instance, spec, loc, context):
         """
