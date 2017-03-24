@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.3] - 2017-03-24
 ### Added
 - Specification can now specify multiple endpoints.
 - Informative error messages when handling the specification.
@@ -31,4 +31,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 - Client side data validation between two consecutive calls.
 
-[Unreleased]: https://github.com/grnet/apimas/
+[0.3]: https://github.com/grnet/apimas/
