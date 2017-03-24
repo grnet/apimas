@@ -1,5 +1,5 @@
-Basic Architecture
-==================
+Overview
+========
 
 APIMAS assumes applications are set up like this:
 
@@ -72,8 +72,8 @@ APIMAS assumes applications are set up like this:
      them top-level. Nested collections are supported to help data
      organization and convenience.
 
-Built-in operations can be overridden for customization.
-The application may also create new named actions:
+     Built-in operations can be overridden for customization.
+     The application may also create new named actions:
 
    - ``POST /<prefix>/api/<resource>/<id>/actions/<action>  data:{key:val...}``
 

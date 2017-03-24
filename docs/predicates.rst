@@ -57,14 +57,15 @@ Predicate         Description
                   PUT    <collection name>/<pk>/
                   PATCH  <collection name>/<pk>/
 
-                  **Note**: The ``.update`` predicate allows a single resource
-                  to be both replaced and partially updated.
-
 ``.delete``       A single resource can be deleted from the set of existing.
                   It corresponds to:
 
                   DELETE <collection name>/<pk>/
 ================= =================================================================
+
+.. note::
+    The ``.update`` predicate allows a single resource
+    to be both replaced and partially updated.
 
 Action predicates are specified inside the structural element **actions** of
 a collection definition.
@@ -111,7 +112,7 @@ Predicate         Description
                   supported.
 
                   **Parameters**:
-                      `maxlength`: The upper bound of string's size (optional).
+                      ``maxlength``: The upper bound of string's size (optional).
                       The default is 255.
 ``.text``         Parent node is a text.
 ``.boolean``      Parent node is either true or false.
@@ -120,44 +121,49 @@ Predicate         Description
 ``.choices``      Parent node can take a list of allowed values as specified
                   by the parameter ``allowed``.
 
+                      **Example**:
+
                       .. code-block:: python
 
-                          'foo': {
-                              '.choices': {
-                                  'allowed': [1, 'bar']
-                              }
-                          }
+                        'foo': {
+                            '.choices': {
+                                'allowed': [1, 'bar']
+                            }
+                        }
+
                       Parent node can be either 1 or 'bar'.
 
                   **Parameters**:
-                      `allowed`: A list of acceptable values for the parent.
+                      ``allowed``: A list of acceptable values for the parent.
+                      (Each item **must** be a literal).
 
-                      `display`: A list  of the displayed values of the node.
+                      ``display``: A list  of the displayed values of the node
+                      (optional). By default is the same as ``allowed``.
 
 ``.ref``          Parent node points to the web location of another resource.
 
                   **Parameters**:
-                      `to`:   Name of the collection where resource is located.
-                              This must be a valid name of a collection which
-                              have been specified on APIMAS specification too.
-                      `many`: true if parent node points to multiple resources,
-                              false otherwise.
+                      ``to``: Name of the collection where resource is located.
+                      This must be a valid name of a collection which
+                      have been specified on APIMAS specification too.
+
+                      ``many``: true if parent node points to multiple resources,
+                      false otherwise.
 ``.identity``     Parent node points to the web location of this resource.
                   It's actually the REST identifier of the resource. It is
                   non-writable.
 ``.file``         Parent node is a file.
 ``.date``         Parent node is a date, represented by a string.
                   
-                   
                   **Parameters**:
-                      `format`:  A list of string representing the allowed
+                      ``format``:  A list of string representing the allowed
                       input formats of the date. (optional).
                       By default only `ISO-8601 <http://www.iso.org/iso/home/standards/iso8601.htm>`__
                       is allowed.
 ``.datetime``     Parent node is a datetime, represented by a string.
 
                   **Parameters**:
-                      `format`:  A list of strings representing the allowed.
+                      ``format``:  A list of strings representing the allowed.
                       input formats of the datetime.
                       By default only `ISO-8601 <http://www.iso.org/iso/home/standards/iso8601.htm>`__
                       is allowed.
@@ -190,7 +196,7 @@ Predicate         Description
 ================= =================================================================
 ``.required``     The parent node is required and **must** be included in every
                   API call associated with create and update operations
-                  (POST and PUT requests).
+                  (e.g. POST and PUT requests).
 ``.readonly``     The parent node is read-only and its value can be viewed, but
                   it cannot be modified or set.
 ``.writeonly``    The parent node is write-only and its value can be modified

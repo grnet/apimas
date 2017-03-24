@@ -1,7 +1,7 @@
 .. _specification:
 
-Introduction to APIMAS specification
-====================================
+APIMAS Specification
+====================
 
 APIMAS considers interfaces made from a hierarchy of
 Collections, Resources, and Properties.

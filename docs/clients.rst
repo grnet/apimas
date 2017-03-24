@@ -1,5 +1,5 @@
-Create client-side applications
-*******************************
+Client-Side Applications
+************************
 
 APIMAS supports the creation of client-side applications to interact
 with the REST API described by your specification. There is a

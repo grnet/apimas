@@ -4,43 +4,57 @@
 APIMAS - API Modeling and Serving
 *********************************
 
-Install
-=======
-As a starting point, create a `virtualenv <http://docs.python-guide.org/en/latest/dev/virtualenvs/>`__:
+APIMAS provides a flexible way for building, modifying and
+extending your application without the cumbersome management
+due to the complexity and the size of it.
 
-.. code-block:: shell
+Trying it out
+=============
+
+apimas
+------
+
+Explore apimas package to find out how to model your REST API, and
+build and deploy your application.
+
+
+First, create a `virtualenv <http://docs.python-guide.org/en/latest/dev/virtualenvs/>`__:
+
+.. code-block:: console
 
     virtualenv virtualenv-apimas
     source virtualenv-apimas/bin/activate
 
+then, install apimas via `pip <https://pip.pypa.io/en/stable/>`__:
 
-Now, you can easily install apimas via ``pip``. Run the following
-command:
-
-.. code-block:: shell
+.. code-block:: console
 
     pip install apimas
 
-Alternatively, install apimas from github repository:
+apimas-drf
+----------
 
-.. code-block:: shell
+For apimas support for building django applications,
+you should checkout apimas-drf package. 
 
-    git clone https://github.com/grnet/apimas
-    cd apimas/apimas
-    python setup.py install
+In a virtualenv run:
+
+.. code-block:: console
+
+    pip install apimas-drf
 
 
 Contents
 ========
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
 
-   basic_architecture
+   overview
    specification
-   writing_spec
    predicates
+   writing_spec
    drf_adapter
    clients
    license
