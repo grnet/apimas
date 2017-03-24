@@ -31,6 +31,11 @@ you should checkout apimas-drf package.
 pip install apimas-drf
 ```
 
+Documentation
+-------------
+Please see the [APIMAS documentation](http://apimas.readthedocs.io/en/latest/index.html)
+for information on using APIMAS.
+
 
 Copyright and license
 ---------------------
