@@ -1,2 +1,1 @@
-requests
 guzzle_sphinx_theme
