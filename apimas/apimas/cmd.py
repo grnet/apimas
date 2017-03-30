@@ -1,4 +1,5 @@
 import click
+from os.path import abspath, dirname, join
 from click import types
 from apimas import config, exceptions as ex
 from apimas.cli.adapter import ApimasCliAdapter
@@ -28,11 +29,23 @@ class ApimasCLI(click.MultiCommand):
         return cli.endpoint_groups.get(name)
 
 
+def print_version():
+    version_file_name = 'version.txt'
+    version_file = join(dirname(abspath(__file__)), '..',
+                        version_file_name)
+    with open(version_file) as f:
+        package_info = f.read().replace('\n', '')
+        click.echo(package_info)
+
+
 @click.group(cls=ApimasCLI, invoke_without_command=True)
 @click.option('--config', type=types.Path(exists=False),
               envvar='APIMAS_CONFIG')
+@click.option('--version', '-v', is_flag=True)
 @click.pass_context
-def apimas(ctx, config):
+def apimas(ctx, config, version):
+    if version:
+        print_version()
     os_args = click.get_os_args()
     if not os_args or os_args[-1] == config:
         cmd = ctx.command.get_command(ctx, None)
