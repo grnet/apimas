@@ -48,9 +48,10 @@ class NaiveAdapter(Adapter):
         """
         Get the structural elements from the given instance specification.
         """
-        filter_func = lambda x: not x.startswith('.')\
-            and not x == self.ADAPTER_CONF
-        return filter(filter_func, instance.keys())
+        return filter(
+            lambda x: not x.startswith('.') and not x == self.ADAPTER_CONF,
+            instance.keys()
+        )
 
     def construct_collection(self, instance, spec, loc, context):
         self.init_adapter_conf(instance)
@@ -128,7 +129,7 @@ class NaiveAdapter(Adapter):
         endpoint, collection = tuple(segments)
         if collection not in top_spec[endpoint]:
             raise InvalidSpec(
-                'Reference targe {!r} does not exist.'.format(ref), loc=loc)
+                'Reference target {!r} does not exist.'.format(ref), loc=loc)
         return self.construct_type(instance, spec, loc, context, 'ref')
 
     def construct_serial(self, instance, spec, loc, context):
@@ -325,7 +326,7 @@ class NaiveAdapter(Adapter):
         Constuctor for `.actions` predicate.
 
         It's a namespace predicate within which we define which REST actions
-        are allowed to be performed on the collectio
+        are allowed to be performed on the collection.
         """
         return instance
 

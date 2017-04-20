@@ -34,7 +34,7 @@ def _load_document(path):
 def _validate_document(document):
     if not isinstance(document, dict):
         raise FormatError('File cannot be understood. It seems not to be'
-                              ' a document.')
+                          ' a document.')
     validator = Validator(VALIDATION_SCHEMA)
     is_valid = validator.validate(document)
     if not is_valid:

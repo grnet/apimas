@@ -22,6 +22,7 @@ class RequestError(HTTPError):
             detailed_msg = {'message': self.message, 'details': details}
             self.message = detailed_msg
 
+
 def get_subdocuments(document):
     """ Get documents that are elements of lists of a parent document. """
     subdocs = {}

@@ -213,11 +213,11 @@ class ApimasCliAdapter(NaiveAdapter):
         auth_format = spec.get('format')
         if auth_format is None:
             raise InvalidSpec('`format` parameter is missing',
-                               loc=loc)
+                              loc=loc)
         auth_schema = spec.get('schema')
         if auth_schema is None:
             raise InvalidSpec('`schema` parameter is missing',
-                               loc=loc)
+                              loc=loc)
         commands = doc.doc_get(instance, (self.ADAPTER_CONF, '.actions'))
         assert commands, (
             'Loc: {!r}, commands have not been constructed yet.'.format(
@@ -237,7 +237,8 @@ class ApimasCliAdapter(NaiveAdapter):
         appropriate options to them based on field schema.
         """
         parent_name = context.get('parent_name')
-        instance = self.init_adapter_conf(instance, initial={'.actions': set()})
+        instance = self.init_adapter_conf(
+            instance, initial={'.actions': set()})
         commands = doc.doc_get(instance, ('.actions', self.ADAPTER_CONF)) or {}
         collection_name = loc[0] + '/' + parent_name
         self.commands[collection_name] = []

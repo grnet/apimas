@@ -69,7 +69,7 @@ class ApimasClientAdapter(NaiveAdapter):
         it belongs.
 
         :raises: NotFound if client is not found for the selected
-        resource.
+        collection.
         """
         collection_name = endpoint + '/' + collection
         if collection_name not in self.clients:
