@@ -1,6 +1,7 @@
 import json
 import click
-from apimas import documents as doc, exceptions as ex
+from apimas import documents as doc
+from apimas.clients import RequestError
 
 
 def is_empty(v):
@@ -11,7 +12,7 @@ def handle_exception(func):
     def wrapper(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        except ex.ApimasClientException as e:
+        except RequestError as e:
             if isinstance(e.message, dict):
                 click.secho(json.dumps(e.message, indent=2), fg='red')
             else:

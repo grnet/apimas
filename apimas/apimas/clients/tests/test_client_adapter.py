@@ -1,6 +1,6 @@
 import unittest
 import mock
-from apimas.exceptions import ApimasException
+from apimas.errors import InvalidSpec, NotFound
 from apimas.adapters.cookbooks import NaiveAdapter
 from apimas.clients import TRAILING_SLASH, ApimasClient
 from apimas.clients.adapter import ApimasClientAdapter
@@ -14,7 +14,7 @@ class TestClientAdapter(unittest.TestCase):
     def test_get_client(self):
         mock_client = create_mock_object(ApimasClientAdapter, ['get_client'])
         mock_client.clients = {}
-        self.assertRaises(ApimasException, mock_client.get_client,
+        self.assertRaises(NotFound, mock_client.get_client,
                           mock_client, endpoint='api', collection='collection')
         mock_clients = {'api/collection': 'value'}
         mock_client.clients = mock_clients
@@ -75,7 +75,7 @@ class TestClientAdapter(unittest.TestCase):
         mock_client.get_extra_params.return_value = {'extra': 'value'}
 
         # Case A: Unspecified type.
-        self.assertRaises(ApimasException, mock_client.construct_field,
+        self.assertRaises(InvalidSpec, mock_client.construct_field,
                           mock_client, mock_instance, {}, mock_loc, {})
         mock_client.extract_type.assert_called_once_with(mock_instance)
 

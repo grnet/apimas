@@ -4,8 +4,8 @@ import unittest
 import mock
 from requests.exceptions import HTTPError
 from apimas.clients import (
-    ApimasClient, requests, get_subdocuments, to_cerberus_paths)
-from apimas.exceptions import ApimasClientException
+    ApimasClient, requests, get_subdocuments, to_cerberus_paths, RequestError)
+from apimas.errors import ValidationError
 from apimas.testing.helpers import create_mock_object
 
 
@@ -30,7 +30,7 @@ class TestClients(unittest.TestCase):
             with mock.patch.object(requests, action) as mock_action:
                 for m, args in methods:
                     mock_action.return_value = mock_response_ex
-                    self.assertRaises(ApimasClientException, m, args)
+                    self.assertRaises(RequestError, m, args)
                     mock_action.return_value = mock_response
                     m(args)
 
@@ -57,17 +57,17 @@ class TestClients(unittest.TestCase):
         self.client = ApimasClient('http://endpoint/', {})
         self.client.validation_schema = validation_schema
         data = {'field1': 1}
-        self.assertRaises(ApimasClientException, self.client.partial_validate,
+        self.assertRaises(ValidationError, self.client.partial_validate,
                           data)
         try:
             self.client.partial_validate(raise_exception=False, data=data)
             self.client.partial_validate(
                 raise_exception=True, data={'field1': 'foo'})
-        except ApimasClientException:
+        except ValidationError:
             self.fail()
 
         data['field3'] = {'field4': 10}
-        self.assertRaises(ApimasClientException, self.client.partial_validate,
+        self.assertRaises(ValidationError, self.client.partial_validate,
                           raise_exception=True, data=data)
 
     def test_partial_validate_sub(self):
@@ -98,7 +98,7 @@ class TestClients(unittest.TestCase):
         }
         sub = {'field1': 'foo'}
         data = {'unknown': [sub]}
-        self.assertRaises(ApimasClientException, mock_client._validate_subdata,
+        self.assertRaises(ValidationError, mock_client._validate_subdata,
                           mock_client, data, validation_schema, False)
         mock_client.partial_validate.assert_not_called
 
@@ -112,11 +112,11 @@ class TestClients(unittest.TestCase):
     def test_extract_files(self):
         mock_file = mock.MagicMock(spec=file)
         data = {'field1': {'field2': mock_file}}
-        self.assertRaises(ApimasClientException, self.client.extract_files,
+        self.assertRaises(ValidationError, self.client.extract_files,
                           data)
         data['field1']['field2'] = 'a value'
         data['field3'] = mock_file
-        self.assertRaises(ApimasClientException, self.client.extract_files,
+        self.assertRaises(ValidationError, self.client.extract_files,
                           data)
 
         data = {'field1': 'a value', 'field2': mock_file,

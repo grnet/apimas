@@ -6,8 +6,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.settings import api_settings
 from rest_framework.utils import model_meta
 from rest_framework.utils.serializer_helpers import ReturnDict
-from apimas import exceptions as ex
 from apimas.documents import ANY
+from apimas.errors import GenericFault
 from apimas.drf import utils
 
 
@@ -26,7 +26,7 @@ def lookup_value(field_name, source, instance):
         return instance
 
     if source is None:
-        raise ex.ApimasException(
+        raise GenericFault(
             'Cannot retrieve instance value for the field {!r} given a'
             ' NoneType source'.format(field_name))
 
@@ -36,7 +36,7 @@ def lookup_value(field_name, source, instance):
         if callable(func):
             instance = func(instance)
         else:
-            raise ex.ApimasException(
+            raise GenericFault(
                 'Cannot retrieve instance value of the'
                 ' field {!r} given the source {!r}'.format(field_name, source))
     return instance
@@ -90,31 +90,31 @@ class ContainerSerializer(serializers.BaseSerializer):
     def _validate_configuration(self):
         meta_cls = getattr(self, 'Meta', None)
         if meta_cls is None:
-            raise ex.ApimasException('`Meta` class cannot be found')
+            raise GenericFault('`Meta` class cannot be found')
         model_fields = getattr(meta_cls, 'model_fields', [])
         fields = getattr(meta_cls, 'extra_fields', [])
         if not (fields or model_fields):
-            raise ex.ApimasException(
+            raise GenericFault(
                 '`extra_fields` and `model_fields` attributes are not'
                 ' specified')
         if not (self.model_ser_cls or self.ser_cls):
-            raise ex.ApimasException(
+            raise GenericFault(
                 'A `ContainerSerializer` must define a `ModelSerializer` class'
                 ' or a `Serializer class')
         if not (self.model_ser_cls or self.ser_cls):
-            raise ex.ApimasException(
+            raise GenericFault(
                 'A `ContainerSerializer` must include a ModelSerializer'
                 ' and Serializer class')
         if self.model_ser_cls:
             mro = inspect.getmro(self.model_ser_cls)
             if serializers.HyperlinkedModelSerializer not in mro:
-                raise ex.ApimasException(
+                raise GenericFault(
                     'A model serializer class must inherit'
                     ' `serializers.ModelSerializer`')
         if self.ser_cls:
             mro = inspect.getmro(self.ser_cls)
             if serializers.BaseSerializer not in mro:
-                raise ex.ApimasException(
+                raise GenericFault(
                     'A serializer class must implement'
                     ' `serializers.BaseSerializer`')
         return model_fields, fields
@@ -410,7 +410,7 @@ class ApimasSerializer(serializers.Serializer):
         out = drf_field.update(instance, value, **kwargs) if instance\
             else drf_field.create(value, **kwargs)
         if out and new_instance:
-            raise ex.ApimasException('Multiple instances found')
+            raise GenericFault('Multiple instances found')
         if not new_instance:
             return out
 
@@ -461,7 +461,7 @@ class ApimasSerializer(serializers.Serializer):
                     field.field_name,
                     instance_sources.get(field.field_name),
                     instance)
-            except (ImportError, ex.ApimasException):
+            except (ImportError, GenericFault):
                 try:
                     attribute = field.get_attribute(instance)
                 except serializers.SkipField:

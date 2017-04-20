@@ -1,7 +1,7 @@
 from os.path import expanduser, join, isfile
 import yaml
 from cerberus import Validator
-from apimas.exceptions import ApimasException
+from apimas.errors import ValidationError, FormatError
 
 
 HOME_DIR = expanduser("~")
@@ -21,24 +21,24 @@ VALIDATION_SCHEMA = {
 def _load_document(path):
     if not isfile(path):
         msg = 'Given path {!r} is not a file'.format(path)
-        raise ApimasException(message=msg)
+        raise ValidationError(message=msg)
 
     with open(path) as data_file:
         try:
             return yaml.safe_load(data_file)
         except yaml.YAMLError as e:
             msg = 'File cannot be understood: {!s}.'.format(str(e))
-            raise ApimasException(message=msg)
+            raise FormatError(message=msg)
 
 
 def _validate_document(document):
     if not isinstance(document, dict):
-        raise ApimasException('File cannot be understood. It seems not to be'
+        raise FormatError('File cannot be understood. It seems not to be'
                               ' a document.')
     validator = Validator(VALIDATION_SCHEMA)
     is_valid = validator.validate(document)
     if not is_valid:
-        raise ApimasException(validator.errors)
+        raise ValidationError(validator.errors)
     return document
 
 

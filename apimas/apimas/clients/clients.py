@@ -2,13 +2,25 @@ from copy import deepcopy
 import requests
 from requests.exceptions import HTTPError
 from requests.compat import urljoin, quote
-from apimas import documents as doc, exceptions as ex
+from apimas import documents as doc
+from apimas.errors import ValidationError
 from apimas.clients.auth import ApimasClientAuth
 from apimas.clients.extensions import ApimasValidator
 
 
 TRAILING_SLASH = '/'
 
+
+class RequestError(HTTPError):
+    def __init__(self, *args, **kwargs):
+        super(self.__class__, self).__init__(*args, **kwargs)
+        if isinstance(self.response, requests.Response):
+            try:
+                details = self.response.json()
+            except ValueError:
+                details = self.response.text
+            detailed_msg = {'message': self.message, 'details': details}
+            self.message = detailed_msg
 
 def get_subdocuments(document):
     """ Get documents that are elements of lists of a parent document. """
@@ -63,7 +75,7 @@ def to_cerberus_paths(data):
 def handle_exception(func):
     """
     Handler of exceptions raised due to the response status codes.
-    It catches them it raised an appropriate `ApimasClientException`.
+    It catches them it raised an appropriate `RequestError`.
     """
     def wrapper(*args, **kwargs):
         try:
@@ -72,7 +84,7 @@ def handle_exception(func):
                 r.raise_for_status()
             return r
         except HTTPError as e:
-            raise ex.ApimasClientException(
+            raise RequestError(
                 e.message, response=e.response, request=e.request)
     return wrapper
 
@@ -245,7 +257,7 @@ class ApimasClient(object):
             subschema = doc.doc_pop(schema, cerberus_path[:-1]) or {}
             subschema = subschema.get('schema', {}).get('schema', {})
             if not subschema:
-                raise ex.ApimasClientException(
+                raise ValidationError(
                     'Field {!r} cannot be validated'.format(str(tuple(path))))
             validated_docs = []
             for subdoc in subdata:
@@ -276,7 +288,7 @@ class ApimasClient(object):
         validator = ApimasValidator(partial_schema)
         is_valid = validator.validate(data)
         if raise_exception and not is_valid:
-            raise ex.ApimasClientException(validator.errors)
+            raise ValidationError(validator.errors)
         for k, v in validated_subdocs.iteritems():
             doc.doc_set(validator.document, k, v)
         return validator.document
@@ -291,7 +303,7 @@ class ApimasClient(object):
         """
         is_valid = self.api_validator.validate(data)
         if raise_exception and not is_valid:
-            raise ex.ApimasClientException(self.api_validator.errors)
+            raise ValidationError(self.api_validator.errors)
         return self.api_validator.document
 
     def extract_files(self, data):
@@ -317,10 +329,10 @@ class ApimasClient(object):
         error_msg = ('Content-Type `application/json is not supported when'
                      ' uploading files`')
         if any(len(path) > 1 for path in paths):
-            raise ex.ApimasClientException(error_msg)
+            raise ValidationError(error_msg)
         if paths and any(isinstance(v, (list, dict))
                          for _, v in data.iteritems()):
-            raise ex.ApimasClientException(error_msg)
+            raise ValidationError(error_msg)
         return {path[-1]: doc.doc_pop(data, path) for path in paths}
 
     def extract_write_data(self, data, raise_exception, partial=False):

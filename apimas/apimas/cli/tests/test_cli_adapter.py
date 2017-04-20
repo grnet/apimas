@@ -1,6 +1,7 @@
 import unittest
 import mock
-from apimas import documents as doc, exceptions as ex
+from apimas import documents as doc
+from apimas.errors import InvalidSpec, NotFound
 from apimas.testing.helpers import create_mock_object
 from apimas.cli.adapter import ApimasCliAdapter
 from apimas.adapters.cookbooks import SKIP
@@ -13,7 +14,7 @@ class TestCliAdapter(unittest.TestCase):
         mock_adapter = create_mock_object(ApimasCliAdapter,
                                           ['get_collection_commands'])
         mock_adapter.commands = {}
-        self.assertRaises(ex.ApimasException,
+        self.assertRaises(NotFound,
                           mock_adapter.get_collection_commands,
                           mock_adapter, endpoint='api',
                           collection='collection')
@@ -103,13 +104,13 @@ class TestCliAdapter(unittest.TestCase):
 
         # Case A: Missing parameter 'format'.
         mock_spec = {'schema': mock_schema}
-        self.assertRaises(ex.ApimasAdapterException,
+        self.assertRaises(InvalidSpec,
                           mock_cli.construct_cli_auth, mock_cli, mock_instance,
                           mock_spec, (), {})
 
         # Case B: Missing parameter 'schema'.
         mock_spec = {'format': mock_schema}
-        self.assertRaises(ex.ApimasAdapterException,
+        self.assertRaises(InvalidSpec,
                           mock_cli.construct_cli_auth, mock_cli, mock_instance,
                           mock_spec, (), {})
 

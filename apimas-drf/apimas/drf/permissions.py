@@ -1,6 +1,5 @@
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.permissions import BasePermission
-from apimas.exceptions import ApimasException
 from apimas.documents import ANY, AnyPattern, doc_to_ns
 from apimas.tabmatch import Tabmatch
 
@@ -31,9 +30,8 @@ class ApimasPermissions(BasePermission):
             roles = self.ANONYMOUS_ROLES
         else:
             roles = getattr(request.user, 'apimas_roles', None)
-            if roles is None:
-                raise ApimasException(
-                    'Cannot find propety `apimas_roles` on `user` object')
+            assert roles is not None, (
+                'Cannot find propety `apimas_roles` on `user` object')
         return [[action], roles, [ANY], [ANY]]
 
     def isallowed(self, request, view, obj=None):

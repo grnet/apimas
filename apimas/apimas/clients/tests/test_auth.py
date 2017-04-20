@@ -1,6 +1,6 @@
 import unittest
 import mock
-from apimas.exceptions import ApimasClientException
+from apimas.errors import ValidationError
 from apimas.clients.auth import HTTPTokenAuth, ApimasClientAuth
 
 
@@ -29,4 +29,4 @@ class TestAuth(unittest.TestCase):
         self.assertEqual(mock_auth.call_count, 1)
 
         auth.auth_type = 'invalid'
-        self.assertRaises(ApimasClientException, auth, mock_request)
+        self.assertRaises(ValidationError, auth, mock_request)

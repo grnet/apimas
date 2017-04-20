@@ -1,8 +1,7 @@
 import mock
 import unittest
 from apimas import documents as doc
-from apimas.exceptions import (
-    ApimasException, ApimasAdapterException)
+from apimas.errors import InvalidSpec
 from apimas.adapters.cookbooks import NaiveAdapter
 from apimas.testing.helpers import create_mock_object
 
@@ -27,7 +26,7 @@ class TestNaiveAdapter(unittest.TestCase):
                           instance=instance, spec={}, loc=(), context={})
 
         loc = ('api', 'foo', '.collection')
-        self.assertRaises(ApimasAdapterException,
+        self.assertRaises(InvalidSpec,
                           self.adapter.construct_collection,
                           instance=instance, spec={}, loc=loc, context={})
 
@@ -45,7 +44,7 @@ class TestNaiveAdapter(unittest.TestCase):
         type_mapping = {'foo': 1}
         self.adapter.TYPE_MAPPING = type_mapping
 
-        self.assertRaises(ApimasAdapterException, self.adapter.construct_type,
+        self.assertRaises(InvalidSpec, self.adapter.construct_type,
                           instance={}, spec={}, loc=(), context={},
                           field_type='unknown')
 
@@ -57,11 +56,11 @@ class TestNaiveAdapter(unittest.TestCase):
 
     def test_validate_structure(self):
         loc = ('foo', 'bar')
-        self.assertRaises(ApimasAdapterException,
+        self.assertRaises(InvalidSpec,
                           self.adapter.validate_structure,
                           instance={}, spec={}, loc=loc, context={})
         spec = {'a': {}, 'b': 1}
-        self.assertRaises(ApimasAdapterException,
+        self.assertRaises(InvalidSpec,
                           self.adapter.validate_structure,
                           instance={}, spec=spec, loc=loc, context={})
         spec['b'] = {'foo': 'bar'}
@@ -77,13 +76,13 @@ class TestNaiveAdapter(unittest.TestCase):
         spec = {'to': 'unknown'}
         mock_loc = ('api', 'bar')
 
-        self.assertRaises(ApimasAdapterException, mock_adapter.construct_ref,
+        self.assertRaises(InvalidSpec, mock_adapter.construct_ref,
                           mock_adapter, instance=mock_instance, spec={},
                           loc=mock_loc, context=context)
         mock_adapter.construct_type.assert_not_called
 
         spec['to'] = 'api/unknown'
-        self.assertRaises(ApimasAdapterException, mock_adapter.construct_ref,
+        self.assertRaises(InvalidSpec, mock_adapter.construct_ref,
                           mock_adapter, instance=mock_instance, spec=spec,
                           loc=mock_loc, context=context)
         mock_adapter.construct_type.assert_not_called
@@ -99,12 +98,12 @@ class TestNaiveAdapter(unittest.TestCase):
         self.adapter.PROPERTIES = mock_properties
         mock_loc = ('foo', 'bar')
         context = {'all_constructors': ['foo', 'bar']}
-        self.assertRaises(ApimasAdapterException,
+        self.assertRaises(InvalidSpec,
                           self.adapter.construct_identity,
                           instance={}, spec={}, loc=mock_loc, context=context)
 
         context = {'all_constructors': ['foo', '.readonly']}
-        self.assertRaises(ApimasAdapterException,
+        self.assertRaises(InvalidSpec,
                           self.adapter.construct_identity,
                           instance={}, spec={}, loc=mock_loc, context=context)
 
@@ -122,13 +121,13 @@ class TestNaiveAdapter(unittest.TestCase):
         mock_adapter = create_mock_object(NaiveAdapter, ['construct_choices'])
 
         # Case A: Parameter `allowed` not specified.
-        self.assertRaises(ApimasAdapterException,
+        self.assertRaises(InvalidSpec,
                           mock_adapter.construct_choices, mock_adapter,
                           instance={}, spec={}, loc=(), context=())
         mock_adapter.construct_type.assert_not_called
 
         # Case B: Parameter `allowed` specified but it is invalid.
-        self.assertRaises(ApimasAdapterException,
+        self.assertRaises(InvalidSpec,
                           mock_adapter.construct_choices, mock_adapter,
                           instance={}, spec={'allowed': 'invalid'}, loc=(),
                           context={})
@@ -152,7 +151,7 @@ class TestNaiveAdapter(unittest.TestCase):
         mock_instance = {mock_adapter.ADAPTER_CONF: {}}
         context = {'constructed': ['foo', 'bar']}
 
-        self.assertRaises(ApimasAdapterException,
+        self.assertRaises(InvalidSpec,
                           mock_adapter.construct_property, mock_adapter,
                           instance=mock_instance, spec={}, loc=mock_loc,
                           context=context, property_name='unknown')
@@ -190,7 +189,7 @@ class TestNaiveAdapter(unittest.TestCase):
         self.assertEqual(self.adapter.extract_type(mock_instance), 'foo')
 
         mock_instance['bar'] = {}
-        self.assertRaises(ApimasException, self.adapter.extract_type,
+        self.assertRaises(InvalidSpec, self.adapter.extract_type,
                           mock_instance)
 
     def test_init_adapter_conf(self):

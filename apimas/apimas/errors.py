@@ -2,7 +2,8 @@
 class GenericException(Exception):
     """Superclass for all exceptions in this module."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, message, *args, **kwargs):
+        self.message = message
         self.args = args
         self.kwargs = kwargs
 
@@ -10,7 +11,7 @@ class GenericException(Exception):
         args = ', '.join(repr(x) for x in self.args)
         kwargs = ', '.join(('%s=%s' % (str(k), repr(v)))
                            for k, v in self.kwargs.iteritems())
-        arglist = []
+        arglist = ['%s=%s' % ('message', repr(self.message))]
         if args:
             arglist.append(args)
         if kwargs:
@@ -22,12 +23,8 @@ class GenericException(Exception):
         return s
 
     def __str__(self):
-        if 'message' in self.kwargs:
-            return str(self.kwargs['message'])
-
-        if self.args:
-            return str(self.args[0])
-
+        if self.message:
+            return str(self.message)
         return repr(self)
 
 
@@ -93,4 +90,22 @@ class ProtocolError(GenericFault):
 
 class TimeoutError(GenericFault):
     """A runtime communication has timed out."""
+    pass
+
+
+class AdapterError(GenericException):
+    """ A runtime error during construction process of adapter. """
+    def __init__(self, message, loc=(), *args, **kwargs):
+        self.loc = loc
+        kwargs['loc'] = loc
+        super(AdapterError, self).__init__(message, *args, **kwargs)
+
+    def __str__(self):
+        if self.loc:
+            return '{msg}, on location: ({loc})'.format(
+                msg=self.message, loc=', '.join(self.loc))
+
+
+class InvalidSpec(AdapterError):
+    """ Specification cannot be understood by the adapter. """
     pass

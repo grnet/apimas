@@ -19,10 +19,10 @@ class TestDjangoRestAdapter(unittest.TestCase):
 
     def test_get_class(self):
         empty = {}
-        self.assertRaises(utils.DRFAdapterException, self.adapter.get_class,
+        self.assertRaises(utils.DRFAdapterError, self.adapter.get_class,
                           empty, 'something', 'else')
         container = {'api/foo': 'bar'}
-        self.assertRaises(utils.DRFAdapterException, self.adapter.get_class,
+        self.assertRaises(utils.DRFAdapterError, self.adapter.get_class,
                           container, 'something', 'else')
         self.assertEqual(self.adapter.get_class(container, 'api', 'foo'),
                          'bar')
@@ -322,7 +322,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
 
         # Case A: `instance_source` and `onmodel` are mutually exclusive.
         self.assertRaises(
-            utils.DRFAdapterException, mock_adapter.default_field_constructor,
+            utils.DRFAdapterError, mock_adapter.default_field_constructor,
             mock_adapter, instance=mock_instance, spec=mock_spec,
             loc=mock_loc, context=mock_context, predicate_type='.string')
         mock_spec['onmodel'] = False
@@ -361,7 +361,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_context['constructed'] = {'.foo'}
 
         mock_adapter.extract_type.return_value = None
-        self.assertRaises(utils.DRFAdapterException,
+        self.assertRaises(utils.DRFAdapterError,
                           mock_adapter.construct_drf_field, mock_adapter,
                           instance=mock_instance, spec={}, loc=mock_loc,
                           context=mock_context)
@@ -395,7 +395,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
             DjangoRestAdapter, ['construct_property', 'ADAPTER_CONF'])
         mock_adapter.PROPERTY_MAPPING = mock_properties
         mock_instance = {self.adapter_conf: {}}
-        self.assertRaises(utils.DRFAdapterException,
+        self.assertRaises(utils.DRFAdapterError,
                           mock_adapter.construct_property, mock_adapter,
                           instance=mock_instance, spec={}, loc=(),
                           context={}, property_name='unknown')
@@ -419,7 +419,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_model = mock.Mock(_meta=mock_meta)
 
         # Case A: Extracted model is `None`.
-        self.assertRaises(utils.DRFAdapterException,
+        self.assertRaises(utils.DRFAdapterError,
                           mock_adapter.validate_model_field, mock_adapter,
                           None, 'foo', self.loc, field_type, None)
         mock_attr.assert_not_called
@@ -588,7 +588,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_adapter = create_mock_object(
             DjangoRestAdapter, ['extract_related_model', 'ADAPTER_CONF'])
         mock_adapter.extract_model.return_value = mock_model
-        self.assertRaises(utils.DRFAdapterException,
+        self.assertRaises(utils.DRFAdapterError,
                           mock_adapter.extract_related_model,
                           mock_adapter, None, None)
 
@@ -611,7 +611,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         # Case A: Cannot import model.
         self.assertEqual(self.adapter.models, {})
         mock_import.side_effect = ImportError()
-        self.assertRaises(utils.DRFAdapterException,
+        self.assertRaises(utils.DRFAdapterError,
                           self.adapter._get_or_import_model, 'foo',
                           ('foo', 'model'), spec)
         mock_import.assert_called_once
@@ -664,7 +664,7 @@ class TestUtilityFunctions(unittest.TestCase):
         # Case C: Types do not match.
         cases = [(mock_cls, mock_cls), mock_cls]
         for case in cases:
-            self.assertRaises(utils.DRFAdapterException,
+            self.assertRaises(utils.DRFAdapterError,
                               django_rest._validate_model_type, 'foo',
                               mock_model_field, case)
 
@@ -679,7 +679,7 @@ class TestUtilityFunctions(unittest.TestCase):
         self.assertEqual(model_attr, 'bar')
 
         # Case B: Attribute not found on given instance.
-        self.assertRaises(utils.DRFAdapterException,
+        self.assertRaises(utils.DRFAdapterError,
                           django_rest._validate_model_attribute,
                           'field_name', mock_model, 'unknown')
 
@@ -692,6 +692,6 @@ class TestUtilityFunctions(unittest.TestCase):
         self.assertEqual(model_field, mock_field)
 
         # Case B: Related model of field and given ref model do not match.
-        self.assertRaises(utils.DRFAdapterException,
+        self.assertRaises(utils.DRFAdapterError,
                           django_rest._validate_relational_field,
                           'foo name', ref_model='bar', model_field=model_field)

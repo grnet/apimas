@@ -1,7 +1,8 @@
 import functools
 import click
 from click import types
-from apimas import documents as doc, exceptions as ex
+from apimas import documents as doc
+from apimas.errors import InvalidSpec, NotFound
 from apimas.cli import (ListCommand, RetrieveCommand, CreateCommand,
                         UpdateCommand, DeleleCommand, abort_if_false)
 from apimas.cli.custom_types import (
@@ -133,12 +134,12 @@ class ApimasCliAdapter(NaiveAdapter):
         Get all commands to interact with a specific collection which belongs
         to a specific endpoint.
 
-        :raises: ApimasException if commands are not found for the selected
+        :raises: NotFound if commands are not found for the selected
         collection.
         """
         collection_name = endpoint + '/' + collection
         if collection_name not in self.commands:
-            raise ex.ApimasException(
+            raise NotFound(
                 'Commands not found for collection {!r}'.format(
                     collection_name))
         return self.commands[collection_name]
@@ -211,12 +212,12 @@ class ApimasCliAdapter(NaiveAdapter):
             raise doc.DeferConstructor
         auth_format = spec.get('format')
         if auth_format is None:
-            raise ex.ApimasAdapterException('`format` parameter is missing',
-                                            loc=loc)
+            raise InvalidSpec('`format` parameter is missing',
+                               loc=loc)
         auth_schema = spec.get('schema')
         if auth_schema is None:
-            raise ex.ApimasAdapterException('`schema` parameter is missing',
-                                            loc=loc)
+            raise InvalidSpec('`schema` parameter is missing',
+                               loc=loc)
         commands = doc.doc_get(instance, (self.ADAPTER_CONF, '.actions'))
         assert commands, (
             'Loc: {!r}, commands have not been constructed yet.'.format(

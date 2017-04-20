@@ -17,7 +17,7 @@ def handle_exception(func):
         try:
             return func(*args, **kwargs)
         except FieldDoesNotExist as e:
-            raise utils.DRFAdapterException(e, loc=kwargs.get('loc', ()))
+            raise utils.DRFAdapterError(e, loc=kwargs.get('loc', ()))
     return wrapper
 
 
@@ -36,7 +36,7 @@ def _validate_model_type(api_field_name, model_field, django_field_type,
     else:
         matches = isinstance(model_field, django_field_type)
     if not matches:
-        raise utils.DRFAdapterException(
+        raise utils.DRFAdapterError(
             'Field {!r} is not a {!r} in your django model'.format(
                 api_field_name, django_field_type), loc=loc)
     return model_field
@@ -49,7 +49,7 @@ def _validate_relational_field(api_field_name, ref_model, model_field,
     parameter.
     """
     if model_field.related_model is not ref_model:
-        raise utils.DRFAdapterException(
+        raise utils.DRFAdapterError(
             'Model field {!r} is not related to {!r}.'.format(
                 model_field.name, ref_model), loc=loc)
     return model_field
@@ -60,7 +60,7 @@ def _validate_model_attribute(api_field_name, model, model_attr_name,
     """ Checks that model have an attribute named as `model_attr_name`."""
     model_attr = getattr(model, model_attr_name, None)
     if model_attr is None:
-        raise utils.DRFAdapterException(
+        raise utils.DRFAdapterError(
             'Attribute {!r} ({!r}) not found in model {!r}'.format(
                 model_attr_name, api_field_name, model.__name__), loc=loc)
     return model_attr
@@ -191,11 +191,11 @@ class DjangoRestAdapter(NaiveAdapter):
         """
         collection_name = endpoint + '/' + collection
         if not class_container:
-            raise utils.DRFAdapterException(
+            raise utils.DRFAdapterError(
                 'Classes have not been constructed yet.'
-                ' Run {!s}.construct()`'.format(self.__class__.__name__))
+                ' Run `{!s}.construct()`'.format(self.__class__.__name__))
         if collection_name not in class_container:
-            raise utils.DRFAdapterException(
+            raise utils.DRFAdapterError(
                 'Class not found for collection {!r}'.format(collection_name))
         return class_container[collection_name]
 
@@ -217,7 +217,7 @@ class DjangoRestAdapter(NaiveAdapter):
         parent_name = context.get('parent_name')
         collections = self.get_structural_elements(instance)
         if not collections:
-            raise utils.DRFAdapterException(
+            raise utils.DRFAdapterError(
                 '.endpoint without any collection found.', loc=loc)
         router = routers.DefaultRouter()
         for collection in collections:
@@ -505,7 +505,7 @@ class DjangoRestAdapter(NaiveAdapter):
         instance_source = spec.pop('instance_source', None)
         onmodel = spec.get('onmodel', True)
         if instance_source and onmodel:
-            raise utils.DRFAdapterException(
+            raise utils.DRFAdapterError(
                 '`instance_source` and `onmodel=True` are mutually'
                 ' exclusive.', loc=loc)
         field_kwargs = {k: v for k, v in spec.iteritems() if k != 'onmodel'}
@@ -531,7 +531,7 @@ class DjangoRestAdapter(NaiveAdapter):
                     doc.doc_get(top_spec, model_path))
                 self.models[collection] = model
             except ImportError as e:
-                raise utils.DRFAdapterException(e.message, loc=model_path)
+                raise utils.DRFAdapterError(e.message, loc=model_path)
         else:
             model = self.models[collection]
         return model
@@ -587,7 +587,7 @@ class DjangoRestAdapter(NaiveAdapter):
             raise doc.DeferConstructor
         type_predicate = self.extract_type(instance)
         if type_predicate is None:
-            raise utils.DRFAdapterException(
+            raise utils.DRFAdapterError(
                 'Cannot construct drf field {!r} without specifying its'
                 ' type'.format(parent), loc=loc)
         return field_constructors.get(
@@ -637,7 +637,7 @@ class DjangoRestAdapter(NaiveAdapter):
         defered.
         """
         if property_name not in self.PROPERTY_MAPPING:
-            raise utils.DRFAdapterException(
+            raise utils.DRFAdapterError(
                 'Unknown property {!r}'.format(property_name), loc=loc)
         self.init_adapter_conf(instance)
         instance[self.ADAPTER_CONF].update(
@@ -654,7 +654,7 @@ class DjangoRestAdapter(NaiveAdapter):
         model = self.extract_model(source or name, django_conf, loc)
         automated = True
         if model is None:
-            raise utils.DRFAdapterException(
+            raise utils.DRFAdapterError(
                 'Invalid argument, model cannot be `None`.', loc=loc)
         try:
             model_field = model._meta.get_field(source or name)
@@ -710,7 +710,7 @@ class DjangoRestAdapter(NaiveAdapter):
         model = self.extract_model(related_field, django_conf, loc)
         related_field = model._meta.get_field(related_field)
         if related_field.related_model is None:
-            raise utils.DRFAdapterException(
+            raise utils.DRFAdapterError(
                 'Field {!r} is not related with another model'.format(
                     related_field), loc=loc)
         return related_field.related_model

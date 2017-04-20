@@ -1,7 +1,8 @@
 import click
 from os.path import abspath, dirname, join
 from click import types
-from apimas import config, exceptions as ex
+from apimas import config
+from apimas.errors import GenericInputError
 from apimas.cli.adapter import ApimasCliAdapter
 from apimas.clients.adapter import ApimasClientAdapter
 
@@ -20,7 +21,7 @@ class ApimasCLI(click.MultiCommand):
         config_file = ctx.params.get('config')
         try:
             conf = config.configure(path=config_file)
-        except ex.ApimasException as e:
+        except GenericInputError as e:
             raise click.BadOptionUsage(str(e))
         root_url, spec = conf['root'], conf['spec']
         cli = _construct_cli(root_url, spec)

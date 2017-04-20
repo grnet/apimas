@@ -1,4 +1,5 @@
-from apimas import documents as doc, exceptions as ex
+from apimas import documents as doc
+from apimas.errors import InvalidSpec
 from apimas.adapters import Adapter
 
 
@@ -56,7 +57,7 @@ class NaiveAdapter(Adapter):
         field_schema = doc.doc_get(instance, ('*',))
         assert len(loc) >= 3
         if not field_schema:
-            raise ex.ApimasAdapterException(
+            raise InvalidSpec(
                 'A collection must define its field schema.'
                 ' Empty collection found: {!r}'.format(loc[-2]), loc=loc)
         return instance
@@ -70,7 +71,7 @@ class NaiveAdapter(Adapter):
         """
         self.init_adapter_conf(instance)
         if field_type not in self.TYPE_MAPPING:
-            raise ex.ApimasAdapterException(
+            raise InvalidSpec(
                 'Unknown field type: {!r}'.format(field_type), loc=loc)
         field_schema = {'type': self.TYPE_MAPPING[field_type]}
         instance[self.ADAPTER_CONF].update(field_schema)
@@ -78,14 +79,14 @@ class NaiveAdapter(Adapter):
 
     def validate_structure(self, instance, spec, loc, context):
         if not spec:
-            raise ex.ApimasAdapterException(
+            raise InvalidSpec(
                 'A structure must define its field schema.'
                 ' Empty structure found: {!r}'.format(loc[-2]), loc=loc)
         for k, v in spec.iteritems():
             if not isinstance(v, dict):
                 msg = ('Not known properties for field {!r} of struct {!r}. A'
                        ' dict with the schema of structure must be provided.')
-                raise ex.ApimasAdapterException(
+                raise InvalidSpec(
                     msg.format(k, loc[-2]), loc=loc)
 
     def construct_struct(self, instance, spec, loc, context):
@@ -116,17 +117,17 @@ class NaiveAdapter(Adapter):
         """
         ref = spec.get('to', None)
         if not ref:
-            raise ex.ApimasAdapterException(
+            raise InvalidSpec(
                 'You have to specify `to` parameter', loc=loc)
         segments = ref.split('/')
         if len(segments) != 2:
             msg = ('Reference target {!r} cannot be understood'
                    'Must be of the form: <endpoint>/<collection>.')
-            raise ex.ApimasAdapterException(msg.format(ref), loc=loc)
+            raise InvalidSpec(msg.format(ref), loc=loc)
         top_spec = context.get('top_spec', {})
         endpoint, collection = tuple(segments)
         if collection not in top_spec[endpoint]:
-            raise ex.ApimasAdapterException(
+            raise InvalidSpec(
                 'Reference targe {!r} does not exist.'.format(ref), loc=loc)
         return self.construct_type(instance, spec, loc, context, 'ref')
 
@@ -229,12 +230,12 @@ class NaiveAdapter(Adapter):
         constructors = set(context.get('all_constructors') + ['.readonly'])
         properties = self.PROPERTIES.intersection(constructors)
         if len(properties) > 1:
-            raise ex.ApimasAdapterException(
+            raise InvalidSpec(
                 '.identity field {!r} can only be readonly'.format(loc[-2]),
                 loc=loc)
         if properties != set(['.readonly']):
             msg = '`.identity` field {!r} is always a readonly field.'
-            raise ex.ApimasAdapterException(msg.format(loc[-2]), loc=loc)
+            raise InvalidSpec(msg.format(loc[-2]), loc=loc)
         return instance
 
     def construct_choices(self, instance, spec, loc, context):
@@ -245,7 +246,7 @@ class NaiveAdapter(Adapter):
         """
         allowed = spec.get('allowed')
         if not isinstance(allowed, (list, tuple)):
-            raise ex.ApimasAdapterException(
+            raise InvalidSpec(
                 '`choices` property requires a list of allowed values.',
                 loc=loc)
         return self.construct_type(instance, spec, loc, context, 'choices')
@@ -305,7 +306,7 @@ class NaiveAdapter(Adapter):
         defered.
         """
         if property_name not in self.PROPERTY_MAPPING:
-            raise ex.ApimasAdapterException(
+            raise InvalidSpec(
                 'Unknown property {!r}'.format(property_name), loc=loc)
         constructed = context.get('constructed')
         predicate_type = self.extract_type(instance)
@@ -324,7 +325,7 @@ class NaiveAdapter(Adapter):
         Constuctor for `.actions` predicate.
 
         It's a namespace predicate within which we define which REST actions
-        are allowed to be performed on a collection.
+        are allowed to be performed on the collectio
         """
         return instance
 
@@ -336,7 +337,7 @@ class NaiveAdapter(Adapter):
         types = set(self.TYPES.intersection(instance.keys()))
         if len(types) > 1:
             msg = 'Type is ambiguous. {!r} found: {!s}'
-            raise ex.ApimasException(msg.format(len(types), str(types)))
+            raise InvalidSpec(msg.format(len(types), str(types)))
         return None if not types else types.pop()
 
     def init_adapter_conf(self, instance, initial=None):

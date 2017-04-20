@@ -1,5 +1,6 @@
 from requests.compat import urljoin
-from apimas import documents as doc, exceptions as ex
+from apimas import documents as doc
+from apimas.errors import InvalidSpec, NotFound
 from apimas.adapters.cookbooks import NaiveAdapter
 from apimas.clients import ApimasClient, TRAILING_SLASH
 from apimas.clients.extensions import (
@@ -67,12 +68,12 @@ class ApimasClientAdapter(NaiveAdapter):
         Retrieve client according to a collection and the endpoint to which
         it belongs.
 
-        :raises: ApimasException if client is not found for the selected
+        :raises: NotFound if client is not found for the selected
         resource.
         """
         collection_name = endpoint + '/' + collection
         if collection_name not in self.clients:
-            raise ex.ApimasException(
+            raise NotFound(
                 'Client not found for collection {!r}'.format(collection_name))
         return self.clients[collection_name]
 
@@ -114,7 +115,7 @@ class ApimasClientAdapter(NaiveAdapter):
         nested_structures = {'.struct', '.structarray'}
         field_type = self.extract_type(instance)
         if not field_type:
-            raise ex.ApimasException(
+            raise InvalidSpec(
                 'You have to specify field type for field {!r}'.format(
                     parent_name))
         self.init_adapter_conf(instance)

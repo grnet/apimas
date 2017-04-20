@@ -1,5 +1,5 @@
 from requests.auth import AuthBase, HTTPBasicAuth
-from apimas.exceptions import ApimasClientException
+from apimas.errors import ValidationError
 
 
 class HTTPTokenAuth(AuthBase):
@@ -38,13 +38,13 @@ class ApimasClientAuth(AuthBase):
         if self.auth_type is None:
             return r
         if self.auth_type not in self.AUTHENTICATION_BACKENDS:
-            raise ApimasClientException(
+            raise ValidationError(
                 '{!r} auth type is not supported'.format(self.auth_type))
         try:
             auth = self.AUTHENTICATION_BACKENDS[self.auth_type](
                 **self.credentials)
         except TypeError:
-            raise ApimasClientException(
+            raise ValidationError(
                 'Given credentials do not match with that of {!r} auth'
                 ' type'.format(self.auth_type))
         return auth(r)

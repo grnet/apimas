@@ -1,5 +1,5 @@
 import importlib
-from apimas.exceptions import ApimasAdapterException
+from apimas.errors import AdapterError
 
 
 AUTH_CLASSES_LOOKUP_FIELD = 'authentication_classes'
@@ -25,7 +25,7 @@ PROPERTIES = {
 }
 
 
-class DRFAdapterException(ApimasAdapterException):
+class DRFAdapterError(AdapterError):
     pass
 
 
