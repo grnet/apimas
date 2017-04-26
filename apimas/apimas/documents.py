@@ -474,13 +474,10 @@ def _doc_construct_normalize_spec(loc, spec):
     return spec
 
 
-def _doc_construct_spec_keys(instance, doc, spec, loc, context,
-                             constructors, autoconstruct,
-                             allow_constructor_input,
-                             sep, doc_is_basic):
+def _doc_construct_scan_spec(doc, spec, loc, sep, doc_is_basic):
 
     constructor_names = []
-    constructed_data_keys = set()
+    data_keys = set()
     prefixes = []
 
     for key in spec.iterkeys():
@@ -496,30 +493,35 @@ def _doc_construct_spec_keys(instance, doc, spec, loc, context,
 
         if key.startswith(sep):
             constructor_names.append(key)
-            if not allow_constructor_input:
-                continue
+        else:
+            data_keys.add(key)
 
-        subspec = spec[key]
-        subdoc = doc[key] if key in doc else {}
+    return constructor_names, data_keys, prefixes
+
+
+def _doc_construct_init_instance(
+            doc, spec, loc, context,
+            constructors, autoconstruct,
+            construct_spec,
+            allow_constructor_input,
+            sep, data_keys, prefixes):
+
+    instance = {}
+
+    for key in data_keys:
         subloc = loc + (key,)
+        subdoc = doc.get(key, {})
+        subspec = spec[key]
         instance[key] = doc_construct(
             doc=subdoc, spec=subspec, loc=subloc, context=context,
             constructors=constructors,
             autoconstruct=autoconstruct,
-            allow_constructor_input=allow_constructor_input)
-        constructed_data_keys.add(key)
-
-    return instance, constructor_names, constructed_data_keys, prefixes
-
-
-def _doc_construct_doc_keys(
-            instance, doc, spec, loc, context,
-            constructors, autoconstruct,
-            allow_constructor_input,
-            sep, constructed_data_keys, prefixes):
+            construct_spec=construct_spec,
+            allow_constructor_input=allow_constructor_input,
+            sep=sep)
 
     for key in doc:
-        if key in constructed_data_keys:
+        if key in data_keys:
             continue
 
         index = bisect_right(prefixes, key) - 1
@@ -535,8 +537,11 @@ def _doc_construct_doc_keys(
             doc=subdoc, spec=subspec, loc=subloc, context=context,
             constructors=constructors,
             autoconstruct=autoconstruct,
+            construct_spec=construct_spec,
             allow_constructor_input=allow_constructor_input,
             sep=sep)
+
+    return instance
 
 
 def _construct_doc_call_constructors(
@@ -561,7 +566,7 @@ def _construct_doc_call_constructors(
         deferred_constructor_names = []
         for constructor_name in working_constructor_names:
             subloc = loc + (constructor_name,)
-            constructor = doc_get(constructors, constructor_name.split(sep))
+            constructor = doc_get(constructors, constructor_name.rstrip('=').split(sep))
             if constructor is None:
                 if autoconstruct is True:
                     constructor = autoconstructor
@@ -600,6 +605,7 @@ def doc_construct(doc, spec, loc=(), context=None,
                   constructors=_constructors,
                   autoconstruct=False,
                   allow_constructor_input=False,
+                  construct_spec=False,
                   sep='.'):
 
     doc_is_basic = type(doc) is not dict
@@ -617,7 +623,6 @@ def doc_construct(doc, spec, loc=(), context=None,
         m = m.format(loc=loc, spec=spec, doc=doc)
         raise ValidationError(m)
 
-    instance = {}
     spec = _doc_construct_normalize_spec(loc, spec)
 
     if context is None:
@@ -625,26 +630,43 @@ def doc_construct(doc, spec, loc=(), context=None,
     elif 'top_spec' not in context:
         context['top_spec'] = spec
 
-    instance, constructor_names, constructed_data_keys, prefixes = \
-            _doc_construct_spec_keys(
-                instance, doc, spec, loc, context,
-                constructors, autoconstruct,
-                allow_constructor_input,
-                sep, doc_is_basic)
+    constructor_names, data_keys, prefixes = \
+            _doc_construct_scan_spec(doc, spec, loc, sep, doc_is_basic)
+
+    if construct_spec:
+        for constructor_name in constructor_names:
+            if not constructor_name.endswith('='):
+                continue
+
+            subdoc = doc if allow_constructor_input else {}
+            subloc = loc + (constructor_name,)
+            spec[constructor_name] = doc_construct(
+                    doc=subdoc, spec=spec[constructor_name],
+                    loc=subloc, context=context,
+                    constructors=constructors,
+                    autoconstruct=autoconstruct,
+                    construct_spec=construct_spec,
+                    allow_constructor_input=allow_constructor_input,
+                    sep=sep)
 
     prefixes.sort()
 
     if doc_is_basic:
-        if instance:
-            instance[''] = doc
-        else:
-            instance = doc
+        if data_keys:
+            subloc = loc + (key,)
+            m = ("{loc!r}: document {doc!r} is basic "
+                 "but spec requires keys {keys!r}")
+            m = m.format(loc=subloc, doc=doc, keys=data_keys)
+            raise ValidationError(m)
+
+        instance = doc
+
     else:
-        _doc_construct_doc_keys(
-            instance, doc, spec, loc, context,
-            constructors, autoconstruct,
-            allow_constructor_input,
-            sep, constructed_data_keys, prefixes)
+        instance =_doc_construct_init_instance(doc, spec, loc, context,
+                                               constructors, autoconstruct,
+                                               construct_spec,
+                                               allow_constructor_input, sep,
+                                               data_keys, prefixes)
 
     instance = _construct_doc_call_constructors(
             instance, spec, loc, context,

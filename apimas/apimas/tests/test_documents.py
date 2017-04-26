@@ -13,19 +13,13 @@ def test():
     print doc_pop(a, 'hella'.split('.'))
     pprint(a)
 
-    def constructor(instance, spec, loc, context):
-        assert '.one' in instance
-        assert '.three' in instance
-        assert context['parent_name'] == (loc[1:2] and loc[-2])
-        assert context['parent_spec'] == doc_get(context['top_spec'], loc[:-1])
-        return instance
-
-    spec = {'.one': 'two', '.three': 'four'}
+    spec = {'.one': {'two': 2}, '.three': {'four': 4}}
     instance = doc_construct({}, spec,
                              allow_constructor_input=True,
-                             constructors = {'one': constructor,
-                                             'three': constructor,},
                              autoconstruct=True)
+    assert '.one' in instance
+    assert '.three' in instance
+
 
     rules_doc = {
         'one': {
