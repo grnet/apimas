@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 ### Added
 - A `--version` CLI option to print the current version.
+- Add `after` and `last` decorators to determine the execution order
+  of constructors.
 
 ## [0.3] - 2017-03-24
 ### Added
