@@ -2,7 +2,7 @@
 class GenericException(Exception):
     """Superclass for all exceptions in this module."""
 
-    def __init__(self, message, *args, **kwargs):
+    def __init__(self, message=None, *args, **kwargs):
         self.message = message
         self.args = args
         self.kwargs = kwargs
@@ -95,16 +95,18 @@ class TimeoutError(GenericFault):
 
 class AdapterError(GenericException):
     """ A runtime error during construction process of adapter. """
-    def __init__(self, message, loc=(), *args, **kwargs):
+    def __init__(self, message=None, loc=(), *args, **kwargs):
         self.loc = loc
         kwargs['loc'] = loc
-        super(AdapterError, self).__init__(message, *args, **kwargs)
+        super(AdapterError, self).__init__(
+            message=message, *args, **kwargs)
 
     def __str__(self):
+        exstr = super(AdapterError, self).__str__()
         if self.loc:
             return '{msg}, on location: ({loc})'.format(
-                msg=self.message, loc=', '.join(self.loc))
-
+                msg=exstr, loc=', '.join(self.loc))
+        return exstr
 
 class InvalidSpec(AdapterError):
     """ Specification cannot be understood by the adapter. """
