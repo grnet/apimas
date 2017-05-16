@@ -42,7 +42,8 @@ class NaiveAdapter(Adapter):
     def construct(self, spec):
         self.adapter_spec = doc.doc_construct(
             {}, spec, constructors=self.get_constructors(),
-            allow_constructor_input=True, autoconstruct=True)
+            allow_constructor_input=True, autoconstruct=True,
+            construct_spec=True)
 
     def get_structural_elements(self, instance):
         """
