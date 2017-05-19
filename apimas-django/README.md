@@ -1,10 +1,8 @@
-apimas-drf
-==========
+apimas-django
+=============
 
-apimas-drf allows you to create django applications using
-[django-rest-framework](http://www.django-rest-framework.org/)
-behind the scenes to build your API.
-
+apimas-django allows you to build APIMAS-based web applications using
+[django](https://www.djangoproject.com/) framework.
 
 Copyright and license
 ---------------------
