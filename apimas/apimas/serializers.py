@@ -117,9 +117,7 @@ class String(BaseSerializer):
 class Email(String):
     # http://bit.ly/RVerWq
     EMAIL_REGEX = re.compile(
-        r"^(?!\.)(""([^""\r\\]|\\[""\r\\])*""|"
-        r"([-a-z0-9!#$%&'*+/=?^_`{|}~]|(?<!\.)\.)*)(?<!\.)"
-        r"@[a-z0-9][\w\.-]*[a-z0-9]\.[a-z][a-z\.]*[a-z]$")
+        r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
 
     def _get_email(self, value):
         value = super(Email, self).get_repr_value(value)
