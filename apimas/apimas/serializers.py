@@ -125,6 +125,7 @@ class Email(String):
         value = super(Email, self).get_repr_value(value)
         if not self.EMAIL_REGEX.match(value):
             raise ValidationError('Field is not a valid email')
+        return value
 
     def get_repr_value(self, value):
         return self._get_email(value)
