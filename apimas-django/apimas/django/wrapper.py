@@ -102,8 +102,8 @@ class DjangoWrapper(object):
         """
         if response.get_native() is not None:
             raise ConflictError('Native Response object already exists')
+        content = response.content
         content_type = response.kwargs.get('content_type')
-        content = response.kwargs.get('content')
         if content_type == 'application/json':
             content = json.dumps(content)
         status_code = response.kwargs.get('status_code')

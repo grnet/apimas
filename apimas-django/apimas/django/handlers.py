@@ -2,7 +2,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from apimas import documents as doc
-from apimas.errors import NotFound, InvalidInput
+from apimas.errors import NotFound, InvalidInput, ValidationError
 from apimas.components import BaseHandler
 from apimas.components.processors import DeSerialization
 
@@ -17,25 +17,56 @@ class DjangoBaseHandler(BaseHandler):
     Base handler for django specific actions.
 
     This handler requires a django model to either read or write data. This
-    handler assumes that there is an interaction with django models where
-    request context is taken into account. The final output is the python
-    native represenation of a model instance or a QuerySet, along with HTTP
-    args in order response can be constructed properly later (namely HTTP
-    status code and and HTTP content type).
+    handler assumes that there is an interaction with django models, e.g.
+    a query, an insertion, etc.
+
+    This handler extracts the following data from context:
+        * `model`: Django model with which handler interacts.
+        * `data`: A dictionary representing data of request (if any).
+        * `pk`: Primary key of the resource if handler operates on a specific
+                model instance, e.g. update.
+
+    The final response of the handler is a dictionary of kwargs needed by
+    APIMAS in order response can be constructed later. This includes:
+        * `content`: A dictionary with the content of response.
+        * `content_type`: Content type of response, e.g. `application/json`.
+        * `status_code`: Status code of response, e.g. 201.
+
+
+    Django base handler also offers a hook (i.e. method `execute()`) where
+    other handlers can execute arbitrary code. It is the actual
+    interaction with the django models, where a model instance or a QuerySet
+    is expected as the output of this hook.
 
     Attributes:
         name (str): The identifier of this handler.
         READ_KEYS (dict): Human readable keys which are mapped to the actual
             keys of context from which processor reads.
         REQUIRED_KEYS (set): Required keys for the adapter.
+
+    Examples:
+        A very simple handler that uses Django BaseHandler is the following
+        which operates on resources. It takes the django model and pk as
+        specified by the request and the corresponding model instance.
+
+        >>> from apimas.errors import InvalidInput
+        >>> from apimas.django.handlers import BaseHandler
+        >>> class MyHandler(BaseHandler):
+        ...     name = 'myapp.mymodule.MyHandler'
+        ...     def execute(self, collection, url, action, context_data):
+        ...        model = context_data['model']
+        ...        pk = context_data.get('pk')
+        ...        if pk is None:
+        ...            raise InvalidInput('Handler operates on resources.')
+        ...        return model.objects.get(pk=pk)
     """
-    name = 'tredisec.handlers.DjangoBaseHandler'
+    name = 'apimas.django.handlers.DjangoBaseHandler'
 
     READ_KEYS = {
-        'data': DeSerialization.WRITE_KEYS,
         'model': 'store/orm_model',
         'pk': 'request/kwargs/pk',
     }
+    READ_KEYS.update(DeSerialization.WRITE_KEYS)
 
     REQUIRED_KEYS = {
         'model',
@@ -191,7 +222,7 @@ class DjangoBaseHandler(BaseHandler):
             data[k] = value
         return data
 
-    def perform(self, collection, url, action, handler_data):
+    def execute(self, collection, url, action, context_data):
         """
         Actual hook of a django handler.
 
@@ -203,7 +234,7 @@ class DjangoBaseHandler(BaseHandler):
             collection (str): Collection corresponding to the handler.
             url (str): Relative URL of the action.
             action (str): Action name correspond to the handler.
-            handler_data (dict): Handler-specific keys extracted from
+            context_data (dict): Handler-specific keys extracted from
                 request context.
         Returns:
             A model instance or a queryset corresponding to the interaction of
@@ -211,7 +242,7 @@ class DjangoBaseHandler(BaseHandler):
             response.
 
         """
-        raise NotImplementedError('perform() must be implemented')
+        raise NotImplementedError('execute() must be implemented')
 
     def handle_error(self, component, cmp_args, ex):
         """
@@ -220,7 +251,7 @@ class DjangoBaseHandler(BaseHandler):
         Args:
             component (str): Identifier of handler/processor in which error
                 occured.
-            proc_args (tuple): Args with which handler/processors was called
+            cmp_args (tuple): Args with which handler/processors was called
                  by apimas.
             ex: Error instance raised by handler of processors.
 
@@ -231,6 +262,7 @@ class DjangoBaseHandler(BaseHandler):
         """
         exceptions = {
             NotFound: 404,
+            ValidationError: 400,
             Exception: 500,
         }
         type_ex = type(ex)
@@ -246,15 +278,15 @@ class DjangoBaseHandler(BaseHandler):
             'status_code': status,
         }
 
-    def adapt_instance(self, output, handler_data, context):
+    def adapt_instance(self, resource, context_data, context):
         """
         Gets a model instance or a QuerySet, converts it into a native format
         and returns it as a part of handler's response.
 
         Args:
-            output: Model instance or QuerySet derived from the actual
+            resource: Model instance or QuerySet derived from the actual
                 interaction of the handler with django models.
-            handler_data (dict): Dict with handler-specific keys, read from
+            context_data (dict): Dict with handler-specific keys, read from
                 context.
             context (dict): Request context.
 
@@ -264,16 +296,16 @@ class DjangoBaseHandler(BaseHandler):
                 can be constructed properly later (namely HTTP status code and
                 HTTP content type).
         """
-        if output and (not isinstance(output, Model) and not
-                       isinstance(output, QuerySet)):
+        if resource and (not isinstance(resource, Model) and not
+                       isinstance(resource, QuerySet)):
             msg = 'A model instance or a queryset is expected. {!r} found.'
-            raise InvalidInput(msg.format(str(type(output))))
-        model = handler_data['model']
-        if isinstance(output, QuerySet):
-            instance = [self.to_dict(model, inst) for inst in output]
+            raise InvalidInput(msg.format(str(type(resource))))
+        model = context_data['model']
+        if isinstance(resource, QuerySet):
+            instance = [self.to_dict(model, inst) for inst in resource]
         else:
-            instance = None if output is None\
-                    else self.to_dict(model, output)
+            instance = None if resource is None\
+                    else self.to_dict(model, resource)
         return {
             'content': instance,
             'content_type': self.CONTENT_TYPE,
@@ -289,13 +321,13 @@ class DjangoBaseHandler(BaseHandler):
             * Returns the response using the python native format
               of the output of previous step.
         """
-        handler_data = self.read_context(context)
-        output = self.perform(collection, url, action, handler_data)
-        return self.adapt_instance(output, handler_data, context)
+        context_data = self.read_context(context)
+        output = self.execute(collection, url, action, context_data)
+        return self.adapt_instance(output, context_data, context)
 
 
 class CreateHandler(DjangoBaseHandler):
-    name = 'tredisec.handlers.CreateHandler'
+    name = 'apimas.django.handlers.CreateHandler'
 
     STATUS_CODE = 201
     CONTENT_TYPE = 'application/json'
@@ -304,10 +336,10 @@ class CreateHandler(DjangoBaseHandler):
         'data',
     }
 
-    def perform(self, collection, url, action, handler_data):
+    def execute(self, collection, url, action, context_data):
         """ Creates a new django model instance. """
-        model = handler_data['model']
-        data = handler_data['data']
+        model = context_data['model']
+        data = context_data['data']
         data, many = self._parse_ref(model, data)
         instance = model.objects.create(**data)
         if many:
@@ -317,7 +349,7 @@ class CreateHandler(DjangoBaseHandler):
 
 
 class ListHandler(DjangoBaseHandler):
-    name = 'tredisec.handlers.ListHandler'
+    name = 'apimas.django.handlers.ListHandler'
 
     STATUS_CODE = 200
     CONTENT_TYPE = 'application/json'
@@ -325,17 +357,17 @@ class ListHandler(DjangoBaseHandler):
         'model',
     }
 
-    def perform(self, collection, url, action, handler_data):
+    def execute(self, collection, url, action, context_data):
         """
         Gets all django model instances based on the orm model extracted
         from request context.
         """
-        model = handler_data['model']
+        model = context_data['model']
         return model.objects.all()
 
 
 class RetrieveHandler(DjangoBaseHandler):
-    name = 'tredisec.handlers.RetrieveHandler'
+    name = 'apimas.django.handlers.RetrieveHandler'
 
     STATUS_CODE = 200
     CONTENT_TYPE = 'application/json'
@@ -344,18 +376,18 @@ class RetrieveHandler(DjangoBaseHandler):
         'pk',
     }
 
-    def perform(self, collection, url, action, handler_data):
+    def execute(self, collection, url, action, context_data):
         """
         Gets a single model instance which based on the orm model and
         resource ID extracted from request context.
         """
-        model = handler_data['model']
-        pk = handler_data['pk']
+        model = context_data['model']
+        pk = context_data['pk']
         return self.get_resource(model, pk)
 
 
 class UpdateHandler(CreateHandler):
-    name = 'tredisec.handlers.UpdateHandler'
+    name = 'apimas.django.handlers.UpdateHandler'
 
     STATUS_CODE = 200
     CONTENT_TYPE = 'application/json'
@@ -371,13 +403,13 @@ class UpdateHandler(CreateHandler):
         obj.save()
         return obj
 
-    def perform(self, collection, url, action, handler_data):
+    def execute(self, collection, url, action, context_data):
         """
         Updates an existing model instance based on the data of request.
         """
-        model = handler_data['model']
-        pk = handler_data['pk']
-        data = handler_data['data']
+        model = context_data['model']
+        pk = context_data['pk']
+        data = context_data['data']
         instance = self.get_resource(model, pk)
         data, many = self._parse_ref(model, data)
         instance = self._update_obj(instance, data)
@@ -388,7 +420,7 @@ class UpdateHandler(CreateHandler):
 
 
 class DeleteHandler(RetrieveHandler):
-    name = 'tredisec.handlers.DeleteHandler'
+    name = 'apimas.django.handlers.DeleteHandler'
 
     STATUS_CODE = 204
     CONTENT_TYPE = None
@@ -397,9 +429,9 @@ class DeleteHandler(RetrieveHandler):
         'pk',
     }
 
-    def perform(self, collection, url, action, handler_data):
+    def execute(self, collection, url, action, context_data):
         """ Deletes an existing model instance. """
-        instance = super(DeleteHandler, self).perform(
-            collection, url, action, handler_data)
+        instance = super(DeleteHandler, self).execute(
+            collection, url, action, context_data)
         instance.delete()
         return None

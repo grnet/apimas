@@ -15,17 +15,15 @@ class BaseProcessor(object):
     `process()`, it reads some keys from the context of request, it executes
     arbitrary code and then writes its output back to the context of request.
 
-    Attributes:
-        name (str): Identifier of the processor, i.e. its module path.
-        READ_KEYS (dict): Human readable keys which are mapped to the actual
-            keys of context from which processor reads.
-        WRITE_KEYS (dict): Human readable keys which are mapped to the actual
-            keys of the context to which processor writes.
+    Each processor has to specify the following attributes:
+        * name (str): Identifier of the processor, i.e. its module path.
+        * READ_KEYS (dict): Human readable keys which are mapped to the actual
+             keys of context from which processor reads.
+        * WRITE_KEYS (dict): Human readable keys which are mapped to the actual
+             keys of the context to which processor writes.
     """
 
     name = 'apimas.components.BaseProcessor'
-    READ_KEYS = {}
-    WRITE_KEYS = {}
 
     def __init__(self, spec, **kwargs):
         self.spec = spec
@@ -43,25 +41,25 @@ class BaseProcessor(object):
             The value of the desired key.
         """
         key = _normalize_keys(key)
-        while True:
-            if not key or context is None:
-                break
+        for k in key:
             try:
-                context = context.get(key[0])
-            except AttributeError:
-                context = getattr(context, key[0], None)
-            key = key[1:]
+                context = context.get(k)
+            except (AttributeError, IndexError, KeyError):
+                try:
+                    context = getattr(context, k)
+                except AttributeError:
+                    return None
         return context
 
-    def save(self, context, value, key):
+    def save(self, context, key, value):
         """
         Saves a value to the context.
 
         Args:
             context: Context to which processor writes.
-            value: Value to be saved to the context.
             key (str|tuple): Key where desired value is located, either
                 string or tuple format (e.g. `foo/bar` or `('foo', bar')`.
+            value: Value to be saved to the context.
         """
         if context is None:
             raise InvalidInput(
@@ -106,6 +104,10 @@ class BaseProcessor(object):
             >>> processor.read(context)
             {'foo': 10, 'bar': 20}
         """
+        keys = getattr(self, 'READ_KEYS', None)
+        if keys is None:
+            raise InvalidInput(
+                'No `READ_KEYS` are specified. Cannot read from context')
         return {k: self.extract(context, v)
                 for k, v in self.READ_KEYS.iteritems()}
 
@@ -133,9 +135,13 @@ class BaseProcessor(object):
             >>> context
             {'data': {'foo': 'new', 'bar': 1}}
         """
+        keys = getattr(self, 'WRITE_KEYS', None)
+        if keys is None:
+            raise InvalidInput(
+                'No `READ_KEYS` are specified. Cannot read from context')
         for k, v in self.WRITE_KEYS.iteritems():
             value = data.get(k)
-            self.save(context, value, v)
+            self.save(context, v, value)
 
     def process(self, collection, url, action, context):
         """

@@ -112,6 +112,8 @@ class BaseSerialization(BaseProcessor):
             kwargs.update(self.EXTRA_KWARGS.get(field_type, {}))
             kwargs.update(spec)
             kwargs.update(instance)
+            if field_type == '.serial':
+                kwargs.update({'readonly': True})
             return serializer(**kwargs)
         return construct_type
 
@@ -138,12 +140,12 @@ class BaseSerialization(BaseProcessor):
             construct_spec=True)
         return instance
 
-    def _get_serializer(self, data):
+    def get_serializer(self, data):
         if isinstance(data, Iterable) and not isinstance(data, Mapping):
             return srs.List(srs.Struct(self.serializers))
         return srs.Struct(self.serializers)
 
-    def perform_serialization(self, serializer, data):
+    def perform_serialization(self, context_data):
         raise NotImplementedError(
             'perform_serialization() must be implemented')
 
@@ -152,12 +154,10 @@ class BaseSerialization(BaseProcessor):
         Reads data which we want to serialize from context, it performs
         serialization on them and finally it saves output to context.
         """
-        data = self.extract(context, self.READ_KEYS)
-        if data is None:
-            return
-        serializer = self._get_serializer(data)
-        output = self.perform_serialization(serializer, data)
-        self.save(context, output, self.WRITE_KEYS)
+        context_data = self.read(context)
+        output = self.perform_serialization(context_data)
+        if output is not None:
+            self.write(output, context)
 
 
 class DeSerialization(BaseSerialization):
@@ -166,11 +166,20 @@ class DeSerialization(BaseSerialization):
     """
     name = 'apimas.components.processors.DeSerialization'
 
-    READ_KEYS = 'request/content'
-    WRITE_KEYS = 'store/' + name + '/deserialized_data'
+    READ_KEYS = {
+        'data': 'request/content',
+    }
 
-    def perform_serialization(self, serializer, data):
-        return serializer.deserialize(data)
+    WRITE_KEYS = {
+        'data': 'store/' + name + '/deserialized_data',
+    }
+
+    def perform_serialization(self, context_data):
+        data = context_data['data']
+        if data is None:
+            return None
+        serializer = self.get_serializer(data)
+        return {'data': serializer.deserialize(data)}
 
 
 class Serialization(BaseSerialization):
@@ -179,8 +188,16 @@ class Serialization(BaseSerialization):
     """
     name = 'apimas.components.processors.Serialization'
 
-    READ_KEYS = 'response/content'
-    WRITE_KEYS = 'response/content'
+    READ_KEYS = {
+        'data': 'response/content',
+    }
+    WRITE_KEYS = {
+        'data': 'response/content',
+    }
 
-    def perform_serialization(self, serializer, data):
-        return serializer.serialize(data)
+    def perform_serialization(self, context_data):
+        data = context_data['data']
+        if data is None:
+            return None
+        serializer = self.get_serializer(data)
+        return {'data': serializer.serialize(data)}
