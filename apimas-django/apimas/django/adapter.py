@@ -181,8 +181,8 @@ class DjangoAdapter(object):
         if handler is None:
             msg = 'Handler not found for action {!r}'.format(action_name)
             raise InvalidSpec(msg, loc=collection_path.split('/'))
-        pre_proc = map(lambda x: x(collection_spec), pre_proc)
-        post_proc = map(lambda x: x(collection_spec), post_proc)
+        pre_proc = [proc(collection_spec) for proc in pre_proc]
+        post_proc = [proc(collection_spec) for proc in post_proc]
         context = self._get_orm_context(
             collection_spec.get('.collection'), collection_path)
         apimas_action = ApimasAction(
@@ -231,9 +231,8 @@ class DjangoAdapter(object):
             handler = utils.import_object(handler)
 
         # Initialize pre processors and post processors with spec.
-        pre_proc = map(lambda x: utils.import_object(x), kwargs.get('pre', []))
-        post_proc = map(lambda x: utils.import_object(x),
-                        kwargs.get('post', []))
+        pre_proc = [utils.import_object(x) for x in kwargs.get('pre', [])]
+        post_proc = [utils.import_object(x) for x in kwargs.get('post', [])]
         return (method, action_url, handler, pre_proc, post_proc)
 
     def _construct_test_method(self, action_name, action_spec, collection_path,
