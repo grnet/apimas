@@ -130,7 +130,7 @@ class SpecGenerator(object):
         ...                 '.create': {},
         ...                 '.list': {}
         ...             },
-        ...             '.collection': {'model': 'tests.models.MyModel2'}
+        ...             '.collection': {'model': 'myapp.mymodule.MyModel'}
         ...         }
         ...     }
         ... }
