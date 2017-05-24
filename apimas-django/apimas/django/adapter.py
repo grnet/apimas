@@ -5,10 +5,36 @@ from django.conf.urls import url
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from apimas import documents as doc, utils
-from apimas.errors import ConflictError, AdapterError, InvalidSpec
+from apimas.tabmatch import Tabmatch
+from apimas.errors import (InvalidInput, ConflictError, AdapterError,
+                           InvalidSpec)
 from apimas.adapters.actions import ApimasAction
 from apimas.django.wrapper import DjangoWrapper
 from apimas.django.testing import TestCase
+
+
+def _parse_pattern(pattern):
+    """
+    Converts a pattern from string format to a pattern set.
+
+    Args:
+        pattern (str): A pattern in a string format, e.g. `api/foo/bar`.
+
+    Returns:
+        A pattern set, e.g. [set(['api']), set(['foo']), set(['bar'])
+    """
+    pattern = pattern.split('/')
+    pattern_len = len(pattern)
+    if pattern_len != 3:
+        msg = 'A pattern with 3 columns is expected. {!s} found'
+        raise InvalidInput(msg.format('/'.join(pattern)))
+    pattern_set = []
+    for segment in pattern:
+        parsed_segment = doc.parse_pattern(segment)
+        pattern_doc = {parsed_segment: {}}
+        pattern_set.extend(
+            doc.doc_to_level_patterns(pattern_doc)[:-1])
+    return pattern_set
 
 
 class DjangoAdapter(object):
@@ -99,7 +125,7 @@ class DjangoAdapter(object):
         self.views = {}
         self.models = {}
         self.urls = defaultdict(list)
-        self.test_methods = {}
+        self._test_methods = {}
         self._constructors = {
             'endpoint': self._endpoint,
             'create': self._automated_action('create'),
@@ -149,24 +175,97 @@ class DjangoAdapter(object):
         return [url for endpoint_urls in self.urls.values()
                 for url in endpoint_urls]
 
-    def get_testcase(self):
+    def _update_testcase_content(self, matches, pattern_spec, content):
+        for row in matches:
+            key = (row.endpoint, row.collection, row.action)
+            for stage, func in pattern_spec.iteritems():
+                if stage not in content:
+                    content[stage] = {}
+                if key in content[stage]:
+                    msg = ('A function has already been set for stage'
+                           ' {stage!r}. ({loc!s})')
+                    raise ConflictError(msg.format(
+                        stage=row.stage, loc=','.join(key)))
+                content[stage][key] = func
+            test_method = self._test_methods[key]
+            method_name = 'test_%s_%s_%s' % key
+            content[method_name] = test_method
+
+    def get_testcase(self, patterns=None, name='DjangoTestCase', **kwargs):
         """
         Gets the test case class for testing the API made by the adapter.
 
+        This method generates a test case class by taking advantage of the
+        mechanism of `apimas.django.testing.TestCase` clas. It expects a
+        dictionary of patterns which specifies which tests should be run.
+        Also, this dictionary defines an execution spec per pattern. This
+        spec denotes code that must be executed if there is match.
+
+        Arbitrary code can be executed on three stages:
+            * Test Case setup, indicated by `SETUP` key.
+            * Request preparation indicated by 'REQUEST' key.
+            * Response validation indicated by `VALIDATE` key.
+
+        Args:
+            patterns (dict): Dictionary of execution spec per pattern.
+            name (str): (optional) Name of generated class.
+            **kwargs: Additional content for generated class.
+
         Returns:
             A Test Case class inheriting from `apimas.django.testing.TestCase`
-            and can be used to test your REST API.
+            and used to test implementation constructed by adapter.
+
+        Examples:
+            The following snippet can be included in your `tests.py` file.
+            >>> from apimas.django.adapter import DjangoAdapter
+            >>> adapter = DjangoAdapter()
+            >>> adapter.construct(SPEC)
+            >>> # This tests all actions for all collections under endpoint
+            >>> # named `foo`.
+            >>> patterns = {
+            ...     'api/*/*': {}
+            ... }
+            >>> TestCase = adapter.get_testcase(patterns=patterns)
+
+            Also, you can add your own code like following:
+            >>> def my_validation(endpoint, collection, action, action_spec,
+            ...                   response):
+            ...     # My assertions.
+            >>> # This applies method `my_validation` for validating all
+            >>> # actions of collection `api/mycollection`.
+            >>> patterns = {
+            ...        'api/mycollection/*': {
+            ...            'VALIDATE': my_validation,
+            ...       }
+            ... }
+            >>> TestCase = adapter.get_testcase(patterns=patterns)
         """
-        if not self.test_methods:
+        rules = self._test_methods.keys()
+        patterns = patterns or rules
+        if not self._test_methods:
             msg = ('Adapter has not constructed any implementation yet.'
                    ' Run construct() first.')
             raise AdapterError(msg)
+
+        if not isinstance(patterns, dict):
+            msg = 'patterns should be a dict. {!r} found'
+            raise InvalidInput(msg.format(type(patterns)))
+
+        columns = ('endpoint', 'collection', 'action')
+        tab = Tabmatch(columns, rules, ignore_last=False)
+        content = {}
+        for pattern, pattern_spec in patterns.iteritems():
+            pattern = _parse_pattern(pattern)
+            matches = tab.multimatch(pattern, expand=columns)
+            self._update_testcase_content(matches, pattern_spec, content)
+
         standard_content = {
             'adapter': self,
             'spec': self.spec,
         }
-        content = dict(standard_content, **self.test_methods)
-        return type('DjangoTestCase', (TestCase,), content)
+        content = dict(standard_content, **content)
+        content.update(kwargs)
+        return type(name, (TestCase,), content)
 
     def _construct_view(self, action_name, collection_path, collection_spec,
                         **kwargs):
@@ -254,8 +353,8 @@ class DjangoAdapter(object):
         # Gets the template test case and parameterize it to generate a new
         # one.
         template = getattr(TestCase, '_template_test_case')
-        method_name = 'test_%s_%s_%s' % (endpoint, collection, action_name)
-        self.test_methods[method_name] = wrapper(template)
+        key = (endpoint, collection, action_name)
+        self._test_methods[key] = wrapper(template)
 
     def _construct_action(self, action_name, action_params, collection_spec,
                           collection_path, is_collection):

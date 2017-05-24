@@ -23,4 +23,7 @@ adapter = DjangoAdapter()
 adapter.construct(SPEC)
 urlpatterns = adapter.get_urlpatterns()
 
-TestAPI = adapter.get_testcase()
+patterns = {
+    '*/*/*': {},
+}
+TestAPI = adapter.get_testcase(patterns=patterns)
