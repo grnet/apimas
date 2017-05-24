@@ -1,21 +1,23 @@
 from collections import namedtuple
-from apimas.documents import (
-    doc_set, doc_match_levels, doc_iter, ANY, Prefix, Regex)
+from apimas.documents import doc_set, doc_match_levels
 
 
 class Tabmatch(object):
-    def __init__(self, column_names, rules=()):
+    def __init__(self, column_names, rules=(), ignore_last=True):
         self.column_names = tuple(column_names)
         self.Row = namedtuple('TabmatchRow', self.column_names)
         self.rules_set = set(rules)
+        self.ignore_last = ignore_last
         self.rules_doc = {}
-        for rule in rules:
-            doc_set(self.rules_doc, rule[:-1], rule[-1])
-
         self.name_levels = {
             name: x
             for x, name in enumerate(self.column_names)
         }
+        self._construct_rules_doc(rules)
+
+    def _construct_rules_doc(self, rules):
+        for rule in rules:
+            doc_set(self.rules_doc, rule, {})
 
     def _check_row_type(self, row):
         if not isinstance(row, self.Row):
@@ -59,6 +61,7 @@ class Tabmatch(object):
     def multimatch(self, pattern_sets, expand):
         expand_levels = {self.name_levels[name] for name in expand}
         depth = len(self.column_names)
+        crop_levels = depth - 1 if self.ignore_last else depth
         matches = doc_match_levels(self.rules_doc, pattern_sets,
-                                   expand_levels)
+                                   expand_levels, crop_levels=crop_levels)
         return (self.Row(*path) for path in matches if len(path) == depth)
