@@ -221,7 +221,7 @@ class DjangoAdapter(object):
             >>> adapter = DjangoAdapter()
             >>> adapter.construct(SPEC)
             >>> # This tests all actions for all collections under endpoint
-            >>> # named `foo`.
+            >>> # named `api`.
             >>> patterns = {
             ...     'api/*/*': {}
             ... }
