@@ -267,10 +267,12 @@ def doc_update(target, source, multival=True):
 
 
 def doc_match_levels(rules_doc, pattern_sets, expand_pattern_levels,
-                     level=0, path=()):
+                     level=0, path=(), crop_levels=None):
 
     reported_paths = set()
     expand_pattern = level in expand_pattern_levels
+    if crop_levels is None:
+        crop_levels = len(pattern_sets)
 
     if level >= len(pattern_sets):
         yield path
@@ -302,7 +304,7 @@ def doc_match_levels(rules_doc, pattern_sets, expand_pattern_levels,
                     level=level + 1, path=subpath)
 
             for reportable_path in reportable_paths:
-                reported_path = reportable_path[:-1]
+                reported_path = reportable_path[:crop_levels]
                 if reported_path not in reported_paths:
                     reported_paths.add(reported_path)
                     yield reportable_path
