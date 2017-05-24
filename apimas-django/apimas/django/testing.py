@@ -54,12 +54,6 @@ def get_ref_collections(spec, endpoint, collection):
 
 class TestCase(DjangoTestCase):
 
-    SETUP_METHOD_NAME_PATTERN = 'setUp_%s_%s_%s'
-
-    PREPARE_METHOD_NAME_PATTERN = 'prepare_%s_%s_%s'
-
-    VALIDATE_RE_METHOD_NAME_PATTERN = 'validate_request_%s_%s_%s'
-
     EXPECTED_STATUS_CODES = [
         200,
         201,
@@ -206,6 +200,18 @@ class TestCase(DjangoTestCase):
         """
         self.assertTrue(response.status_code in self.EXPECTED_STATUS_CODES)
 
+    def _get_stage_method(self, property_name, dict_key):
+        default_methods = {
+            'SETUP': self.setUp_default,
+            'REQUEST': self.prepare_request_default,
+            'VALIDATE': self.validate_response_default,
+        }
+        methods_dict = getattr(self, property_name, None)
+        default = default_methods[property_name]
+        if methods_dict is None:
+            return default
+        return methods_dict.get(dict_key, default)
+
     def _template_test_case(self, endpoint, collection, action, action_spec):
         """
         It triggers a test scenario for a particular endpoint, collection and
@@ -214,21 +220,15 @@ class TestCase(DjangoTestCase):
         This scenario includes the `setup`, `request preparation` and
         `response validation` stages.
         """
-        method_name = self.SETUP_METHOD_NAME_PATTERN % (
-            endpoint, collection, action)
-        setup_method = getattr(self, method_name, self.setUp_default)
+        key = (endpoint, collection, action)
+        setup_method = self._get_stage_method('SETUP', key)
         setup_method(endpoint, collection, action, action_spec)
-        method_name = self.PREPARE_METHOD_NAME_PATTERN % (
-            endpoint, collection, action)
-        prepare_method = getattr(self, method_name,
-                                 self.prepare_request_default)
+
+        prepare_method = self._get_stage_method('REQUEST', key)
         prepare_method(endpoint, collection, action, action_spec)
 
         client_method = getattr(self.client, action_spec['method'].lower())
         response = client_method(self.test_url, **self.request_kwargs)
 
-        method_name = self.VALIDATE_RE_METHOD_NAME_PATTERN % (
-            endpoint, collection, action)
-        validate_response = getattr(self, method_name,
-                                    self.validate_response_default)
-        validate_response(endpoint, collection, action, action_spec, response)
+        validate_method = self._get_stage_method('VALIDATE', key)
+        validate_method(endpoint, collection, action, action_spec, response)
