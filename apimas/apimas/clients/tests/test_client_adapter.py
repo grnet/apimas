@@ -159,7 +159,7 @@ class TestClientAdapter(unittest.TestCase):
                 self.adapter_conf: {'bar': 'foo'},
             }
         }
-        mock_instance = {'.struct': schema, self.adapter_conf: {}}
+        mock_instance = {'.struct=': schema, self.adapter_conf: {}}
         instance = mock_client.construct_nested_field(
             mock_client, mock_instance, {}, mock_loc, {}, '.struct')
         self.assertEqual(len(instance), 2)
@@ -169,7 +169,7 @@ class TestClientAdapter(unittest.TestCase):
         self.assertEqual(instance_conf['schema'], {'field1': {'foo': 'bar'},
                                                    'field2': {'bar': 'foo'}})
 
-        mock_instance = {'.structarray': schema, self.adapter_conf: {}}
+        mock_instance = {'.structarray=': schema, self.adapter_conf: {}}
         instance = mock_client.construct_nested_field(
             mock_client, mock_instance, {}, mock_loc, {}, '.structarray')
         self.assertEqual(len(instance), 2)

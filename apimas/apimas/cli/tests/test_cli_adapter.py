@@ -287,7 +287,7 @@ class TestCliAdapter(unittest.TestCase):
         mock_loc = ('foo', 'bar')
 
         mock_instance = {
-            '.struct': {
+            '.struct=': {
                 'foo': {
                     self.adapter_conf: {
                         'foo_option': {

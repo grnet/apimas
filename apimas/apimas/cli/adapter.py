@@ -290,7 +290,7 @@ class ApimasCliAdapter(NaiveAdapter):
                 if not self.option_allowed(action, spec, option_constructor):
                     continue
                 command = option_constructor(option_name, params)(command)
-                path = (field_name,) if '.struct' not in spec\
+                path = (field_name,) if '.struct=' not in spec\
                     else self._struct_map[option_name]
                 command.register_option_mapping(
                     option_name.replace('-', '_'), path)
@@ -359,7 +359,7 @@ class ApimasCliAdapter(NaiveAdapter):
         option_kwargs = {}
         self.init_adapter_conf(instance)
         for _, schema in doc.doc_get(
-                instance, ('.struct',)).iteritems():
+                instance, ('.struct=',)).iteritems():
             if schema == SKIP:
                 continue
             for nested, params in schema.get(self.ADAPTER_CONF).iteritems():

@@ -6,6 +6,7 @@ from apimas.adapters.cookbooks import NaiveAdapter
 from apimas.testing.helpers import create_mock_object
 
 
+
 class TestNaiveAdapter(unittest.TestCase):
     def setUp(self):
         self.adapter = NaiveAdapter()
@@ -22,22 +23,24 @@ class TestNaiveAdapter(unittest.TestCase):
 
     def test_construct_collection(self):
         instance = {}
+        context = {'top_spec': {}}
         self.assertRaises(AssertionError, self.adapter.construct_collection,
-                          instance=instance, spec={}, loc=(), context={})
+                          instance=instance, spec={}, loc=(), context=context)
 
         loc = ('api', 'foo', '.collection')
         self.assertRaises(InvalidSpec,
                           self.adapter.construct_collection,
-                          instance=instance, spec={}, loc=loc, context={})
+                          instance=instance, spec={}, loc=loc, context=context)
 
         instance = {
             '*': {
                 '.foo': {},
                 '.bar': {},
-            }
+            },
+            self.adapter.ADAPTER_CONF: {}
         }
         output = self.adapter.construct_collection(
-            instance=instance, spec={}, loc=loc, context={})
+            instance=instance, spec={}, loc=loc, context=context)
         self.assertEqual(instance, output)
 
     def test_construct_type(self):
@@ -70,8 +73,8 @@ class TestNaiveAdapter(unittest.TestCase):
     def test_construct_ref(self):
         mock_adapter = create_mock_object(
             NaiveAdapter, ['construct_ref'])
-        mock_instance = {'a': {}, 'b': {}}
-        top_spec = {'api': {'foo': {}, 'bar': {}}}
+        mock_instance = {}
+        top_spec = {'api': {'foo': {}, 'bar': {}, 'a': {}, 'b': {}}}
         context = {'top_spec': top_spec}
         spec = {'to': 'unknown'}
         mock_loc = ('api', 'bar')
@@ -91,54 +94,55 @@ class TestNaiveAdapter(unittest.TestCase):
         mock_adapter.construct_ref(mock_adapter, instance=mock_instance,
                                    spec=spec, loc=mock_loc, context=context)
         mock_adapter.construct_type.assert_called_once_with(
-            mock_instance, spec, mock_loc, context, 'ref')
+            top_spec['api'], spec, mock_loc, context, 'ref')
 
     def test_construct_identity(self):
         mock_properties = {'foo', 'bar', '.readonly'}
         self.adapter.PROPERTIES = mock_properties
         mock_loc = ('foo', 'bar')
-        context = {'all_constructors': ['foo', 'bar']}
+        context = {'all_constructors': ['foo', 'bar'], 'top_spec': {}}
         self.assertRaises(InvalidSpec,
                           self.adapter.construct_identity,
                           instance={}, spec={}, loc=mock_loc, context=context)
 
-        context = {'all_constructors': ['foo', '.readonly']}
+        context['all_constructors'] = ['foo', '.readonly']
         self.assertRaises(InvalidSpec,
                           self.adapter.construct_identity,
                           instance={}, spec={}, loc=mock_loc, context=context)
 
-        context = {'all_constructors': ['.readonly']}
+        context['all_constructors'] = ['.readonly']
         output = self.adapter.construct_identity(
             instance={}, spec={}, loc=mock_loc, context=context)
         self.assertEqual(output, {})
 
-        context = {'all_constructors': ['non_property']}
+        context['all_constructors'] = ['non_property']
         output = self.adapter.construct_identity(
             instance={}, spec={}, loc=mock_loc, context=context)
         self.assertEqual(output, {})
 
     def test_construct_choices(self):
         mock_adapter = create_mock_object(NaiveAdapter, ['construct_choices'])
+        context = {'top_spec': {}}
 
         # Case A: Parameter `allowed` not specified.
         self.assertRaises(InvalidSpec,
                           mock_adapter.construct_choices, mock_adapter,
-                          instance={}, spec={}, loc=(), context=())
+                          instance={}, spec={}, loc=(), context=context)
         mock_adapter.construct_type.assert_not_called
 
         # Case B: Parameter `allowed` specified but it is invalid.
         self.assertRaises(InvalidSpec,
                           mock_adapter.construct_choices, mock_adapter,
                           instance={}, spec={'allowed': 'invalid'}, loc=(),
-                          context={})
+                          context=context)
         mock_adapter.construct_type.assert_not_called
 
         # Case C: Construction succeedeed
         instance = mock_adapter.construct_choices(
             mock_adapter, instance={}, spec={'allowed': ['foo', 'bar']},
-            loc=(), context={})
+            loc=(), context=context)
         mock_adapter.construct_type.assert_called_once_with(
-            {}, {'allowed': ['foo', 'bar']}, (), {}, 'choices')
+            {}, {'allowed': ['foo', 'bar']}, (), context, 'choices')
         self.assertTrue(isinstance(instance, mock.Mock))
 
     def test_construct_property(self):
@@ -215,6 +219,7 @@ class TestNaiveAdapter(unittest.TestCase):
             'type': 'TYPES',
             'property': 'PROPERTIES',
         }
+        context = {'top_spec': {}}
         for k, v in predicates.iteritems():
             with mock.patch.object(
                     self.adapter, 'construct_' + k,
@@ -228,7 +233,7 @@ class TestNaiveAdapter(unittest.TestCase):
                         self.adapter, 'construct_' + predicate_type[1:])
                     self.assertEqual(
                         func(instance=mock_instance, spec=mock_instance,
-                             loc=mock_loc, context={}), mock_instance)
+                             loc=mock_loc, context=context), mock_instance)
                     mock_func.assert_called_with(
-                        mock_instance, mock_instance, mock_loc, {},
+                        mock_instance, mock_instance, mock_loc, context,
                         predicate_type[1:])

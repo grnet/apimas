@@ -1,3 +1,4 @@
+from functools import wraps
 from apimas import documents as doc
 from apimas.errors import InvalidSpec
 from apimas.adapters import Adapter
@@ -6,6 +7,25 @@ from apimas.adapters import Adapter
 SKIP = object()
 
 
+def instance_to_node_spec(func):
+    """
+    A decorator which merges instance and parent spec for backward
+    compatibility.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        instance = kwargs.get('instance')
+        context = kwargs.get('context')
+        top_spec = context['top_spec']
+        loc = kwargs.get('loc')
+        node_spec = doc.doc_get(top_spec, loc[:-1]) or {}
+        node_spec.update(instance)
+        kwargs['instance'] = node_spec
+        return func(*args, **kwargs)
+    return wrapper
+
+
+@instance_to_node_spec
 def default_constructor(instance, spec, loc, context):
     return instance
 
@@ -41,8 +61,8 @@ class NaiveAdapter(Adapter):
 
     def construct(self, spec):
         self.adapter_spec = doc.doc_construct(
-            {}, spec, constructors=self.get_constructors(),
-            allow_constructor_input=True, autoconstruct=True,
+                {}, spec, constructors=self.get_constructors(),
+            allow_constructor_input=False, autoconstruct=True,
             construct_spec=True)
 
     def get_structural_elements(self, instance):
@@ -54,6 +74,7 @@ class NaiveAdapter(Adapter):
             instance.keys()
         )
 
+    @instance_to_node_spec
     def construct_collection(self, instance, spec, loc, context):
         self.init_adapter_conf(instance)
         field_schema = doc.doc_get(instance, ('*',))
@@ -91,6 +112,7 @@ class NaiveAdapter(Adapter):
                 raise InvalidSpec(
                     msg.format(k, loc[-2]), loc=loc)
 
+    @instance_to_node_spec
     def construct_struct(self, instance, spec, loc, context):
         """
         Constructor for `.struct` predicate.
@@ -100,6 +122,7 @@ class NaiveAdapter(Adapter):
         self.validate_structure(instance, spec, loc, context)
         return self.construct_type(instance, spec, loc, context, 'struct')
 
+    @instance_to_node_spec
     def construct_structarray(self, instance, spec, loc, context):
         """
         Constructor for `.structarray` predicate.
@@ -110,6 +133,7 @@ class NaiveAdapter(Adapter):
         return self.construct_type(
             instance, spec, loc, context, 'structarray')
 
+    @instance_to_node_spec
     def construct_ref(self, instance, spec, loc, context):
         """
         Constuctor for `.ref` predicate.
@@ -133,6 +157,7 @@ class NaiveAdapter(Adapter):
                 'Reference target {!r} does not exist.'.format(ref), loc=loc)
         return self.construct_type(instance, spec, loc, context, 'ref')
 
+    @instance_to_node_spec
     def construct_serial(self, instance, spec, loc, context):
         """
         Constuctor for `.serial` predicate.
@@ -141,6 +166,7 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'serial')
 
+    @instance_to_node_spec
     def construct_integer(self, instance, spec, loc, context):
         """
         Constuctor for `.integer` predicate.
@@ -149,6 +175,7 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'integer')
 
+    @instance_to_node_spec
     def construct_biginteger(self, instance, spec, loc, context):
         """
         Constuctor for `.biginteger` predicate.
@@ -158,6 +185,7 @@ class NaiveAdapter(Adapter):
         return self.construct_type(instance, spec, loc, context,
                                    'biginteger')
 
+    @instance_to_node_spec
     def construct_float(self, instance, spec, loc, context):
         """
         Constuctor for `.float` predicate.
@@ -167,6 +195,7 @@ class NaiveAdapter(Adapter):
         return self.construct_type(instance, spec, loc, context,
                                    'float')
 
+    @instance_to_node_spec
     def construct_string(self, instance, spec, loc, context):
         """
         Constuctor for `.string` predicate.
@@ -175,6 +204,7 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'string')
 
+    @instance_to_node_spec
     def construct_text(self, instance, spec, loc, context):
         """
         Constuctor for `.text` predicate.
@@ -183,6 +213,7 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'text')
 
+    @instance_to_node_spec
     def construct_email(self, instance, spec, loc, context):
         """
         Constuctor for `.ref` predicate.
@@ -191,6 +222,7 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'email')
 
+    @instance_to_node_spec
     def construct_boolean(self, instance, spec, loc, context):
         """
         Constuctor for `.ref` predicate.
@@ -199,6 +231,7 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'boolean')
 
+    @instance_to_node_spec
     def construct_datetime(self, instance, spec, loc, context):
         """
         Constuctor for `.ref` predicate.
@@ -207,6 +240,7 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'datetime')
 
+    @instance_to_node_spec
     def construct_date(self, instance, spec, loc, context):
         """
         Constuctor for `.ref` predicate.
@@ -215,6 +249,7 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'date')
 
+    @instance_to_node_spec
     def construct_file(self, instance, spec, loc, context):
         """
         Constuctor for `.file` predicate.
@@ -223,6 +258,7 @@ class NaiveAdapter(Adapter):
         """
         return self.construct_type(instance, spec, loc, context, 'file')
 
+    @instance_to_node_spec
     def construct_identity(self, instance, spec, loc, context):
         """
         Constructor of `.identity` predicate.
@@ -240,6 +276,7 @@ class NaiveAdapter(Adapter):
             raise InvalidSpec(msg.format(loc[-2]), loc=loc)
         return instance
 
+    @instance_to_node_spec
     def construct_choices(self, instance, spec, loc, context):
         """
         Constuctor for `.ref` predicate.
@@ -253,6 +290,7 @@ class NaiveAdapter(Adapter):
                 loc=loc)
         return self.construct_type(instance, spec, loc, context, 'choices')
 
+    @instance_to_node_spec
     def construct_blankable(self, instance, spec, loc, context):
         """
         Constuctor for `.blankable` predicate.
@@ -262,6 +300,7 @@ class NaiveAdapter(Adapter):
         return self.construct_property(instance, spec, loc, context,
                                        'blankable')
 
+    @instance_to_node_spec
     def construct_required(self, instance, spec, loc, context):
         """
         Constuctor for `.required` predicate.
@@ -271,6 +310,7 @@ class NaiveAdapter(Adapter):
         return self.construct_property(instance, spec, loc, context,
                                        'required')
 
+    @instance_to_node_spec
     def construct_nullable(self, instance, spec, loc, context):
         """
         Constuctor for `.nullable` predicate.
@@ -280,6 +320,7 @@ class NaiveAdapter(Adapter):
         return self.construct_property(instance, spec, loc, context,
                                        'nullable')
 
+    @instance_to_node_spec
     def construct_readonly(self, instance, spec, loc, context):
         """
         Constuctor for `.readonly` predicate.
@@ -289,6 +330,7 @@ class NaiveAdapter(Adapter):
         return self.construct_property(instance, spec, loc, context,
                                        'readonly')
 
+    @instance_to_node_spec
     def construct_writeonly(self, instance, spec, loc, context):
         """
         Constuctor for `.readonly` predicate.
@@ -322,6 +364,7 @@ class NaiveAdapter(Adapter):
             property_name, property_name): True})
         return instance
 
+    @instance_to_node_spec
     def construct_actions(self, instance, spec, loc, context):
         """
         Constuctor for `.actions` predicate.
@@ -336,7 +379,10 @@ class NaiveAdapter(Adapter):
         Method for extracting a predicate whose semantic refers to a type of
         a field from the given instance.
         """
-        types = set(self.TYPES.intersection(instance.keys()))
+        # Handle case of having `.struct=`, `.structarray=`, etc.
+        normalized_keys = [k if not k.endswith('=') else k[:-1]
+                           for k in instance.iterkeys()]
+        types = set(self.TYPES.intersection(normalized_keys))
         if len(types) > 1:
             msg = 'Type is ambiguous. {!r} found: {!s}'
             raise InvalidSpec(msg.format(len(types), str(types)))

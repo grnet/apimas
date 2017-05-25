@@ -192,7 +192,8 @@ class ApimasClientAdapter(NaiveAdapter):
             '.structarray': lambda x: {'type': 'list', 'schema': {
                 'type': 'dict', 'schema': x}}
         }
-        params = doc.doc_get(instance, (field_type,))
+        # Concatenate '=' because we have compound predicates.
+        params = doc.doc_get(instance, (field_type + '=',))
         field_schema = {field_name: schema.get(self.ADAPTER_CONF, {})
                         for field_name, schema in params.iteritems()}
         instance[self.ADAPTER_CONF].update(

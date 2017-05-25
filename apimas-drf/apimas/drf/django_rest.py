@@ -9,7 +9,7 @@ from apimas.drf import utils
 from apimas.drf.serializers import (
     generate_container_serializer, generate_model_serializer)
 from apimas.drf.views import generate_view
-from apimas.adapters.cookbooks import NaiveAdapter
+from apimas.adapters.cookbooks import NaiveAdapter, instance_to_node_spec
 
 
 def utc_time_field_init(self, **kwargs):
@@ -81,10 +81,12 @@ def _validate_model_attribute(api_field_name, model, model_attr_name,
 
 class DjangoRestAdapter(NaiveAdapter):
     STRUCTURES = {
-        '.struct': '.drf_field',
-        '.structarray': '.drf_field',
+        '.struct=': '.drf_field',
+        '.structarray=': '.drf_field',
         '.collection': '.drf_collection',
     }
+
+    COMPOUND_TYPES = {'.struct', '.structarray'}
 
     ADAPTER_CONF = 'drf_conf'
     PROPERTIES_CONF_KEY = 'properties'
@@ -220,6 +222,7 @@ class DjangoRestAdapter(NaiveAdapter):
         """ Get `ViewSet` class based on the given collection. """
         return self.get_class(self.views, endpoint, collection)
 
+    @instance_to_node_spec
     def construct_endpoint(self, instance, spec, loc, context):
         """
         Constructor of '.endpoint' predicate.
@@ -247,6 +250,7 @@ class DjangoRestAdapter(NaiveAdapter):
         instance[self.ADAPTER_CONF].append(action)
         return instance
 
+    @instance_to_node_spec
     def construct_list(self, instance, spec, loc, context):
         """
         Constuctor for `.list` predicate.
@@ -256,6 +260,7 @@ class DjangoRestAdapter(NaiveAdapter):
         return self.construct_CRUD_action(instance, spec, loc, context,
                                           'list')
 
+    @instance_to_node_spec
     def construct_retrieve(self, instance, spec, loc, context):
         """
         Constuctor for `.retrieve` predicate.
@@ -265,6 +270,7 @@ class DjangoRestAdapter(NaiveAdapter):
         return self.construct_CRUD_action(instance, spec, loc, context,
                                           'retrieve')
 
+    @instance_to_node_spec
     def construct_create(self, instance, spec, loc, context):
         """
         Constuctor for `.retrieve` predicate.
@@ -274,6 +280,7 @@ class DjangoRestAdapter(NaiveAdapter):
         return self.construct_CRUD_action(instance, spec, loc, context,
                                           'create')
 
+    @instance_to_node_spec
     def construct_update(self, instance, spec, loc, context):
         """
         Constuctor for `.retrieve` predicate.
@@ -283,6 +290,7 @@ class DjangoRestAdapter(NaiveAdapter):
         return self.construct_CRUD_action(instance, spec, loc, context,
                                           'update')
 
+    @instance_to_node_spec
     def construct_delete(self, instance, spec, loc, context):
         """
         Constuctor for `.retrieve` predicate.
@@ -349,6 +357,7 @@ class DjangoRestAdapter(NaiveAdapter):
                 extra_serializers=extra_serializers)
         return serializer
 
+    @instance_to_node_spec
     def construct_drf_collection(self, instance, spec, loc, context):
         """
         Constructor for `.drf_collection` predicate.
@@ -363,7 +372,7 @@ class DjangoRestAdapter(NaiveAdapter):
         if '.collection' not in constructed:
             raise doc.DeferConstructor
         field_schema = doc.doc_get(instance, ('*',))
-        actions = doc.doc_get(instance, ('.actions', self.ADAPTER_CONF)) or []
+        actions = doc.doc_get(instance, ('.actions=', self.ADAPTER_CONF)) or []
         model = self._get_or_import_model(loc[0] + '/' + parent,
                                           loc + ('model',),
                                           context.get('top_spec'))
@@ -413,7 +422,7 @@ class DjangoRestAdapter(NaiveAdapter):
         Generate a nested drf field, which is actually a `Serializer` class.
         """
         kwargs.update(self.get_default_properties(predicate_type, kwargs))
-        field_schema = doc.doc_get(instance, (predicate_type,))
+        field_schema = doc.doc_get(instance, (predicate_type + '=',))
         many = predicate_type == '.structarray'
         model_serializers = kwargs.pop('model_serializers', [])
         extra_serializers = kwargs.pop('serializers', [])
@@ -445,7 +454,7 @@ class DjangoRestAdapter(NaiveAdapter):
 
     def _generate_field(self, instance, name, predicate_type, model,
                         automated, **field_kwargs):
-        if predicate_type in self.STRUCTURES:
+        if predicate_type in self.COMPOUND_TYPES:
             drf_field = self.generate_nested_drf_field(
                 instance, name, predicate_type, model, onmodel=automated,
                 **field_kwargs)
@@ -580,6 +589,7 @@ class DjangoRestAdapter(NaiveAdapter):
                     model = model_field.related_model
         return model, automated
 
+    @instance_to_node_spec
     def construct_drf_field(self, instance, spec, loc, context):
         """
         Constructor of `.drf_field` predicate.

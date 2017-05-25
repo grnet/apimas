@@ -105,7 +105,7 @@ FIELD_TYPE_MAPPING = {
 
 
 def action_exists(spec, endpoint, collection, action):
-    loc = (endpoint, collection, '.actions')
+    loc = (endpoint, collection, '.actions=')
     actions = doc.doc_get(spec, loc) or {}
     return action in actions
 
@@ -127,12 +127,12 @@ def filter_field_schema(field_schema, excluded=None, included=None):
     filtered = {}
     for k in filtered_keys:
         spec = deepcopy(field_schema[k])
-        if '.struct' in spec:
-            spec['.struct'] = filter_field_schema(
-                spec.get('.struct'), excluded, included)
-        elif '.structarray' in spec:
-            spec['.structarray'] = filter_field_schema(
-                spec.get('.structarray'), excluded, included)
+        if '.struct=' in spec:
+            spec['.struct='] = filter_field_schema(
+                spec.get('.struct='), excluded, included)
+        elif '.structarray=' in spec:
+            spec['.structarray='] = filter_field_schema(
+                spec.get('.structarray='), excluded, included)
         filtered[k] = spec
 
     return filtered
@@ -201,10 +201,10 @@ def get_refs(field_schema, spec):
             endpoint, collection = tuple(ref.split('/'))
             refs.append(ref)
             refs.extend(get_ref_collections(spec, endpoint, collection))
-        elif '.struct' in field_spec:
-            refs.extend(get_refs(field_spec.get('.struct'), spec))
-        elif '.structarray' in field_spec:
-            refs.extend(get_refs(field_spec.get('.structarray'), spec))
+        elif '.struct=' in field_spec:
+            refs.extend(get_refs(field_spec.get('.struct='), spec))
+        elif '.structarray=' in field_spec:
+            refs.extend(get_refs(field_spec.get('.structarray='), spec))
     return refs
 
 
@@ -266,6 +266,9 @@ EXTRA_API_PARAMS = {
 }
 
 
+COMPOUND_TYPES = {'.struct', '.structarray'}
+
+
 def _get_extra_params(spec, predicate_type):
     params = spec.get(predicate_type, {})
     return {
@@ -285,7 +288,9 @@ def populate_request(field_schema, instances, all_fields=True):
         predicate_type = adapter.extract_type(spec)
         extra_params = _get_extra_params(spec, predicate_type)
         if isrelational(predicate_type):
-            predicate_kwargs = spec.get(predicate_type)
+            predicate = predicate_type if predicate_type not in COMPOUND_TYPES\
+                else predicate_type + '='
+            predicate_kwargs = spec.get(predicate)
             kwargs[field_name] = RELATIONAL_CONSTRUCTORS[predicate_type](
                 predicate_kwargs, instances, **extra_params)
         else:

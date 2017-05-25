@@ -330,12 +330,12 @@ class ApimasTestCase(APITestCase):
                    ' response data {!r}'.format(field, response_data))
             self.assertIn(field, response_data, msg=msg)
             value = response_data.get(field)
-            if '.struct' in field_spec:
-                structure = field_spec.get('.struct')
+            if '.struct=' in field_spec:
+                structure = field_spec.get('.struct=')
                 self.assert_structure_field(value, structure, '.struct',
                                             msg_prefix)
-            elif '.structarray' in field_spec:
-                structure = field_spec.get('.structarray')
+            elif '.structarray=' in field_spec:
+                structure = field_spec.get('.structarray=')
                 self.assert_structure_field(value, structure,
                                             '.structarray', msg_prefix)
 
