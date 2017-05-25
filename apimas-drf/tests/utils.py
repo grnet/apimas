@@ -1,27 +1,7 @@
-import copy
 import random
 from django.db import models
 from apimas.drf.utils import import_object
 from apimas.drf.testing import utils
-
-
-COLLECTION_TEMPLATE = {
-    '.collection': {},
-    '.drf_collection': {
-        'model': None
-    },
-    '*': {
-    }
-}
-
-
-ACTIONS = {
-    '.list': {},
-    '.retrieve': {},
-    '.create': {},
-    '.update': {},
-    '.delete': {},
-}
 
 
 PROPERTIES = {'.required': {}}
@@ -48,10 +28,17 @@ class SpecGenerator(object):
             model_fields = filter((lambda x: isinstance(x, models.Field)),
                                   model_cls._meta.get_fields())
             field_schema = self.generate_field_schema(model_fields)
-            collection_spec = copy.deepcopy(COLLECTION_TEMPLATE)
-            collection_spec['.drf_collection']['model'] = model
-            collection_spec['*'] = field_schema
-            collection_spec['.actions'] = ACTIONS
+            collection_spec = {
+                '.drf_collection': {'model': model},
+                '.collection': {},
+                '*': field_schema,
+                '.actions=': {
+                    '.list': {},
+                    '.create': {},
+                    '.update': {},
+                    '.delete': {},
+                }
+            }
             spec[self.endpoint][collection_name] = collection_spec
             spec[self.endpoint].update(
                 {'.endpoint': {'permissions': self.permissions}})
@@ -64,9 +51,9 @@ class SpecGenerator(object):
 
     def generate_structure(self, model_field):
         if model_field.one_to_one or model_field.many_to_one:
-            predicate_type = '.struct'
+            predicate_type = '.struct='
         else:
-            predicate_type = '.structarray'
+            predicate_type = '.structarray='
         ref_model = model_field.related_model
         model_fields = filter((lambda x: isinstance(x, models.Field)),
                               ref_model._meta.get_fields())
@@ -91,7 +78,8 @@ class SpecGenerator(object):
                 spec_field = random.choice(rel_field_constructors)(
                     model_field)
                 field_node = dict({'.drf_field': {}}, **spec_field)
-            if '.struct' not in field_node and '.structarray' not in field_node:
+            if '.struct=' not in field_node and\
+                    '.structarray=' not in field_node:
                 field_schema[model_field.name] = dict(field_node, **PROPERTIES)
         identity_field = utils.generate_random_string(max_length=4)
         if iscollection:

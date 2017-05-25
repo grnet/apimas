@@ -1,6 +1,5 @@
 from apimas.drf.testing import (
     apimas_context, ApimasTestCase)
-from tests.utils import ACTIONS
 
 
 def get_value(instance):
@@ -21,11 +20,11 @@ SPEC = {
                 'data': {
                     '.required': {},
                     '.drf_field': {'onmodel': False},
-                    '.struct': {
+                    '.struct=': {
                         'node': {
                             '.required': {},
                             '.drf_field': {'onmodel': False},
-                            '.struct': {
+                            '.struct=': {
                                 'id': {
                                     '.serial': {},
                                     '.drf_field': {},
@@ -91,7 +90,7 @@ SPEC = {
                 'extra': {
                     '.writeonly': {},
                     '.drf_field': {'onmodel': False},
-                    '.struct': {
+                    '.struct=': {
                         'foo': {
                             '.drf_field': {'onmodel': False},
                             '.string': {}
@@ -103,7 +102,13 @@ SPEC = {
                     }
                 },
             },
-            '.actions': ACTIONS
+            '.actions=': {
+                '.list': {},
+                '.create': {},
+                '.retrieve': {},
+                '.update': {},
+                '.delete': {},
+            }
         },
     }
 }

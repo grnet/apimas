@@ -100,7 +100,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
                 'foo': {},
                 'bar': {},
             },
-            '.actions': {
+            '.actions=': {
                 self.adapter_conf: ['a', 'b']
             },
             self.adapter_conf: {},
@@ -118,7 +118,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_adapter.generate_serializer.return_value = 'mock_serializer'
         mock_adapter.get_permissions.return_value = 'permissions'
         context = {'constructed': ['.a_constructor'],
-                   'parent_name': 'collection'}
+                   'parent_name': 'collection',
+                   'top_spec': {}}
         self.assertRaises(doc.DeferConstructor,
                           mock_adapter.construct_drf_collection, mock_adapter,
                           instance=mock_instance, spec=mock_spec, loc=mock_loc,
@@ -130,7 +131,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
             loc=mock_loc, context=context)
         self.assertEqual(len(instance), 3)
         self.assertIn('*', instance)
-        self.assertIn('.actions', instance)
+        self.assertIn('.actions=', instance)
         instance_conf = instance.get(self.adapter_conf)
         self.assertIsNotNone(instance_conf)
         self.assertEqual(instance_conf, 'mock_view')
@@ -138,7 +139,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(mock_adapter.serializers['api/collection'],
                          'mock_serializer')
         mock_adapter._get_or_import_model.assert_called_once_with(
-            'api/collection', mock_loc + ('model',), None)
+            'api/collection', mock_loc + ('model',), {})
         mock_view_gen.assert_called_once_with(
             'collection', 'mock_serializer', 'model_imported',
             actions=['a', 'b'], permissions='permissions')
@@ -234,11 +235,11 @@ class TestDjangoRestAdapter(unittest.TestCase):
         }
         mock_adapter = create_mock_object(
             DjangoRestAdapter,
-            ['_generate_field', 'ADAPTER_CONF', 'STRUCTURES'])
+            ['_generate_field', 'ADAPTER_CONF', 'COMPOUND_TYPES'])
         mock_adapter.SERILIZERS_TYPE_MAPPING = mock_serializer_mapping
         mock_adapter.generate_nested_drf_field.return_value = 'nested_field'
-        self.assertIn('.struct', mock_adapter.STRUCTURES)
-        self.assertIn('.structarray', mock_adapter.STRUCTURES)
+        self.assertIn('.struct', mock_adapter.COMPOUND_TYPES)
+        self.assertIn('.structarray', mock_adapter.COMPOUND_TYPES)
 
         for predicate_type in ['.struct', '.structarray']:
             field = mock_adapter._generate_field(
@@ -250,7 +251,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
 
         predicate_type = '.foo'
         mock_adapter.get_default_properties.return_value = {}
-        self.assertNotIn(predicate_type, mock_adapter.STRUCTURES)
+        self.assertNotIn(predicate_type, mock_adapter.COMPOUND_TYPES)
         field = mock_adapter._generate_field(
             mock_adapter, instance={}, name=None,
             predicate_type=predicate_type, model=None, automated=False)
@@ -351,7 +352,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         }
         all_constructors = {'.drf_field', '.foo'}
         mock_context = {'constructed': set(),
-                        'all_constructors': all_constructors}
+                        'all_constructors': all_constructors,
+                        'top_spec': {}}
         mock_adapter = create_mock_object(
             DjangoRestAdapter, ['construct_drf_field'])
         self.assertRaises(doc.DeferConstructor,

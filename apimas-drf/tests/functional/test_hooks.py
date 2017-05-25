@@ -5,7 +5,6 @@ from apimas.drf.testing import (
 from apimas.drf.testing import utils
 from apimas.drf.mixins import HookMixin
 from tests.models import MyModel
-from tests.utils import ACTIONS
 
 
 PERMISSION_ACTIONS = {
@@ -115,7 +114,13 @@ SPEC = {
                     '.drf_field': {},
                 }
             },
-            '.actions': ACTIONS
+            '.actions=': {
+                '.list': {},
+                '.create': {},
+                '.retrieve': {},
+                '.update': {},
+                '.delete': {},
+            }
         },
     }
 }

@@ -15,7 +15,7 @@ API_SPEC = {
                     '.string': {'max_length': 10},
                 },
             },
-            '.actions': {
+            '.actions=': {
                 '.create': {},
                 '.list': {},
                 '.retrieve': {},
@@ -53,7 +53,7 @@ API_SPEC = {
                     '.drf_field': {},
                 },
             },
-            '.actions': {
+            '.actions=': {
                 '.list': {},
                 '.retrieve': {},
             }
@@ -69,7 +69,7 @@ API_SPEC = {
                 },
                 'country': {
                     '.drf_field': {},
-                    '.struct': {
+                    '.struct=': {
                         'name': {
                             '.drf_field': {},
                             '.string': {},
@@ -77,7 +77,7 @@ API_SPEC = {
                     },
                 },
             },
-            '.actions': {
+            '.actions=': {
                 '.list': {},
                 '.retrieve': {},
             }
@@ -119,7 +119,7 @@ API_SPEC = {
                     '.required': {},
                 },
             },
-            '.actions': {
+            '.actions=': {
                 '.create': {},
                 '.update': {},
                 '.retrieve': {},
@@ -152,7 +152,7 @@ API_SPEC = {
                 'products-view': {
                     '.drf_field': {'source': 'products'},
                     '.readonly': {},
-                    '.structarray': {
+                    '.structarray=': {
                         'key': {
                             '.drf_field': {},
                             '.string': {},
@@ -169,7 +169,7 @@ API_SPEC = {
                 },
 
             },
-            '.actions': {
+            '.actions=': {
                 '.list': {},
                 '.retrieve': {},
                 '.create': {},
@@ -212,7 +212,7 @@ API_SPEC = {
                     '.required': {},
                 }
             },
-            '.actions': {
+            '.actions=': {
                 '.list': {},
                 '.create': {},
                 '.update': {},

@@ -3,7 +3,7 @@ from rest_framework import serializers
 from apimas.drf.testing import (
     apimas_context, ApimasTestCase)
 from tests.models import MyModel
-from tests.utils import SpecGenerator, ACTIONS
+from tests.utils import SpecGenerator
 
 
 class MySerializer(serializers.BaseSerializer):
@@ -61,14 +61,20 @@ SPEC = {
                 'mymodel': {
                     '.required': {},
                     '.drf_field': {},
-                    '.struct': mymodel_field_schema,
+                    '.struct=': mymodel_field_schema,
                 },
                 'url': {
                     '.identity': {},
                     '.drf_field': {},
                 }
             },
-            '.actions': ACTIONS
+            '.actions=': {
+                '.list': {},
+                '.create': {},
+                '.retrieve': {},
+                '.update': {},
+                '.delete': {},
+            }
         },
     }
 }
