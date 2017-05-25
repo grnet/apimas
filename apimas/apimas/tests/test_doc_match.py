@@ -60,8 +60,8 @@ def test_random():
         matched = doc.doc_match_levels(random_doc, pattern_sets,
                                        expand_pattern_levels=())
         matched_doc = {}
-        for p in matched:
-            doc.doc_set(matched_doc, p[:-1], p[-1])
+        for p, v in matched:
+            doc.doc_set(matched_doc, p, v)
 
         assert random_doc == matched_doc
 

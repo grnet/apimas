@@ -3,6 +3,7 @@
 from inspect import getargspec
 from bisect import bisect_right
 from itertools import chain
+from collections import namedtuple
 import re
 
 from errors import ValidationError, NotFound, InvalidInput, ConflictError
@@ -13,6 +14,24 @@ bytes = str
 
 class DeferConstructor(Exception):
     """An exception raised by constructors to defer their execution."""
+
+
+cons_fields = [
+    'instance',
+    'loc',
+    'spec',
+    'cons_round',
+    'parent_name',
+    'parent_spec',
+    'top_spec',
+    'sep',
+    'constructor_index',
+    'sibling_constructor_names',
+    'constructed',
+    'context',
+]
+
+ConstructorContext = namedtuple('ConstructorContext', cons_fields)
 
 
 def doc_locate(doc, path):
@@ -275,7 +294,7 @@ def doc_match_levels(rules_doc, pattern_sets, expand_pattern_levels,
         crop_levels = len(pattern_sets)
 
     if level >= len(pattern_sets):
-        yield path
+        yield path, None
         return
 
     for pattern in pattern_sets[level]:
@@ -296,18 +315,18 @@ def doc_match_levels(rules_doc, pattern_sets, expand_pattern_levels,
             reportable_segment = rule if expand_pattern else pattern
             subpath = path + (reportable_segment,)
             if type(subdoc) is not dict:
-                reportable_paths = [subpath + (subdoc,)]
+                reportables = [(subpath, subdoc)]
             else:
-                reportable_paths = doc_match_levels(
+                reportables = doc_match_levels(
                     rules_doc=subdoc, pattern_sets=pattern_sets,
                     expand_pattern_levels=expand_pattern_levels,
                     level=level + 1, path=subpath)
 
-            for reportable_path in reportable_paths:
+            for reportable_path, reportable_val in reportables:
                 reported_path = reportable_path[:crop_levels]
                 if reported_path not in reported_paths:
                     reported_paths.add(reported_path)
-                    yield reportable_path
+                    yield reportable_path, reportable_val
 
 
 def conventional_strategy(x, y):
@@ -425,7 +444,7 @@ def doc_match(patterns, rules, aggregators, level=0, expand_levels=None,
 _constructors = {}
 
 
-def register_constructor(constructor, name=None, sep='.'):
+def make_constructor(constructor, name=None, sep='.'):
     if name is None:
         name = constructor.__module__
         name += sep + constructor.__name__.replace('construct_', '', 1)
@@ -437,27 +456,47 @@ def register_constructor(constructor, name=None, sep='.'):
         raise ConflictError(m)
 
     argspec = getargspec(constructor)
-    req_args = ['instance', 'spec', 'loc', 'context']
-    if argspec.args != req_args:
-        m = "{name!r}: a constructor arguments must be {req_args!r}"
-        m = m.format(name=name, req_args=req_args)
+    unknown_args = set(argspec.args) - set(cons_fields)
+
+    if argspec.args == ['context']:
+        final_constructor = constructor
+
+    elif unknown_args:
+        m = ("{name!r}: unknown constructor arguments: {unknown_args!r}. "
+             "the context consists of {cons_fields!r}.")
+        m = m.format(name=name, unknown_args=list(unknown_args),
+                     cons_fields=cons_fields)
         raise InvalidInput(m)
 
-    _constructors[name] = constructor
+    else:
+        def final_constructor(context):
+            kwargs = {name:getattr(context, name, None)
+                      for name in argspec.args}
+            if 'context' in kwargs:
+                kwargs['context'] = dict(context.__dict__)
+            return constructor(**kwargs)
+
+    return final_constructor
+
+
+def register_constructor(constructor, name=None, sep='.'):
+    final_constructor = make_constructor(constructor, name=name, sep=sep)
+    _constructors[name] = final_constructor
+    return final_constructor
 
 
 def unregister_constructor(name, sep='.'):
     return doc_pop(_constructors, name.split(sep))
 
 
-def autoconstructor(instance, spec, loc, context):
-    if type(spec) is not dict:
-        return spec
+def autoconstructor(context):
+    if type(context.spec) is not dict:
+        return context.spec
 
-    if type(instance) is dict:
-        instance[loc[-1]] = spec
+    if type(context.instance) is dict:
+        context.instance[context.loc[-1]] = context.spec
 
-    return instance
+    return context.instance
 
 
 register_constructor(autoconstructor, name='autoconstruct')
@@ -502,7 +541,7 @@ def _doc_construct_scan_spec(doc, spec, loc, sep, doc_is_basic):
 
 
 def _doc_construct_init_instance(
-            doc, spec, loc, context,
+            doc, spec, loc, top_spec,
             constructors, autoconstruct,
             construct_spec,
             allow_constructor_input,
@@ -515,7 +554,7 @@ def _doc_construct_init_instance(
         subdoc = doc.get(key, {})
         subspec = spec[key]
         instance[key] = doc_construct(
-            doc=subdoc, spec=subspec, loc=subloc, context=context,
+            doc=subdoc, spec=subspec, loc=subloc, top_spec=top_spec,
             constructors=constructors,
             autoconstruct=autoconstruct,
             construct_spec=construct_spec,
@@ -536,7 +575,7 @@ def _doc_construct_init_instance(
         subloc = loc + (key,)
         subdoc = doc[key]
         instance[key] = doc_construct(
-            doc=subdoc, spec=subspec, loc=subloc, context=context,
+            doc=subdoc, spec=subspec, loc=subloc, top_spec=top_spec,
             constructors=constructors,
             autoconstruct=autoconstruct,
             construct_spec=construct_spec,
@@ -547,7 +586,7 @@ def _doc_construct_init_instance(
 
 
 def _construct_doc_call_constructors(
-        instance, spec, loc, context,
+        instance, spec, loc, top_spec,
         constructors, autoconstruct,
         allow_constructor_input,
         sep, constructor_names):
@@ -558,13 +597,6 @@ def _construct_doc_call_constructors(
     working_constructor_names = constructor_names
 
     while True:
-        context['sep'] = sep
-        context['all_constructors'] = constructor_names
-        context['constructed'] = constructed
-        context['cons_round'] = cons_round
-        context['parent_name'] = loc and loc[-1]
-        context['parent_spec'] = spec
-
         deferred_constructor_names = []
         for constructor_name in working_constructor_names:
             subloc = loc + (constructor_name,)
@@ -581,9 +613,24 @@ def _construct_doc_call_constructors(
                     raise InvalidInput(m)
 
             subspec = spec[constructor_name]
+
+            cons_context = ConstructorContext(
+                instance=instance,
+                loc=subloc,
+                spec=subspec,
+                cons_round=cons_round,
+                parent_name=loc and loc[-1],
+                parent_spec=spec,
+                top_spec=top_spec,
+                sep=sep,
+                constructor_index=constructors,
+                sibling_constructor_names=constructor_names,
+                constructed=constructed,
+                context=None,
+            )
+
             try:
-                instance = constructor(instance=instance, spec=subspec,
-                                       loc=subloc, context=context)
+                instance = constructor(cons_context)
                 constructed.add(constructor_name)
             except DeferConstructor as e:
                 deferred_constructor_names.append(constructor_name)
@@ -603,7 +650,7 @@ def _construct_doc_call_constructors(
     return instance
 
 
-def doc_construct(doc, spec, loc=(), context=None,
+def doc_construct(doc, spec, loc=(), top_spec=None,
                   constructors=_constructors,
                   autoconstruct=False,
                   allow_constructor_input=False,
@@ -627,10 +674,8 @@ def doc_construct(doc, spec, loc=(), context=None,
 
     spec = _doc_construct_normalize_spec(loc, spec)
 
-    if context is None:
-        context = {'top_spec': spec}
-    elif 'top_spec' not in context:
-        context['top_spec'] = spec
+    if top_spec is None:
+        top_spec = spec
 
     constructor_names, data_keys, prefixes = \
             _doc_construct_scan_spec(doc, spec, loc, sep, doc_is_basic)
@@ -644,7 +689,7 @@ def doc_construct(doc, spec, loc=(), context=None,
             subloc = loc + (constructor_name,)
             spec[constructor_name] = doc_construct(
                     doc=subdoc, spec=spec[constructor_name],
-                    loc=subloc, context=context,
+                    loc=subloc, top_spec=top_spec,
                     constructors=constructors,
                     autoconstruct=autoconstruct,
                     construct_spec=construct_spec,
@@ -664,14 +709,14 @@ def doc_construct(doc, spec, loc=(), context=None,
         instance = doc
 
     else:
-        instance =_doc_construct_init_instance(doc, spec, loc, context,
+        instance =_doc_construct_init_instance(doc, spec, loc, top_spec,
                                                constructors, autoconstruct,
                                                construct_spec,
                                                allow_constructor_input, sep,
                                                data_keys, prefixes)
 
     instance = _construct_doc_call_constructors(
-            instance, spec, loc, context,
+            instance, spec, loc, top_spec,
             constructors, autoconstruct,
             allow_constructor_input,
             sep, constructor_names)

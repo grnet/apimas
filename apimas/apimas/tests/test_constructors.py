@@ -215,6 +215,7 @@ simple_spec = {
 }
 
 
+@make_constructor
 def randomizer(instance, spec, loc, context):
     key = loc[-1]
     instance[key] = spec
