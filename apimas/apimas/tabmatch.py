@@ -3,11 +3,10 @@ from apimas.documents import doc_set, doc_match_levels
 
 
 class Tabmatch(object):
-    def __init__(self, column_names, rules=(), ignore_last=True):
+    def __init__(self, column_names, rules=()):
         self.column_names = tuple(column_names)
         self.Row = namedtuple('TabmatchRow', self.column_names)
         self.rules_set = set(rules)
-        self.ignore_last = ignore_last
         self.rules_doc = {}
         self.name_levels = {
             name: x
@@ -29,7 +28,7 @@ class Tabmatch(object):
         for row in rows:
             self._check_row_type(row)
             self.rules_set.add(row)
-            doc_set(self.rules_doc, row[:-1], row[-1])
+            doc_set(self.rules_doc, row, {})
 
     def match(self, row, expand):
         self._check_row_type(row)
@@ -61,7 +60,6 @@ class Tabmatch(object):
     def multimatch(self, pattern_sets, expand):
         expand_levels = {self.name_levels[name] for name in expand}
         depth = len(self.column_names)
-        crop_levels = depth - 1 if self.ignore_last else depth
         matches = doc_match_levels(self.rules_doc, pattern_sets,
-                                   expand_levels, crop_levels=crop_levels)
-        return (self.Row(*path) for path in matches if len(path) == depth)
+                                   expand_levels, crop_levels=depth)
+        return (self.Row(*path) for path, _ in matches if len(path) == depth)
