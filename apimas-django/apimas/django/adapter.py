@@ -252,7 +252,7 @@ class DjangoAdapter(object):
             raise InvalidInput(msg.format(type(patterns)))
 
         columns = ('endpoint', 'collection', 'action')
-        tab = Tabmatch(columns, rules, ignore_last=False)
+        tab = Tabmatch(columns, rules)
         content = {}
         for pattern, pattern_spec in patterns.iteritems():
             pattern = _parse_pattern(pattern)
@@ -372,50 +372,49 @@ class DjangoAdapter(object):
         self._construct_test_method(action_name, action_params,
                                     collection_path, is_collection)
 
-    def _construct_automated_action(self, instance, spec, loc, context,
-                                    action_name):
-        is_collection = self._is_collection(loc)
-        if self._is_collection(loc) == action_name in ['list', 'create']:
+    def _construct_automated_action(self, context, action_name):
+        is_collection = self._is_collection(context.loc)
+        if self._is_collection(context.loc) ==\
+                action_name in ['list', 'create']:
             subject = 'collection' if is_collection else 'resource'
             msg = '.{action!r} cannot be applied on a {subject!s}'
             raise InvalidSpec(msg.format(action=action_name, subject=subject),
-                              loc=loc)
-        top_spec = context.get('top_spec')
-        collection_spec = doc.doc_get(top_spec, loc[:2])
-        collection_path = '/'.join(loc[:2])
+                              loc=context.loc)
+        top_spec = context.top_spec
+        collection_spec = doc.doc_get(top_spec, context.loc[:2])
+        collection_path = '/'.join(context.loc[:2])
         default_params = self.AUTOMATED_ACTIONS[action_name]
         # Override default params if users specified their params.
-        action_params = dict(default_params, **spec)
+        action_params = dict(default_params, **context.spec)
         self._construct_action(action_name,
                                action_params,
                                collection_spec, collection_path,
                                is_collection)
-        return instance
+        return context.instance
 
-    def _endpoint(self, instance, spec, loc, context):
-        endpoint = context.get('parent_name')
+    def _endpoint(self, context):
+        endpoint = context.parent_name
         for k, v in self._action_urls.iteritems():
             url_actions = dict(v)
             django_view = DjangoWrapper(url_actions)
             http_methods = require_http_methods(v.keys())
             django_view = csrf_exempt(http_methods(django_view))
             self.urls[endpoint].append(url(k, django_view))
-        return instance
+        return context.instance
 
     def _automated_action(self, action):
-        def _action(instance, spec, loc, context):
-            return self._construct_automated_action(
-                instance, spec, loc, context, action)
+        def _action(context):
+            return self._construct_automated_action(context, action)
         return _action
 
-    def _actions(self, instance, spec, loc, context):
-        actions = utils.get_structural_elements(spec)
-        top_spec = context.get('top_spec')
+    def _actions(self, context):
+        actions = utils.get_structural_elements(context.spec)
+        top_spec = context.top_spec
         for action_name in actions:
-            action_params = spec[action_name]
-            collection_spec = doc.doc_get(top_spec, loc[:2])
-            collection_path = '/'.join(loc[:2])
-            is_collection = self._is_collection(loc)
+            action_params = context.spec[action_name]
+            collection_spec = doc.doc_get(top_spec, context.loc[:2])
+            collection_path = '/'.join(context.loc[:2])
+            is_collection = self._is_collection(context.loc)
             self._construct_action(action_name, action_params, collection_spec,
                                    collection_path, is_collection)
-        return instance
+        return context.instance

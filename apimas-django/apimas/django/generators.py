@@ -64,13 +64,13 @@ class DjangoRequestGenerator(gen.RequestGenerator):
 
     def _common_constructor(self, field_type):
         @after(['.readonly'])
-        def generate(instance, loc, spec, context):
-            if instance is self._SKIP:
+        def generate(context):
+            if context.instance is self._SKIP:
                 return None
             if field_type == '.ref':
                 return generate_ref(
-                    **dict(spec, **{'instances': self.instances}))
-            return self.RANDOM_GENERATORS[field_type](**spec)
+                    **dict(context.spec, **{'instances': self.instances}))
+            return self.RANDOM_GENERATORS[field_type](**context.spec)
         return generate
 
 
