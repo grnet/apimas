@@ -17,7 +17,7 @@ def instance_to_node_spec(func):
     def wrapper(*args, **kwargs):
         context = kwargs.get('context')
         context.instance.update(doc.doc_merge(
-            context.instance, context.parent_spec, doc.conventional_strategy))
+            context.instance, context.parent_spec, doc.standard_merge))
         return func(*args, **kwargs)
     return wrapper
 

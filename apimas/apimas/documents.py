@@ -254,6 +254,18 @@ def doc_value(doc):
         return doc.get('', None)
     return doc
 
+def standard_merge(x, y):
+    if x is None:
+        return y
+    if y is None:
+        return x
+    if x == y:
+        return x
+    else:
+        raise ConflictError(
+            'Cannot merge documents: distinct values (%s %s)' % (
+                repr(x), repr(y)))
+
 
 def doc_merge(doca, docb, merge=lambda a, b: (a, b)):
     docout = {}
@@ -328,19 +340,6 @@ def doc_match_levels(rules_doc, pattern_sets, expand_pattern_levels,
                     yield reportable_path, reportable_val
 
 
-def conventional_strategy(x, y):
-    if x is None:
-        return y
-    if y is None:
-        return x
-    if x == y:
-        return x
-    else:
-        raise ConflictError(
-            'Cannot merge documents: distinct values (%s %s)' % (
-                repr(x), repr(y)))
-
-
 class Aggregator(object):
     def __call__(patterns, rules):
         raise NotImplementedError('__call__ must be implemented')
@@ -378,7 +377,7 @@ def multimerge(doc, merged_keys, merged_node=None):
         if k not in doc:
             raise NotFound('Key %s not found in document' % (repr(k)))
         doc_k = doc[k]
-        merged_doc = doc_merge(doc_k, merged_doc, conventional_strategy)
+        merged_doc = doc_merge(doc_k, merged_doc, standard_merge)
     merged_doc = {merged_node: merged_doc}
     for k, v in doc.iteritems():
         if k not in merged_keys:
@@ -390,7 +389,7 @@ def _doc_match_update_doc(doc, matched_doc, updated_keys):
     for k in updated_keys:
         if k in doc:
             doc = doc_merge(
-                doc, {k: matched_doc}, conventional_strategy)
+                doc, {k: matched_doc}, standard_merge)
         else:
             doc[k] = matched_doc
     return doc
