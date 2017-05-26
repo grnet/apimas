@@ -2,7 +2,6 @@
 """
 from inspect import getargspec
 from bisect import bisect_right
-from itertools import chain
 from collections import namedtuple
 import re
 
@@ -26,7 +25,7 @@ cons_fields = [
     'top_spec',
     'sep',
     'constructor_index',
-    'sibling_constructor_names',
+    'cons_siblings',
     'constructed',
     'context',
 ]
@@ -457,6 +456,8 @@ def make_constructor(constructor, name=None, sep='.'):
 
     argspec = getargspec(constructor)
     unknown_args = set(argspec.args) - set(cons_fields)
+    # Ignore argument named 'self', in case of method-based constructors.
+    unknown_args.discard('self')
 
     if argspec.args == ['context']:
         final_constructor = constructor
@@ -624,15 +625,15 @@ def _construct_doc_call_constructors(
                 top_spec=top_spec,
                 sep=sep,
                 constructor_index=constructors,
-                sibling_constructor_names=constructor_names,
+                cons_siblings=constructor_names,
                 constructed=constructed,
                 context=None,
             )
 
             try:
-                instance = constructor(cons_context)
+                instance = constructor(context=cons_context)
                 constructed.add(constructor_name)
-            except DeferConstructor as e:
+            except DeferConstructor:
                 deferred_constructor_names.append(constructor_name)
 
         if not deferred_constructor_names:
@@ -700,10 +701,9 @@ def doc_construct(doc, spec, loc=(), top_spec=None,
 
     if doc_is_basic:
         if data_keys:
-            subloc = loc + (key,)
             m = ("{loc!r}: document {doc!r} is basic "
                  "but spec requires keys {keys!r}")
-            m = m.format(loc=subloc, doc=doc, keys=data_keys)
+            m = m.format(loc=loc, doc=doc, keys=data_keys)
             raise ValidationError(m)
 
         instance = doc
