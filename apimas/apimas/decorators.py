@@ -17,8 +17,8 @@ def after(constructors):
         @wraps(func)
         def wrapper(*args, **kwargs):
             context = kwargs.get('context')
-            constructed = context.get('constructed')
-            all_constructors = context.get('all_constructors')
+            constructed = context.constructed
+            all_constructors = context.cons_siblings
 
             actual_cons = set(constructors).intersection(all_constructors)
             if not all(c in constructed for c in actual_cons):
@@ -36,8 +36,8 @@ def last(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         context = kwargs.get('context')
-        all_constructors = context.get('all_constructors')
-        constructed = context.get('constructed')
+        all_constructors = context.cons_siblings
+        constructed = context.constructed
         if len(constructed) < len(all_constructors) - 1:
             raise DeferConstructor
         return func(*args, **kwargs)

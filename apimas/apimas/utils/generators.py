@@ -187,25 +187,28 @@ class RequestGenerator(object):
             'struct': self._struct,
             'readonly': self._readonly,
             'array of': self._array_of,
-            'default': self._default,
             'serial': self._serial,
+            'default': self._default
         }
         self._constructors.update(
             {k[1:]: self._common_constructor(k) for k in self.COMMON_FIELDS})
 
+    def _default(self, context):
+        return context.instance
+
     def _common_constructor(self, field_type):
         @after(['.readonly'])
-        def generate(instance, loc, spec, context):
-            if instance is self._SKIP:
+        def generate(context):
+            if context.instance is self._SKIP:
                 return None
-            return self.RANDOM_GENERATORS[field_type](**spec)
+            return self.RANDOM_GENERATORS[field_type](**context.spec)
         return generate
 
     @after(['.readonly'])
-    def _serial(self, instance, loc, spec, context):
+    def _serial(self, context):
         return None
 
-    def _readonly(self, instance, loc, spec, context):
+    def _readonly(self, context):
         return self._SKIP
 
     def _compound(self, instance, spec):
@@ -215,15 +218,12 @@ class RequestGenerator(object):
         return spec
 
     @after(['.readonly'])
-    def _struct(self, instance, loc, spec, context):
-        return self._compound(instance, spec)
+    def _struct(self, context):
+        return self._compound(context.instance, context.spec)
 
     @after(['.readonly'])
-    def _array_of(self, instance, loc, spec, context):
-        return [self._compound(instance, spec)]
-
-    def _default(self, instance, loc, spec, context):
-        return instance
+    def _array_of(self, context):
+        return [self._compound(context.instance, context.spec)]
 
     def construct(self):
         """

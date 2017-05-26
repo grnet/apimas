@@ -196,7 +196,7 @@ class ApimasCliAdapter(NaiveAdapter):
                 '--format', type=click.Choice(['json', 'table']),
                 default='json')(command)
 
-    def construct_cli_auth(self, instance, spec, loc, context):
+    def construct_cli_auth(self, context):
         """
         Constructor of `.cli_auth` predicate.
 
@@ -208,55 +208,57 @@ class ApimasCliAdapter(NaiveAdapter):
         configuration file of specific format (`JSON` and `YAML` are supported
         at the momment).
         """
-        if self.ADAPTER_CONF not in instance:
+        if self.ADAPTER_CONF not in context.instance:
             raise doc.DeferConstructor
-        auth_format = spec.get('format')
+        auth_format = context.spec.get('format')
         if auth_format is None:
             raise InvalidSpec('`format` parameter is missing',
-                              loc=loc)
-        auth_schema = spec.get('schema')
+                              loc=context.loc)
+        auth_schema = context.spec.get('schema')
         if auth_schema is None:
             raise InvalidSpec('`schema` parameter is missing',
-                              loc=loc)
-        commands = doc.doc_get(instance, (self.ADAPTER_CONF, '.actions'))
+                              loc=context.loc)
+        commands = doc.doc_get(
+            context.instance, (self.ADAPTER_CONF, '.actions'))
         assert commands, (
             'Loc: {!r}, commands have not been constructed yet.'.format(
-                str(loc)))
+                str(context.loc)))
         credential_option = click.option(
             '--credentials', required=True, type=Credentials(
                 schema=auth_schema, file_type=auth_format))
         for command in commands:
             credential_option(command)
-        return instance
+        return context.instance
 
-    def construct_cli_commands(self, instance, spec, loc, context):
+    def construct_cli_commands(self, context):
         """
         Constructor for '.cli_commands' predicate.
 
         Gets all commands corresponding to actions and attaches the
         appropriate options to them based on field schema.
         """
-        parent_name = context.get('parent_name')
+        parent_name = context.parent_name
         instance = self.init_adapter_conf(
-            instance, initial={'.actions': set()})
+            context.instance, initial={'.actions': set()})
         commands = doc.doc_get(instance, ('.actions', self.ADAPTER_CONF)) or {}
-        collection_name = loc[0] + '/' + parent_name
+        collection_name = context.loc[0] + '/' + parent_name
         self.commands[collection_name] = []
         for action, command in commands.iteritems():
             command = self.construct_command(
-                instance, parent_name, spec, loc, action, command)
+                instance, parent_name, context.spec, context.loc, action,
+                command)
             self.commands[collection_name].append(command)
             instance[self.ADAPTER_CONF]['.actions'].add(command)
         return instance
 
-    def construct_action(self, instance, spec, loc, context, action):
+    def construct_action(self, context, action):
         """
         Construct a command based on a specific actions, e.g. list,
         create, etc.
         """
-        assert len(loc) == 4
-        self.init_adapter_conf(instance)
-        collection = loc[0] + '/' + loc[-3]
+        assert len(context.loc) == 4
+        self.init_adapter_conf(context.instance)
+        collection = context.loc[0] + '/' + context.loc[-3]
         command = self.COMMANDS[action](self.clients.get(collection))
         if action in self.RESOURCE_ACTIONS:
             command = click.argument('resource_id')(command)
@@ -267,8 +269,8 @@ class ApimasCliAdapter(NaiveAdapter):
                 prompt='Are you sure you want to perform this action?')
             command = option(command)
         self._add_format_option(command, action)
-        instance[self.ADAPTER_CONF][action] = command
-        return instance
+        context.instance[self.ADAPTER_CONF][action] = command
+        return context.instance
 
     def construct_command(self, instance, command_name, spec, loc, action,
                           command):
@@ -297,47 +299,47 @@ class ApimasCliAdapter(NaiveAdapter):
         endpoint_group = self.get_or_create_endpoint_group(loc[0])
         return endpoint_group.command(loc[-2] + '-' + action)(command)
 
-    def construct_list(self, instance, spec, loc, context):
+    def construct_list(self, context):
         """
         Constructor for '.list' predicate.
 
         This constructs a `ListCommand` according to the spec.
         """
-        return self.construct_action(instance, spec, loc, context, 'list')
+        return self.construct_action(context, 'list')
 
-    def construct_create(self, instance, spec, loc, context):
+    def construct_create(self, context):
         """
         Constructor for '.create' predicate.
 
         This constructs a `CreateCommand` according to the spec.
         """
         return self.construct_action(
-            instance, spec, loc, context, 'create')
+            context, 'create')
 
-    def construct_update(self, instance, spec, loc, context):
+    def construct_update(self, context):
         """
         Constructor for '.update' predicate.
 
         This constructs a `UpdateCommand` according to the spec.
         """
         return self.construct_action(
-            instance, spec, loc, context, 'update')
+            context, 'update')
 
-    def construct_delete(self, instance, spec, loc, context):
+    def construct_delete(self, context):
         """
         Constructor for '.delete' predicate.
 
         This constructs a `DeleteCommand` according to the spec.
         """
-        return self.construct_action(instance, spec, loc, context, 'delete')
+        return self.construct_action(context, 'delete')
 
-    def construct_retrieve(self, instance, spec, loc, context):
+    def construct_retrieve(self, context):
         """
         Constructor for '.retrieve' predicate.
 
         This constructs a `RetrieveCommand` according to the spec.
         """
-        return self.construct_action(instance, spec, loc, context, 'retrieve')
+        return self.construct_action(context, 'retrieve')
 
     def construct_struct_option(self, instance, parent_name, spec, loc,
                                 option_name):
@@ -369,27 +371,30 @@ class ApimasCliAdapter(NaiveAdapter):
         instance[self.ADAPTER_CONF].update(option_kwargs)
         return instance
 
-    def construct_option_type(self, instance, spec, loc, context,
+    def construct_option_type(self, context,
                               predicate_type):
         if predicate_type in self.SKIP_FIELDS:
             return None
 
-        extra_kwargs = self.get_extra_params(instance, predicate_type)
+        extra_kwargs = self.get_extra_params(context.instance, predicate_type)
         option_type = self.TYPE_MAPPING[predicate_type[1:]]
         return option_type(**extra_kwargs)
 
-    def construct_identity(self, instance, spec, loc, context):
+    def construct_identity(self, context):
         instance = SKIP
         return instance
 
-    def construct_cli_option(self, instance, spec, loc, context):
+    def construct_cli_option(self, context):
         """
         Constructor for '.cli_option' predicate.
 
         It constructs a dictionary keyed by option name which contains
         all required keyword arguments for `click.option()` constructor.
         """
-        parent_name = context.get('parent_name')
+        parent_name = context.parent_name
+        instance = context.instance
+        spec = context.spec
+        loc = context.loc
         if instance == SKIP:
             return instance
         predicate_type = self.extract_type(instance)
@@ -400,26 +405,26 @@ class ApimasCliAdapter(NaiveAdapter):
                                                 loc, option_name)
         instance = self.init_adapter_conf(instance, initial={option_name: {}})
         kwargs = {'type': self.construct_option_type(
-            instance, spec, loc, context, predicate_type)}
+            context, predicate_type)}
         if predicate_type == '.ref':
-            kwargs.update(self._add_ref_params(instance, spec, loc, context))
+            kwargs.update(self._add_ref_params(context))
         if '.required' in instance:
             kwargs.update({'required': True})
         instance[self.ADAPTER_CONF][option_name] = kwargs
         return instance
 
-    def _add_ref_params(self, instance, spec, loc, context):
-        many = doc.doc_get(instance, ('.ref', 'many'))
+    def _add_ref_params(self, context):
+        many = doc.doc_get(context.instance, ('.ref', 'many'))
         return {'multiple': True} if many else {}
 
-    def construct_struct(self, instance, spec, loc, context):
-        return instance
+    def construct_struct(self, context):
+        return context.instance
 
-    def construct_type(self, instance, spec, loc, context, field_type):
-        return instance
+    def construct_type(self, context, field_type):
+        return context.instance
 
-    def construct_property(self, instance, spec, loc, context, property_name):
+    def construct_property(self, context, property_name):
         """
         Constuctor for `.required` predicate.
         """
-        return instance
+        return context.instance

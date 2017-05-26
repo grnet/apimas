@@ -1,3 +1,4 @@
+from copy import deepcopy
 from functools import wraps
 from apimas import documents as doc
 from apimas.errors import InvalidSpec
@@ -14,20 +15,16 @@ def instance_to_node_spec(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        instance = kwargs.get('instance')
         context = kwargs.get('context')
-        top_spec = context['top_spec']
-        loc = kwargs.get('loc')
-        node_spec = doc.doc_get(top_spec, loc[:-1]) or {}
-        node_spec.update(instance)
-        kwargs['instance'] = node_spec
+        context.instance.update(doc.doc_merge(
+            context.instance, context.parent_spec, doc.conventional_strategy))
         return func(*args, **kwargs)
     return wrapper
 
 
 @instance_to_node_spec
-def default_constructor(instance, spec, loc, context):
-    return instance
+def default_constructor(context):
+    return context.instance
 
 
 class NaiveAdapter(Adapter):
@@ -60,6 +57,7 @@ class NaiveAdapter(Adapter):
             default_constructor) for predicate in self.PREDICATES}
 
     def construct(self, spec):
+        spec = deepcopy(spec)
         self.adapter_spec = doc.doc_construct(
                 {}, spec, constructors=self.get_constructors(),
             allow_constructor_input=False, autoconstruct=True,
@@ -75,272 +73,267 @@ class NaiveAdapter(Adapter):
         )
 
     @instance_to_node_spec
-    def construct_collection(self, instance, spec, loc, context):
-        self.init_adapter_conf(instance)
-        field_schema = doc.doc_get(instance, ('*',))
-        assert len(loc) >= 3
+    def construct_collection(self, context):
+        self.init_adapter_conf(context.instance)
+        field_schema = doc.doc_get(context.instance, ('*',))
+        assert len(context.loc) >= 3
         if not field_schema:
             raise InvalidSpec(
                 'A collection must define its field schema.'
-                ' Empty collection found: {!r}'.format(loc[-2]), loc=loc)
-        return instance
+                ' Empty collection found: {!r}'.format(
+                    context.loc[-2]), loc=context.loc)
+        return context.instance
 
-    def construct_type(self, instance, spec, loc, context, field_type=None):
+    def construct_type(self, context, field_type=None):
         """
         Contructor for predicates that indicate the type of a field.
 
         This constructor produces the corresponding spec syntax for
         defining the type of a field according given mapping.
         """
-        self.init_adapter_conf(instance)
+        self.init_adapter_conf(context.instance)
         if field_type not in self.TYPE_MAPPING:
             raise InvalidSpec(
-                'Unknown field type: {!r}'.format(field_type), loc=loc)
+                'Unknown field type: {!r}'.format(field_type), loc=context.loc)
         field_schema = {'type': self.TYPE_MAPPING[field_type]}
-        instance[self.ADAPTER_CONF].update(field_schema)
-        return instance
+        context.instance[self.ADAPTER_CONF].update(field_schema)
+        return context.instance
 
-    def validate_structure(self, instance, spec, loc, context):
-        if not spec:
+    def validate_structure(self, context):
+        if not context.spec:
             raise InvalidSpec(
                 'A structure must define its field schema.'
-                ' Empty structure found: {!r}'.format(loc[-2]), loc=loc)
-        for k, v in spec.iteritems():
+                ' Empty structure found: {!r}'.format(
+                    context.loc[-2]), loc=context.loc)
+        for k, v in context.spec.iteritems():
             if not isinstance(v, dict):
                 msg = ('Not known properties for field {!r} of struct {!r}. A'
                        ' dict with the schema of structure must be provided.')
                 raise InvalidSpec(
-                    msg.format(k, loc[-2]), loc=loc)
+                    msg.format(k, context.loc[-2]), loc=context.loc)
 
     @instance_to_node_spec
-    def construct_struct(self, instance, spec, loc, context):
+    def construct_struct(self, context):
         """
         Constructor for `.struct` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        self.validate_structure(instance, spec, loc, context)
-        return self.construct_type(instance, spec, loc, context, 'struct')
+        self.validate_structure(context)
+        return self.construct_type(context, 'struct')
 
     @instance_to_node_spec
-    def construct_structarray(self, instance, spec, loc, context):
+    def construct_structarray(self, context):
         """
         Constructor for `.structarray` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        self.validate_structure(instance, spec, loc, context)
-        return self.construct_type(
-            instance, spec, loc, context, 'structarray')
+        self.validate_structure(context)
+        return self.construct_type(context, 'structarray')
 
     @instance_to_node_spec
-    def construct_ref(self, instance, spec, loc, context):
+    def construct_ref(self, context):
         """
         Constuctor for `.ref` predicate.
 
         This maps predicate to the specified type according to mapping.
         Apart from this, it validates that it refers to an existing collection.
         """
-        ref = spec.get('to', None)
+        ref = context.spec.get('to', None)
         if not ref:
             raise InvalidSpec(
-                'You have to specify `to` parameter', loc=loc)
+                'You have to specify `to` parameter', loc=context.loc)
         segments = ref.split('/')
         if len(segments) != 2:
             msg = ('Reference target {!r} cannot be understood'
                    'Must be of the form: <endpoint>/<collection>.')
-            raise InvalidSpec(msg.format(ref), loc=loc)
-        top_spec = context.get('top_spec', {})
+            raise InvalidSpec(msg.format(ref), loc=context.loc)
+        top_spec = context.top_spec
         endpoint, collection = tuple(segments)
         if collection not in top_spec[endpoint]:
             raise InvalidSpec(
-                'Reference target {!r} does not exist.'.format(ref), loc=loc)
-        return self.construct_type(instance, spec, loc, context, 'ref')
+                'Reference target {!r} does not exist.'.format(ref),
+                loc=context.loc)
+        return self.construct_type(context, 'ref')
 
     @instance_to_node_spec
-    def construct_serial(self, instance, spec, loc, context):
+    def construct_serial(self, context):
         """
         Constuctor for `.serial` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context, 'serial')
+        return self.construct_type(context, 'serial')
 
     @instance_to_node_spec
-    def construct_integer(self, instance, spec, loc, context):
+    def construct_integer(self, context):
         """
         Constuctor for `.integer` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context, 'integer')
+        return self.construct_type(context, 'integer')
 
     @instance_to_node_spec
-    def construct_biginteger(self, instance, spec, loc, context):
+    def construct_biginteger(self, context):
         """
         Constuctor for `.biginteger` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context,
-                                   'biginteger')
+        return self.construct_type(context, 'biginteger')
 
     @instance_to_node_spec
-    def construct_float(self, instance, spec, loc, context):
+    def construct_float(self, context):
         """
         Constuctor for `.float` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context,
-                                   'float')
+        return self.construct_type(context, 'float')
 
     @instance_to_node_spec
-    def construct_string(self, instance, spec, loc, context):
+    def construct_string(self, context):
         """
         Constuctor for `.string` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context, 'string')
+        return self.construct_type(context, 'string')
 
     @instance_to_node_spec
-    def construct_text(self, instance, spec, loc, context):
+    def construct_text(self, context):
         """
         Constuctor for `.text` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context, 'text')
+        return self.construct_type(context, 'text')
 
     @instance_to_node_spec
-    def construct_email(self, instance, spec, loc, context):
+    def construct_email(self, context):
         """
         Constuctor for `.ref` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context, 'email')
+        return self.construct_type(context, 'email')
 
     @instance_to_node_spec
-    def construct_boolean(self, instance, spec, loc, context):
+    def construct_boolean(self, context):
         """
         Constuctor for `.ref` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context, 'boolean')
+        return self.construct_type(context, 'boolean')
 
     @instance_to_node_spec
-    def construct_datetime(self, instance, spec, loc, context):
+    def construct_datetime(self, context):
         """
         Constuctor for `.ref` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context, 'datetime')
+        return self.construct_type(context, 'datetime')
 
     @instance_to_node_spec
-    def construct_date(self, instance, spec, loc, context):
+    def construct_date(self, context):
         """
         Constuctor for `.ref` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context, 'date')
+        return self.construct_type(context, 'date')
 
     @instance_to_node_spec
-    def construct_file(self, instance, spec, loc, context):
+    def construct_file(self, context):
         """
         Constuctor for `.file` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        return self.construct_type(instance, spec, loc, context, 'file')
+        return self.construct_type(context, 'file')
 
     @instance_to_node_spec
-    def construct_identity(self, instance, spec, loc, context):
+    def construct_identity(self, context):
         """
         Constructor of `.identity` predicate.
 
         An `.identity` field is always `readonly`.
         """
-        constructors = set(context.get('all_constructors') + ['.readonly'])
+        constructors = set(context.cons_siblings + ['.readonly'])
         properties = self.PROPERTIES.intersection(constructors)
         if len(properties) > 1:
             raise InvalidSpec(
-                '.identity field {!r} can only be readonly'.format(loc[-2]),
-                loc=loc)
+                '.identity field {!r} can only be readonly'.format(
+                    context.loc[-2]), loc=context.loc)
         if properties != set(['.readonly']):
             msg = '`.identity` field {!r} is always a readonly field.'
-            raise InvalidSpec(msg.format(loc[-2]), loc=loc)
-        return instance
+            raise InvalidSpec(msg.format(context.loc[-2]), loc=context.loc)
+        return context.instance
 
     @instance_to_node_spec
-    def construct_choices(self, instance, spec, loc, context):
+    def construct_choices(self, context):
         """
         Constuctor for `.ref` predicate.
 
         This maps predicate to the specified type according to mapping.
         """
-        allowed = spec.get('allowed')
+        allowed = context.spec.get('allowed')
         if not isinstance(allowed, (list, tuple)):
             raise InvalidSpec(
                 '`choices` property requires a list of allowed values.',
-                loc=loc)
-        return self.construct_type(instance, spec, loc, context, 'choices')
+                loc=context.loc)
+        return self.construct_type(context, 'choices')
 
     @instance_to_node_spec
-    def construct_blankable(self, instance, spec, loc, context):
+    def construct_blankable(self, context):
         """
         Constuctor for `.blankable` predicate.
 
         This maps predicate to the specified property according to mapping.
         """
-        return self.construct_property(instance, spec, loc, context,
-                                       'blankable')
+        return self.construct_property(context, 'blankable')
 
     @instance_to_node_spec
-    def construct_required(self, instance, spec, loc, context):
+    def construct_required(self, context):
         """
         Constuctor for `.required` predicate.
 
         This maps predicate to the specified property according to mapping.
         """
-        return self.construct_property(instance, spec, loc, context,
-                                       'required')
+        return self.construct_property(context, 'required')
 
     @instance_to_node_spec
-    def construct_nullable(self, instance, spec, loc, context):
+    def construct_nullable(self, context):
         """
         Constuctor for `.nullable` predicate.
 
         This maps predicate to the specified property according to mapping.
         """
-        return self.construct_property(instance, spec, loc, context,
-                                       'nullable')
+        return self.construct_property(context, 'nullable')
 
     @instance_to_node_spec
-    def construct_readonly(self, instance, spec, loc, context):
+    def construct_readonly(self, context):
         """
         Constuctor for `.readonly` predicate.
 
         This maps predicate to the specified property according to mapping.
         """
-        return self.construct_property(instance, spec, loc, context,
-                                       'readonly')
+        return self.construct_property(context, 'readonly')
 
     @instance_to_node_spec
-    def construct_writeonly(self, instance, spec, loc, context):
+    def construct_writeonly(self, context):
         """
         Constuctor for `.readonly` predicate.
 
         This maps predicate to the specified property according to mapping.
         """
-        return self.construct_property(instance, spec, loc, context,
-                                       'writeonly')
+        return self.construct_property(context, 'writeonly')
 
-    def construct_property(self, instance, spec, loc, context, property_name):
+    def construct_property(self, context, property_name):
         """
         Constuctor for predicates that indicate a property of a field,
         e.g. nullable, readonly, required, etc.
@@ -351,28 +344,29 @@ class NaiveAdapter(Adapter):
         """
         if property_name not in self.PROPERTY_MAPPING:
             raise InvalidSpec(
-                'Unknown property {!r}'.format(property_name), loc=loc)
-        constructed = context.get('constructed')
-        predicate_type = self.extract_type(instance)
+                'Unknown property {!r}'.format(property_name),
+                loc=context.loc)
+        constructed = context.constructed
+        predicate_type = self.extract_type(context.instance)
         if predicate_type not in constructed:
             raise doc.DeferConstructor
 
         if predicate_type in self.SKIP_FIELDS:
-            return instance
-        field_schema = doc.doc_get(instance, (self.ADAPTER_CONF,))
+            return context.instance
+        field_schema = doc.doc_get(context.instance, (self.ADAPTER_CONF,))
         field_schema.update({self.PROPERTY_MAPPING.get(
             property_name, property_name): True})
-        return instance
+        return context.instance
 
     @instance_to_node_spec
-    def construct_actions(self, instance, spec, loc, context):
+    def construct_actions(self, context):
         """
         Constuctor for `.actions` predicate.
 
         It's a namespace predicate within which we define which REST actions
         are allowed to be performed on the collection.
         """
-        return instance
+        return context.instance
 
     def extract_type(self, instance):
         """

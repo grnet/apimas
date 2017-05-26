@@ -4,7 +4,8 @@ from apimas.errors import InvalidSpec, NotFound
 from apimas.adapters.cookbooks import NaiveAdapter
 from apimas.clients import TRAILING_SLASH, ApimasClient
 from apimas.clients.adapter import ApimasClientAdapter
-from apimas.testing.helpers import create_mock_object
+from apimas.testing.helpers import (
+    create_mock_object, create_mock_constructor_context)
 
 
 class TestClientAdapter(unittest.TestCase):
@@ -43,11 +44,12 @@ class TestClientAdapter(unittest.TestCase):
                 }
             }
         }
-        context = {'parent_name': 'foo'}
         loc = ('api', 'collection', '.collection')
+        mock_context = create_mock_constructor_context(
+            instance=mock_instance, loc=loc, parent_name='foo')
         mock_constructor.return_value = mock_instance
         instance = mock_client.construct_collection(
-            mock_client, mock_instance, {}, loc, context=context)
+            mock_client, context=mock_context)
         self.assertEqual(len(instance), 2)
         instance_conf = instance.get(mock_client.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)
@@ -73,10 +75,12 @@ class TestClientAdapter(unittest.TestCase):
         mock_client.init_adapter_conf.return_value = mock_instance
         mock_client.extract_type.return_value = None
         mock_client.get_extra_params.return_value = {'extra': 'value'}
+        mock_context = create_mock_constructor_context(
+            instance=mock_instance, loc=mock_loc)
 
         # Case A: Unspecified type.
         self.assertRaises(InvalidSpec, mock_client.construct_field,
-                          mock_client, mock_instance, {}, mock_loc, {})
+                          mock_client, context=mock_context)
         mock_client.extract_type.assert_called_once_with(mock_instance)
 
         # Case B: Structural elements.
@@ -86,7 +90,7 @@ class TestClientAdapter(unittest.TestCase):
         for structure in nested_structures:
             mock_client.extract_type.return_value = structure
             instance = mock_client.construct_field(
-                mock_client, mock_instance, {}, mock_loc, {})
+                mock_client, context=mock_context)
             self.assertEqual(instance, expected)
             mock_client.construct_nested_field.assert_called
             mock_client.init_adapter_conf.assert_called_with(mock_instance)
@@ -95,7 +99,7 @@ class TestClientAdapter(unittest.TestCase):
         # Case C:  A common field.
         mock_client.extract_type.return_value = 'foo'
         instance = mock_client.construct_field(
-            mock_client, mock_instance, {}, mock_loc, {})
+            mock_client, context=mock_context)
         self.assertEqual(instance[self.adapter_conf]['extra'], 'value')
         mock_client.init_adapter_conf.assert_called_with(mock_instance)
         mock_client.extract_type.assert_called_with(mock_instance)
@@ -108,7 +112,7 @@ class TestClientAdapter(unittest.TestCase):
             mock_client._construct_date_field.return_value = (
                 field_type + '_returned')
             instance = mock_client.construct_field(
-                mock_client, mock_instance, {}, mock_loc, {})
+                mock_client, context=mock_context)
             self.assertEqual(instance, field_type + '_returned')
 
     @mock.patch('apimas.clients.adapter.RefNormalizer')
@@ -123,9 +127,11 @@ class TestClientAdapter(unittest.TestCase):
         mock_loc = ('foo', 'bar')
         mock_instance = {self.adapter_conf: {}}
         mock_constructor.return_value = mock_instance
-        spec = {'to': 'foo'}
+        mock_spec = {'to': 'foo'}
+        mock_context = create_mock_constructor_context(
+            instanccee=mock_instance, spec=mock_spec, loc=mock_loc)
         instance = mock_client.construct_ref(
-            mock_client, mock_instance, spec, mock_loc, {})
+            mock_client, context=mock_context)
         self.assertEqual(len(instance), 1)
         instance_conf = instance.get(mock_client.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)
@@ -133,9 +139,10 @@ class TestClientAdapter(unittest.TestCase):
         mock_normalizer.assert_called_once_with(
             TRAILING_SLASH.join((mock_root_url, mock_loc[0], 'foo', '')))
 
-        spec['many'] = True
-        instance = mock_client.construct_ref(
-            mock_client, mock_instance, spec, mock_loc, {})
+        mock_spec['many'] = True
+        mock_context = create_mock_constructor_context(
+            instanccee=mock_instance, spec=mock_spec, loc=mock_loc)
+        instance = mock_client.construct_ref(mock_client, context=mock_context)
         self.assertEqual(len(instance), 1)
         instance_conf = instance.get(mock_client.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)
@@ -160,8 +167,10 @@ class TestClientAdapter(unittest.TestCase):
             }
         }
         mock_instance = {'.struct=': schema, self.adapter_conf: {}}
+        mock_context = create_mock_constructor_context(
+            instance=mock_instance, loc=mock_loc)
         instance = mock_client.construct_nested_field(
-            mock_client, mock_instance, {}, mock_loc, {}, '.struct')
+            mock_client, mock_context, '.struct')
         self.assertEqual(len(instance), 2)
         instance_conf = instance.get(mock_client.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)
@@ -170,8 +179,10 @@ class TestClientAdapter(unittest.TestCase):
                                                    'field2': {'bar': 'foo'}})
 
         mock_instance = {'.structarray=': schema, self.adapter_conf: {}}
+        mock_context = create_mock_constructor_context(
+            instance=mock_instance, loc=mock_loc)
         instance = mock_client.construct_nested_field(
-            mock_client, mock_instance, {}, mock_loc, {}, '.structarray')
+            mock_client, mock_context, '.structarray')
         self.assertEqual(len(instance), 2)
         instance_conf = instance.get(mock_client.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)

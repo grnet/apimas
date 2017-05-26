@@ -77,7 +77,7 @@ class ApimasClientAdapter(NaiveAdapter):
                 'Client not found for collection {!r}'.format(collection_name))
         return self.clients[collection_name]
 
-    def construct_collection(self, instance, spec, loc, context):
+    def construct_collection(self, context):
         """
         Constructor for `.collection` predicate.
 
@@ -85,21 +85,21 @@ class ApimasClientAdapter(NaiveAdapter):
         for every single field defined by the collection.
         """
         instance = super(self.__class__, self).construct_collection(
-            instance, spec, loc, context)
+            context)
         self.init_adapter_conf(instance)
         schema = {field_name: schema.get(self.ADAPTER_CONF, {})
                   for field_name, schema in doc.doc_get(
                       instance, ('*',)).iteritems()}
-        collection = context.get('parent_name')
+        collection = context.parent_name
         endpoint = urljoin(
-            self.root_url, TRAILING_SLASH.join([loc[0], collection]))
+            self.root_url, TRAILING_SLASH.join([context.loc[0], collection]))
         endpoint += TRAILING_SLASH
         instance[self.ADAPTER_CONF] = schema
         client = ApimasClient(endpoint, schema)
-        self.clients[loc[0] + '/' + collection] = client
+        self.clients[context.loc[0] + '/' + collection] = client
         return instance
 
-    def construct_field(self, instance, spec, loc, context):
+    def construct_field(self, context):
         """
         Constructor of `.field` predicate.
 
@@ -111,26 +111,25 @@ class ApimasClientAdapter(NaiveAdapter):
             '.datetime': self._construct_date_field,
         }
 
-        parent_name = context.get('parent_name')
+        parent_name = context.parent_name
         nested_structures = {'.struct', '.structarray'}
-        field_type = self.extract_type(instance)
+        field_type = self.extract_type(context.instance)
         if not field_type:
             raise InvalidSpec(
                 'You have to specify field type for field {!r}'.format(
                     parent_name))
-        self.init_adapter_conf(instance)
+        self.init_adapter_conf(context.instance)
         if field_type in nested_structures:
             return self.construct_nested_field(
-                instance, spec, loc, context, field_type)
+                context, field_type)
         method_name = special_constructors.get(field_type)
         if method_name is not None:
-            return method_name(instance, spec, loc, context, field_type)
-        extra_params = self.get_extra_params(instance, field_type)
-        instance[self.ADAPTER_CONF].update(extra_params)
-        return instance
+            return method_name(context, field_type)
+        extra_params = self.get_extra_params(context.instance, field_type)
+        context.instance[self.ADAPTER_CONF].update(extra_params)
+        return context.instance
 
-    def _construct_date_field(self, instance, spec, loc, context,
-                              predicate_type):
+    def _construct_date_field(self, context, predicate_type):
         """
         Adds extra configuration based on the parameters of constructor.
 
@@ -142,13 +141,13 @@ class ApimasClientAdapter(NaiveAdapter):
             '.datetime': (DateTimeNormalizer, ['%Y-%m-%dT%H:%M:%S']),
         }
         normalizer, default = normalizers.get(predicate_type)
-        params = instance.get(predicate_type)
+        params = context.instance.get(predicate_type)
         date_formats = params.get('format', default)
-        instance[self.ADAPTER_CONF].update(
+        context.instance[self.ADAPTER_CONF].update(
             {'coerce': normalizer(string_formats=date_formats)})
-        return instance
+        return context.instance
 
-    def construct_ref(self, instance, spec, loc, context):
+    def construct_ref(self, context):
         """
         Construct a field that refes to another collection.
 
@@ -165,19 +164,18 @@ class ApimasClientAdapter(NaiveAdapter):
         This normalization is triggered before every cerberus validation.
         """
         instance = super(self.__class__, self).construct_ref(
-            instance, spec, loc, context)
-        many = spec.get('many')
-        ref = spec.get('to')
+            context)
+        many = context.spec.get('many')
+        ref = context.spec.get('to')
         normalizer = {'coerce': RefNormalizer(TRAILING_SLASH.join(
-            (self.root_url, loc[0], ref, '')))}
+            (self.root_url, context.loc[0], ref, '')))}
         instance[self.ADAPTER_CONF].update(normalizer)
         if many is True:
             conf = {'type': 'list', 'schema': instance[self.ADAPTER_CONF]}
             instance[self.ADAPTER_CONF] = conf
         return instance
 
-    def construct_nested_field(self, instance, spec, loc, context,
-                               field_type=None):
+    def construct_nested_field(self, context, field_type=None):
         """
         Constructor for predicates that include nested schemas. Typically,
         `.struct` and `.structarray` predicates are included in this category
@@ -193,12 +191,12 @@ class ApimasClientAdapter(NaiveAdapter):
                 'type': 'dict', 'schema': x}}
         }
         # Concatenate '=' because we have compound predicates.
-        params = doc.doc_get(instance, (field_type + '=',))
+        params = doc.doc_get(context.instance, (field_type + '=',))
         field_schema = {field_name: schema.get(self.ADAPTER_CONF, {})
                         for field_name, schema in params.iteritems()}
-        instance[self.ADAPTER_CONF].update(
+        context.instance[self.ADAPTER_CONF].update(
             bound_field[field_type](field_schema))
-        return instance
+        return context.instance
 
-    def construct_writeonly(self, instance, spec, loc, context):
-        return instance
+    def construct_writeonly(self, context):
+        return context.instance
