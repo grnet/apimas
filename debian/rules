@@ -1,0 +1,37 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+DH_VERBOSE = 1
+
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/default.mk
+
+BUILDDIR = debian
+SOURCE = $(shell cat debian/control | grep '^Source:' | cut -d' ' -f2)
+PACKAGES = $(shell cat debian/control | grep '^Package:' | grep -v '^Package: python-' | cut -d' ' -f2)
+PYTHON_PACKAGES = $(shell cat debian/control | grep '^Package: python-' | sed -e 's/python-//' | cut -d' ' -f2)
+TOPDIR = $(CURDIR)
+
+%:
+	dh $@ --with python2 --with-systemd
+
+override_dh_auto_install:
+	echo PACKAGES $(PACKAGES) $(PYTHON_PACKAGES); \
+	for package in $(PACKAGES); do \
+		[ -e $${package}/setup.py ] && cd $${package}; \
+		[ -e setup.py ] && python setup.py install --root=$(BUILDDIR)/$${package} --install-layout=deb; \
+		[ -e Makefile ] && make install DESTDIR=$(BUILDDIR)/$${package} prefix=$(BUILDDIR)/$${package}; \
+		cd $(TOPDIR); \
+	done; \
+	\
+	for package in $(PYTHON_PACKAGES); do \
+		[ -e $${package}/setup.py ] && cd $${package}; \
+		[ -e setup.py ] && python setup.py install --root=$(BUILDDIR)/python-$${package} --install-layout=deb; \
+		cd $(TOPDIR); \
+	done; \
+	\
+	for py in $(shell pyversions -vr debian/control); do \
+		rm -f $(BUILDDIR)/*/usr/lib/python$$py/*-packages/*-nspkg.pth; \
+	done; \
+	\
+	dh_install --list-missing
