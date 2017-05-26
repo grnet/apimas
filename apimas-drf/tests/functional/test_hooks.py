@@ -20,10 +20,10 @@ PERMISSION_ACTIONS = {
 def get_fields_sample(field_schema):
     fields = []
     for field, field_spec in field_schema.iteritems():
-        if '.struct' in field_spec:
-            nested_fields = get_fields_sample(field_spec.get('.struct'))
-        elif '.structarray' in field_spec:
-            nested_fields = get_fields_sample(field_spec.get('.structarray'))
+        if '.struct=' in field_spec:
+            nested_fields = get_fields_sample(field_spec.get('.struct='))
+        elif '.structarray=' in field_spec:
+            nested_fields = get_fields_sample(field_spec.get('.structarray='))
         else:
             nested_fields = []
         fields.extend([field + '/' + n_field for n_field in nested_fields])

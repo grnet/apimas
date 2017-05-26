@@ -2,10 +2,11 @@ import mock
 import unittest
 from django.core.exceptions import FieldDoesNotExist
 from apimas import documents as doc
+from apimas.testing.helpers import (
+    create_mock_object, create_mock_constructor_context)
 from apimas.drf import utils
 from apimas.drf import django_rest
 from apimas.drf.django_rest import DjangoRestAdapter
-from apimas.testing.helpers import create_mock_object
 
 
 class TestDjangoRestAdapter(unittest.TestCase):
@@ -27,30 +28,36 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(self.adapter.get_class(container, 'api', 'foo'),
                          'bar')
 
-    #def test_get_permissions(self):
-    #    rules = [
-    #        ('foo', 'a', 'b', 'c', 'd', 'e'),
-    #        ('foo', 'a', 'b', 'c', 'f', 'k'),
-    #        ('*', 'a', 'b', 'c', 'p', 'l'),
-    #        ('bar', 'z', 'l', 'm', '*', '*')
-    #    ]
-    #    top_spec = {}
-    #    self.assertIsNone(self.adapter.get_permissions('foo', top_spec))
+    def test_get_permissions(self):
+        rules = [
+            ('foo', 'a', 'b', 'c', 'd', 'e'),
+            ('foo', 'a', 'b', 'c', 'f', 'k'),
+            ('*', 'a', 'b', 'c', 'p', 'l'),
+            ('bar', 'z', 'l', 'm', '*', '*')
+        ]
+        top_spec = {}
+        self.assertIsNone(self.adapter.get_permissions(('foo',), top_spec))
 
-    #    top_spec = {'.endpoint': {'permissions': rules}}
-    #    permissions = self.adapter.get_permissions('foo', top_spec)
-    #    self.assertEqual(len(permissions), 3)
+        top_spec = {'.endpoint': {'permissions': rules}}
+        permissions = self.adapter.get_permissions(('foo',), top_spec)
+        self.assertEqual(len(permissions), 2)
+
+        expected_permissions = [
+            ('a', 'b', 'c', 'd',),
+            ('a', 'b', 'c', 'f',),
+        ]
+        self.assertEqual(permissions, expected_permissions)
 
     def test_construct_CRUD_action(self):
         instance = {}
         action = 'myaction'
-        instance = self.adapter.construct_CRUD_action(
-            instance, None, None, None, action)
+        mock_context = create_mock_constructor_context()
+        instance = self.adapter.construct_CRUD_action(mock_context, action)
         allowable_actions = [action]
         self.assertEqual(instance, {
             self.adapter_conf: allowable_actions})
-        instance = self.adapter.construct_CRUD_action(
-            instance, None, None, None, action)
+
+        instance = self.adapter.construct_CRUD_action(mock_context, action)
         instance_actions = instance[self.adapter_conf]
         self.assertEqual(instance_actions, [action, action])
 
@@ -110,6 +117,9 @@ class TestDjangoRestAdapter(unittest.TestCase):
             'model_serializers': ['model_ser_cls'],
             'model': 'model_cls',
         }
+        mock_context = create_mock_constructor_context(
+            instance=mock_instance, spec=mock_spec, loc=mock_loc,
+            parent_name='collection', constructed=['.a_constructor'])
         mock_adapter = create_mock_object(
             DjangoRestAdapter, ['construct_drf_collection', 'ADAPTER_CONF'])
         mock_adapter._get_or_import_model.return_value = 'model_imported'
@@ -117,18 +127,15 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_adapter.serializers = {}
         mock_adapter.generate_serializer.return_value = 'mock_serializer'
         mock_adapter.get_permissions.return_value = 'permissions'
-        context = {'constructed': ['.a_constructor'],
-                   'parent_name': 'collection',
-                   'top_spec': {}}
         self.assertRaises(doc.DeferConstructor,
                           mock_adapter.construct_drf_collection, mock_adapter,
-                          instance=mock_instance, spec=mock_spec, loc=mock_loc,
-                          context=context)
+                          context=mock_context)
 
-        context['constructed'] = ['.collection']
+        mock_context = create_mock_constructor_context(
+            instance=mock_instance, spec=mock_spec, loc=mock_loc,
+            parent_name='collection', constructed=['.collection'])
         instance = mock_adapter.construct_drf_collection(
-            mock_adapter, instance=mock_instance, spec=mock_spec,
-            loc=mock_loc, context=context)
+            mock_adapter, context=mock_context)
         self.assertEqual(len(instance), 3)
         self.assertIn('*', instance)
         self.assertIn('.actions=', instance)
@@ -269,25 +276,26 @@ class TestDjangoRestAdapter(unittest.TestCase):
             DjangoRestAdapter, ['_get_extra_field_kwargs'])
         mock_adapter.get_extra_params.return_value = {'extra': 'value'}
         mock_adapter._get_ref_params.return_value = 'extra_ref'
+        mock_context = create_mock_constructor_context()
 
         # Case A: A `.ref` field.
         field_kwargs = mock_adapter._get_extra_field_kwargs(
-            mock_adapter, '.ref', instance={}, loc=(), context={},
-            automated=True, field_kwargs={})
+            mock_adapter, '.ref', mock_context, automated=True,
+            field_kwargs={})
         self.assertEqual(field_kwargs, 'extra_ref')
 
         # Case B: A common field.
         field_kwargs = mock_adapter._get_extra_field_kwargs(
-            mock_adapter, '.foo', instance={}, loc=(), context={},
-            automated=True, field_kwargs={})
+            mock_adapter, '.foo', mock_context, automated=True,
+            field_kwargs={})
         self.assertEqual(field_kwargs, {'extra': 'value'})
 
         # Case C: A choices field, with empty display list.
         mock_adapter.get_extra_params.return_value = {'allowed': [1, 2],
                                                       'display': []}
         field_kwargs = mock_adapter._get_extra_field_kwargs(
-            mock_adapter, '.choices', instance={}, loc=(), context={},
-            automated=True, field_kwargs={})
+            mock_adapter, '.choices', mock_context, automated=True,
+            field_kwargs={})
         self.assertEqual(field_kwargs, {'choices': [1, 2]})
         self.assertEqual(len(field_kwargs), 1)
 
@@ -295,8 +303,8 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_adapter.get_extra_params.return_value = {'allowed': [1, 2],
                                                       'display': ['foo', 'bar']}
         field_kwargs = mock_adapter._get_extra_field_kwargs(
-            mock_adapter, '.choices', instance={}, loc=(), context={},
-            automated=True, field_kwargs={})
+            mock_adapter, '.choices', mock_context, automated=True,
+            field_kwargs={})
         self.assertEqual(field_kwargs, {'choices': [(1, 'foo'), (2, 'bar')]})
         self.assertEqual(len(field_kwargs), 1)
 
@@ -311,8 +319,10 @@ class TestDjangoRestAdapter(unittest.TestCase):
             'foo': 'bar',
             'instance_source': 'instance_mock',
         }
-        mock_context = {'parent_name': 'foo'}
         mock_loc = ('api', 'foo', '*', 'field', '.drf_field')
+        mock_context = create_mock_constructor_context(
+            instance=mock_instance, spec=mock_spec, loc=mock_loc,
+            parent_name='foo')
         mock_adapter = create_mock_object(
             DjangoRestAdapter, ['default_field_constructor', 'ADAPTER_CONF'])
         mock_adapter._generate_field.return_value = 'drf field'
@@ -324,15 +334,13 @@ class TestDjangoRestAdapter(unittest.TestCase):
         # Case A: `instance_source` and `onmodel` are mutually exclusive.
         self.assertRaises(
             utils.DRFAdapterError, mock_adapter.default_field_constructor,
-            mock_adapter, instance=mock_instance, spec=mock_spec,
-            loc=mock_loc, context=mock_context, predicate_type='.string')
-        mock_spec['onmodel'] = False
-        mock_spec['instance_source'] = 'instance_mock'
+            mock_adapter, context=mock_context, predicate_type='.string')
+        mock_context.spec['onmodel'] = False
+        mock_context.spec['instance_source'] = 'instance_mock'
 
         # Case B: A common field construction.
         instance = mock_adapter.default_field_constructor(
-            mock_adapter, instance=mock_instance, spec=mock_spec,
-            loc=mock_loc, context=mock_context, predicate_type='.string')
+            mock_adapter, context=mock_context, predicate_type='.string')
         instance_conf = instance.get(mock_adapter.ADAPTER_CONF)
         self.assertIsNotNone(instance_conf)
         self.assertEqual(len(instance_conf), 2)
@@ -340,7 +348,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
         self.assertEqual(instance_conf['source'], 'instance_mock')
         field_kwargs = {'extra': 'value', 'foo': 'bar', 'extra_key': 'value'}
         mock_adapter._generate_field.assert_called_with(
-            mock_instance, mock_context.get('parent_name'), '.string',
+            mock_instance, mock_context.parent_name, '.string',
             mock.ANY, False, **field_kwargs)
         mock_adapter._get_extra_field_kwargs.assert_called_once
 
@@ -350,22 +358,19 @@ class TestDjangoRestAdapter(unittest.TestCase):
             '.drf_field': {},
             '.foo': {},
         }
-        all_constructors = {'.drf_field', '.foo'}
-        mock_context = {'constructed': set(),
-                        'all_constructors': all_constructors,
-                        'top_spec': {}}
+        mock_context = create_mock_constructor_context(
+            instance=mock_instance, loc=mock_loc,
+            cons_siblings=['.drf_field', '.foo'])
         mock_adapter = create_mock_object(
             DjangoRestAdapter, ['construct_drf_field'])
         self.assertRaises(doc.DeferConstructor,
                           mock_adapter.construct_drf_field, mock_adapter,
-                          instance=mock_instance, spec={}, loc=mock_loc,
                           context=mock_context)
-        mock_context['constructed'] = {'.foo'}
+        mock_context.constructed.append('.foo')
 
         mock_adapter.extract_type.return_value = None
         self.assertRaises(utils.DRFAdapterError,
                           mock_adapter.construct_drf_field, mock_adapter,
-                          instance=mock_instance, spec={}, loc=mock_loc,
                           context=mock_context)
 
         mock_adapter.extract_type.return_value = '.identity'
@@ -373,20 +378,18 @@ class TestDjangoRestAdapter(unittest.TestCase):
         mock_adapter.default_field_constructor.return_value = 'drf field'
 
         instance = mock_adapter.construct_drf_field(
-            mock_adapter, instance=mock_instance, spec={}, loc=mock_loc,
-            context=mock_context)
+            mock_adapter, context=mock_context)
         self.assertEqual(instance, 'identity field')
         mock_adapter.construct_identity_field.assert_called_once_with(
-            mock_instance, {}, mock_loc, mock_context, '.identity')
+            mock_context, '.identity')
         mock_adapter.default_field_constructor.assert_not_called
 
         mock_adapter.extract_type.return_value = '.foo'
         instance = mock_adapter.construct_drf_field(
-            mock_adapter, instance=mock_instance, spec={}, loc=mock_loc,
-            context=mock_context)
+            mock_adapter, context=mock_context)
         self.assertEqual(instance, 'drf field')
         mock_adapter.default_field_constructor.assert_called_once_with(
-            mock_instance, {}, mock_loc, mock_context, '.foo')
+            mock_context, '.foo')
 
     def test_construct_property(self):
         mock_properties = {
@@ -397,14 +400,13 @@ class TestDjangoRestAdapter(unittest.TestCase):
             DjangoRestAdapter, ['construct_property', 'ADAPTER_CONF'])
         mock_adapter.PROPERTY_MAPPING = mock_properties
         mock_instance = {self.adapter_conf: {}}
+        mock_context = create_mock_constructor_context(instance=mock_instance)
         self.assertRaises(utils.DRFAdapterError,
                           mock_adapter.construct_property, mock_adapter,
-                          instance=mock_instance, spec={}, loc=(),
-                          context={}, property_name='unknown')
+                          context=mock_context, property_name='unknown')
 
         instance = mock_adapter.construct_property(
-            mock_adapter, instance=mock_instance, spec={},
-            loc=(), context={}, property_name='foo')
+            mock_adapter, context=mock_context, property_name='foo')
         self.assertEqual(len(instance), 1)
         instance_conf = instance.get(mock_adapter.ADAPTER_CONF)
         self.assertEqual(len(instance_conf), 1)
@@ -502,38 +504,37 @@ class TestDjangoRestAdapter(unittest.TestCase):
             'onmodel': False,
         }
         mock_loc = ('api', 'foo', '.drf_collection', '*', 'bar')
+        mock_context = create_mock_constructor_context(
+            spec=mock_spec, loc=mock_loc)
         mock_model = mock.Mock()
         mock_adapter._get_or_import_model.return_value = mock_model
 
         # Case A: There is no model configuration.
         model, automated = mock_adapter.validate_model_configuration(
-            mock_adapter, instance={}, spec=mock_spec, loc=mock_loc,
-            context={}, predicate_type='foo')
+            mock_adapter, context=mock_context, predicate_type='foo')
         self.assertEqual(model, mock_model)
         self.assertFalse(automated)
 
         # Case B: `.ref` field.
         mock_adapter.validate_ref.return_value = mock.Mock, mock_model, True
-        mock_spec['onmodel'] = True
+        mock_context.spec['onmodel'] = True
         model, automated = mock_adapter.validate_model_configuration(
-            mock_adapter, instance={}, spec=mock_spec, loc=mock_loc,
-            context={}, predicate_type='.ref')
+            mock_adapter, context=mock_context, predicate_type='.ref')
         self.assertEqual(model, mock_model)
         self.assertTrue(automated)
         mock_adapter.validate_ref.assert_called_once_with(
-            {}, None, mock_loc, None, 'source')
+            {}, None, mock_loc, {}, 'source')
 
         # Case C: typical field.
         mock_adapter.validate_model_field.return_value = (
             mock.Mock, mock_model, True)
-        mock_spec['onmodel'] = True
+        mock_context.spec['onmodel'] = True
         model, automated = mock_adapter.validate_model_configuration(
-            mock_adapter, instance={}, spec=mock_spec, loc=mock_loc,
-            context={}, predicate_type='foo')
+            mock_adapter, context=mock_context, predicate_type='foo')
         self.assertEqual(model, mock_model)
         self.assertTrue(automated)
         mock_adapter.validate_model_field.assert_called_once_with(
-            None, None, mock_loc, mock.ANY, 'source')
+            {}, None, mock_loc, mock.ANY, 'source')
 
         # Case D: structure fields.
         related_model = mock.Mock()
@@ -542,8 +543,7 @@ class TestDjangoRestAdapter(unittest.TestCase):
             mock_field, mock_model, True)
         for structure in {'.struct', '.structarray'}:
             model, automated = mock_adapter.validate_model_configuration(
-                mock_adapter, instance={}, spec=mock_spec, loc=mock_loc,
-                context={}, predicate_type=structure)
+                mock_adapter, context=mock_context, predicate_type=structure)
             self.assertEqual(model, related_model)
             self.assertTrue(automated)
 

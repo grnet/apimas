@@ -5,6 +5,7 @@ from django.core.exceptions import FieldDoesNotExist
 from rest_framework import serializers
 from rest_framework import routers
 from apimas import documents as doc
+from apimas.decorators import last
 from apimas.drf import utils
 from apimas.drf.serializers import (
     generate_container_serializer, generate_model_serializer)
@@ -223,82 +224,77 @@ class DjangoRestAdapter(NaiveAdapter):
         return self.get_class(self.views, endpoint, collection)
 
     @instance_to_node_spec
-    def construct_endpoint(self, instance, spec, loc, context):
+    def construct_endpoint(self, context):
         """
         Constructor of '.endpoint' predicate.
 
         It gets the generated views and it maps them with urlpatterns which
         will later be used from django.
         """
-        parent_name = context.get('parent_name')
-        collections = self.get_structural_elements(instance)
+        parent_name = context.parent_name
+        collections = self.get_structural_elements(context.instance)
         if not collections:
             raise utils.DRFAdapterError(
-                '.endpoint without any collection found.', loc=loc)
+                '.endpoint without any collection found.', loc=context.loc)
         router = routers.DefaultRouter()
         for collection in collections:
-            collection_spec = instance.get(collection)
+            collection_spec = context.instance.get(collection)
             view = collection_spec.get(self.ADAPTER_CONF)
             basename = parent_name + '_' + collection
             router.register(collection, view, base_name=basename)
         self.urls[parent_name] = url(
             r'^' + parent_name + '/', include(router.urls))
 
-    def construct_CRUD_action(self, instance, spec, loc, context, action):
+    def construct_CRUD_action(self, context, action):
         """ Adds an action to the list of allowable. """
-        self.init_adapter_conf(instance, initial=[])
-        instance[self.ADAPTER_CONF].append(action)
-        return instance
+        self.init_adapter_conf(context.instance, initial=[])
+        context.instance[self.ADAPTER_CONF].append(action)
+        return context.instance
 
     @instance_to_node_spec
-    def construct_list(self, instance, spec, loc, context):
+    def construct_list(self, context):
         """
         Constuctor for `.list` predicate.
 
         Allows list operation to be performed on a resource.
         """
-        return self.construct_CRUD_action(instance, spec, loc, context,
-                                          'list')
+        return self.construct_CRUD_action(context, 'list')
 
     @instance_to_node_spec
-    def construct_retrieve(self, instance, spec, loc, context):
+    def construct_retrieve(self, context):
         """
         Constuctor for `.retrieve` predicate.
 
         Allows retrieval of specific resource.
         """
-        return self.construct_CRUD_action(instance, spec, loc, context,
-                                          'retrieve')
+        return self.construct_CRUD_action(context, 'retrieve')
 
     @instance_to_node_spec
-    def construct_create(self, instance, spec, loc, context):
+    def construct_create(self, context):
         """
         Constuctor for `.retrieve` predicate.
 
         Allows creation of a new resource.
         """
-        return self.construct_CRUD_action(instance, spec, loc, context,
-                                          'create')
+        return self.construct_CRUD_action(context, 'create')
 
     @instance_to_node_spec
-    def construct_update(self, instance, spec, loc, context):
+    def construct_update(self, context):
         """
         Constuctor for `.retrieve` predicate.
 
         Allows update of a specific resource.
         """
-        return self.construct_CRUD_action(instance, spec, loc, context,
-                                          'update')
+        return self.construct_CRUD_action(context, 'update')
 
     @instance_to_node_spec
-    def construct_delete(self, instance, spec, loc, context):
+    def construct_delete(self, context):
         """
         Constuctor for `.retrieve` predicate.
 
         Allows deletion of specific resource.
         """
-        return self.construct_CRUD_action(instance, spec, loc, context,
-                                          'delete')
+        return self.construct_CRUD_action(context, 'delete')
 
     def get_permissions(self, collection_path, top_spec):
         """
@@ -318,7 +314,7 @@ class DjangoRestAdapter(NaiveAdapter):
         permissions = [[doc.parse_pattern(segment) for segment in row]
                        for row in permissions]
         for rule in permissions:
-            doc.doc_set(permission_doc, rule[:-1], rule[-1])
+            doc.doc_set(permission_doc, rule, {})
         patterns = [[collection], [doc.ANY], [doc.ANY], [doc.ANY],
                     [doc.ANY]]
         matches = list(doc.doc_match_levels(
@@ -326,7 +322,7 @@ class DjangoRestAdapter(NaiveAdapter):
             expand_pattern_levels=range(nu_columns)))
         if not matches:
             return None
-        return map((lambda x: x[1:]), matches)
+        return [match[1:] for match, _ in matches]
 
     def generate_serializer(self, field_schema, name, model=None,
                             onmodel=False, model_serializers=None,
@@ -358,7 +354,7 @@ class DjangoRestAdapter(NaiveAdapter):
         return serializer
 
     @instance_to_node_spec
-    def construct_drf_collection(self, instance, spec, loc, context):
+    def construct_drf_collection(self, context):
         """
         Constructor for `.drf_collection` predicate.
 
@@ -366,30 +362,32 @@ class DjangoRestAdapter(NaiveAdapter):
         based on the field schema, actions, permissions and additional
         configuation (filter_fields, mixins) as specified on spec.
         """
-        endpoint = loc[0]
-        parent = context.get('parent_name')
-        constructed = context.get('constructed')
+        endpoint = context.loc[0]
+        parent = context.parent_name
+        constructed = context.constructed
         if '.collection' not in constructed:
             raise doc.DeferConstructor
-        field_schema = doc.doc_get(instance, ('*',))
-        actions = doc.doc_get(instance, ('.actions=', self.ADAPTER_CONF)) or []
-        model = self._get_or_import_model(loc[0] + '/' + parent,
-                                          loc + ('model',),
-                                          context.get('top_spec'))
-        model_serializers = spec.pop('model_serializers', [])
-        extra_serializers = spec.pop('serializers', [])
+        field_schema = doc.doc_get(context.instance, ('*',))
+        actions = doc.doc_get(
+            context.instance, ('.actions=', self.ADAPTER_CONF)) or []
+        model = self._get_or_import_model(context.loc[0] + '/' + parent,
+                                          context.loc + ('model',),
+                                          context.top_spec)
+        model_serializers = context.spec.pop('model_serializers', [])
+        extra_serializers = context.spec.pop('serializers', [])
         serializer = self.generate_serializer(
             field_schema, parent, model=model,
             model_serializers=model_serializers,
             extra_serializers=extra_serializers)
-        kwargs = {k: v for k, v in spec.iteritems() if k != 'model'}
-        permissions = self.get_permissions(loc[:-1], context.get('top_spec'))
+        kwargs = {k: v for k, v in context.spec.iteritems() if k != 'model'}
+        permissions = self.get_permissions(
+            context.loc[:-1], context.top_spec)
         view = generate_view(parent, serializer, model, actions=actions,
                              permissions=permissions, **kwargs)
-        instance[self.ADAPTER_CONF] = view
+        context.instance[self.ADAPTER_CONF] = view
         self.serializers[endpoint + '/' + parent] = serializer
         self.views[endpoint + '/' + parent] = view
-        return instance
+        return context.instance
 
     def _classify_fields(self, field_schema):
         """
@@ -432,14 +430,14 @@ class DjangoRestAdapter(NaiveAdapter):
             extra_serializers=extra_serializers, model=model)
         return serializer(many=many, **kwargs)
 
-    def construct_identity_field(self, instance, spec, loc, context,
+    def construct_identity_field(self, context,
                                  predicate_type):
         """ Construct an `.identity` field. """
-        collection_name = loc[1]
+        collection_name = context.loc[1]
         drf_field = self.SERILIZERS_TYPE_MAPPING[predicate_type[1:]](
-            view_name='%s-detail' % (loc[0] + '_' + collection_name))
-        doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
-        return instance
+            view_name='%s-detail' % (context.loc[0] + '_' + collection_name))
+        doc.doc_set(context.instance, (self.ADAPTER_CONF, 'field'), drf_field)
+        return context.instance
 
     def get_default_properties(self, predicate_type, field_kwargs):
         default = {}
@@ -490,13 +488,13 @@ class DjangoRestAdapter(NaiveAdapter):
                 extra['queryset'] = ref_model.objects.all()
         return extra
 
-    def _get_extra_field_kwargs(self, predicate_type, instance, loc, context,
+    def _get_extra_field_kwargs(self, predicate_type, context,
                                 automated, field_kwargs):
         if predicate_type == '.ref':
             return self._get_ref_params(
-                instance, loc, context.get('top_spec'), automated,
+                context.instance, context.loc, context.top_spec, automated,
                 field_kwargs)
-        extra_params = self.get_extra_params(instance, predicate_type)
+        extra_params = self.get_extra_params(context.instance, predicate_type)
         if predicate_type == '.choices':
             # In case of a `.choices` field, we merge the parameters of
             # allowed and display into a list of tuples.
@@ -505,8 +503,7 @@ class DjangoRestAdapter(NaiveAdapter):
             extra_params['choices'] = zip(allowed, display) or allowed
         return extra_params
 
-    def default_field_constructor(self, instance, spec, loc, context,
-                                  predicate_type):
+    def default_field_constructor(self, context, predicate_type):
         """
         A common constructor for the drf fields.
 
@@ -522,24 +519,26 @@ class DjangoRestAdapter(NaiveAdapter):
         configuations before being constructed.
         """
         model, automated = self.validate_model_configuration(
-            instance, spec, loc, context, predicate_type)
+            context, predicate_type)
         path = (self.ADAPTER_CONF,)
-        instance_source = spec.pop('instance_source', None)
-        onmodel = spec.get('onmodel', True)
+        instance_source = context.spec.pop('instance_source', None)
+        onmodel = context.spec.get('onmodel', True)
         if instance_source and onmodel:
             raise utils.DRFAdapterError(
                 '`instance_source` and `onmodel=True` are mutually'
-                ' exclusive.', loc=loc)
-        field_kwargs = {k: v for k, v in spec.iteritems() if k != 'onmodel'}
-        field_kwargs.update(doc.doc_get(instance, path) or {})
+                ' exclusive.', loc=context.loc)
+        field_kwargs = {k: v for k, v in context.spec.iteritems()
+                        if k != 'onmodel'}
+        field_kwargs.update(doc.doc_get(context.instance, path) or {})
         field_kwargs.update(self._get_extra_field_kwargs(
-            predicate_type, instance, loc, context, automated, field_kwargs))
-        doc.doc_set(instance, (self.ADAPTER_CONF, 'source'), instance_source)
+            predicate_type, context, automated, field_kwargs))
+        doc.doc_set(
+            context.instance, (self.ADAPTER_CONF, 'source'), instance_source)
         drf_field = self._generate_field(
-            instance, context.get('parent_name'), predicate_type, model,
+            context.instance, context.parent_name, predicate_type, model,
             automated and onmodel, **field_kwargs)
-        doc.doc_set(instance, (self.ADAPTER_CONF, 'field'), drf_field)
-        return instance
+        doc.doc_set(context.instance, (self.ADAPTER_CONF, 'field'), drf_field)
+        return context.instance
 
     def _get_or_import_model(self, collection, model_path, top_spec):
         """
@@ -558,7 +557,7 @@ class DjangoRestAdapter(NaiveAdapter):
             model = self.models[collection]
         return model
 
-    def validate_model_configuration(self, instance, spec, loc, context,
+    def validate_model_configuration(self, context,
                                      predicate_type):
         """
         Validates that the instance, that is a field, conforms to the
@@ -566,10 +565,11 @@ class DjangoRestAdapter(NaiveAdapter):
 
         For instance, a model field must correspond to a django model field.
         """
-        onmodel = spec.get('onmodel', True)
-        source = spec.get('source')
-        parent_name = context.get('parent_name')
-        top_spec = context.get('top_spec')
+        loc = context.loc
+        onmodel = context.spec.get('onmodel', True)
+        source = context.spec.get('source')
+        parent_name = context.parent_name
+        top_spec = context.top_spec
         model_path = loc[:2] + ('.drf_collection', 'model')
         collection = loc[1]
         full_collection_name = loc[0] + '/' + collection
@@ -581,7 +581,7 @@ class DjangoRestAdapter(NaiveAdapter):
             field_type = self.TYPE_MAPPING[predicate_type[1:]]
             if predicate_type == '.ref':
                 _, model, automated = self.validate_ref(
-                    instance, parent_name, loc, top_spec, source)
+                    context.instance, parent_name, loc, top_spec, source)
             else:
                 model_field, model, automated = self.validate_model_field(
                     top_spec, parent_name, loc, field_type, source)
@@ -590,7 +590,8 @@ class DjangoRestAdapter(NaiveAdapter):
         return model, automated
 
     @instance_to_node_spec
-    def construct_drf_field(self, instance, spec, loc, context):
+    @last
+    def construct_drf_field(self, context):
         """
         Constructor of `.drf_field` predicate.
 
@@ -600,22 +601,18 @@ class DjangoRestAdapter(NaiveAdapter):
         In case of nested fields, e.g. `.struct`, `.structarray`, the field
         should be related to another model.
         """
-        parent = context.get('parent_name')
+        parent = context.parent_name
         field_constructors = {
             '.identity': self.construct_identity_field,
         }
-        all_constructors = context.get('all_constructors')
-        constructed = context.get('constructed')
-        if len(constructed) < len(all_constructors) - 1:
-            raise doc.DeferConstructor
-        type_predicate = self.extract_type(instance)
+        type_predicate = self.extract_type(context.instance)
         if type_predicate is None:
             raise utils.DRFAdapterError(
                 'Cannot construct drf field {!r} without specifying its'
-                ' type'.format(parent), loc=loc)
+                ' type'.format(parent), loc=context.loc)
         return field_constructors.get(
             type_predicate, self.default_field_constructor)(
-                instance, spec, loc, context, type_predicate)
+                context, type_predicate)
 
     def validate_ref(self, instance, name, loc, top_spec, source):
         """
@@ -641,16 +638,16 @@ class DjangoRestAdapter(NaiveAdapter):
                 name, model, source or name, loc)
         return model_attr, model, auto
 
-    def construct_type(self, instance, spec, loc, context, field_type=None):
+    def construct_type(self, context, field_type=None):
         """
         Contructor for predicates that indicate the type of a field.
 
         This constructor produces the corresponding cerberus syntax for
         specifying the type of a field.
         """
-        return instance
+        return context.instance
 
-    def construct_property(self, instance, spec, loc, context, property_name):
+    def construct_property(self, context, property_name):
         """
         Constuctor for predicates that indicate a property of a field,
         e.g. nullable, readonly, required, etc.
@@ -659,9 +656,10 @@ class DjangoRestAdapter(NaiveAdapter):
         it requires field to be initialized, otherwise, construction is
         defered.
         """
+        instance = context.instance
         if property_name not in self.PROPERTY_MAPPING:
             raise utils.DRFAdapterError(
-                'Unknown property {!r}'.format(property_name), loc=loc)
+                'Unknown property {!r}'.format(property_name), loc=context.loc)
         self.init_adapter_conf(instance)
         instance[self.ADAPTER_CONF].update(
             {self.PROPERTY_MAPPING[property_name]: True})

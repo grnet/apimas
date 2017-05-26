@@ -9,7 +9,7 @@ class ApimasPermissions(BasePermission):
     OBJECT_CHECK_PREFIX = 'check_resource_state'
 
     message = None
-    COLUMNS = ('action', 'role', 'field', 'state', 'comment')
+    COLUMNS = ('action', 'role', 'field', 'state')
 
     ANONYMOUS_ROLES = ['anonymous']
 
