@@ -13,7 +13,7 @@ from apimas.django.wrapper import DjangoWrapper
 from apimas.django.testing import TestCase
 
 
-def _parse_pattern(pattern):
+def _path_to_pattern_set(pattern):
     """
     Converts a pattern from string format to a pattern set.
 
@@ -195,16 +195,41 @@ class DjangoAdapter(object):
         """
         Gets the test case class for testing the API made by the adapter.
 
-        This method generates a test case class by taking advantage of the
-        mechanism of `apimas.django.testing.TestCase` clas. It expects a
-        dictionary of patterns which specifies which tests should be run.
-        Also, this dictionary defines an execution spec per pattern. This
-        spec denotes code that must be executed if there is match.
+        This method generates an `apimas.django.testing.TestCase` subclass.
+        It expects a dictionary of patterns which specifies which tests should
+        be run. Each pattern is a string with the following format:
 
-        Arbitrary code can be executed on three stages:
-            * Test Case setup, indicated by `SETUP` key.
-            * Request preparation indicated by 'REQUEST' key.
-            * Response validation indicated by `VALIDATE` key.
+            ```
+            <endpoint pattern>/<collection pattern>/<action pattern>
+            ```
+        For example, the pattern `api/foo/create` matches only with the action
+        "create" of collection "foo" which belongs to the endpoint named
+        "api".
+
+        Typically, A test case for every triplet of endpoint-collection-action
+        is generated, thus developer can filter which tests should be run
+        via these patterns. Note that exclusion patterns are not supported.
+
+        Also, this dictionary defines an execution spec per pattern.
+        This spec denotes code that must be executed if there is match. There
+        are three hooks. Each hook is identified by a key which maps to a
+        function object. Specifically:
+            * `SETUP`: Called during the setup of the test case. Typically,
+              used for the setup of the databse with mock data, etc.
+              Signature: `(endpoint, collection, action, action_spec)`
+
+            * `PREPARE`: Called during the preparation of the request. It
+              must define `self.request_url` and self.request_kwargs` fields.
+              Signature: `(endpoint, collection, action, action_spec)`
+
+            * 'VALIDATE': Called after the client request. It's the hook for
+              your assertions based on the client response.
+              Signature: `(endpoint, collection, action, action_spec,
+                           response)`
+
+        Note that if there is hook not specified in the execution spec, then
+        the default code as specified by the `apimas.django.testing.TestCase`
+        is executed.
 
         Args:
             patterns (dict): Dictionary of execution spec per pattern.
@@ -227,7 +252,7 @@ class DjangoAdapter(object):
             ... }
             >>> TestCase = adapter.get_testcase(patterns=patterns)
 
-            Also, you can add your own code like following:
+            Also, you can add your own code like the following:
             >>> def my_validation(endpoint, collection, action, action_spec,
             ...                   response):
             ...     # My assertions.
@@ -248,15 +273,15 @@ class DjangoAdapter(object):
             raise AdapterError(msg)
 
         if not isinstance(patterns, dict):
-            msg = 'patterns should be a dict. {!r} found'
+            msg = 'patterns should be a dict, not {!r}'
             raise InvalidInput(msg.format(type(patterns)))
 
         columns = ('endpoint', 'collection', 'action')
         tab = Tabmatch(columns, rules)
         content = {}
         for pattern, pattern_spec in patterns.iteritems():
-            pattern = _parse_pattern(pattern)
-            matches = tab.multimatch(pattern, expand=columns)
+            pattern_set = _path_to_pattern_set(pattern)
+            matches = tab.multimatch(pattern_set, expand=columns)
             self._update_testcase_content(matches, pattern_spec, content)
 
         standard_content = {
