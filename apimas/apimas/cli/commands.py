@@ -80,7 +80,12 @@ class BaseCommand(object):
         if format_type == 'json':
             click.echo(json.dumps(data, indent=2))
         else:
-            from tabulate import tabulate
+            try:
+                from tabulate import tabulate
+            except ImportError:
+                msg = ('You must install package \'tabulate\' to view data in',
+                        ' a tabular format')
+                raise ImportError(msg)
             if type(data) is dict:
                 headers = data.keys()
                 table_data = [data.values()]
