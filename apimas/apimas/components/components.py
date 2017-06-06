@@ -1,4 +1,5 @@
 from apimas.errors import InvalidInput
+from apimas.documents import doc_set, doc_get
 
 
 def _normalize_keys(keys):
@@ -17,10 +18,12 @@ class BaseProcessor(object):
 
     Each processor has to specify the following attributes:
         * name (str): Identifier of the processor, i.e. its module path.
-        * READ_KEYS (dict): Human readable keys which are mapped to the actual
-             keys of context from which processor reads.
-        * WRITE_KEYS (dict): Human readable keys which are mapped to the actual
-             keys of the context to which processor writes.
+        * READ_KEYS: Dictionary of Human readable keys which are mapped to the
+             actua; keys of context from which processor reads or a tuple
+             of the actual keys.
+        * WRITE_KEYS: Human readable keys which are mapped to the actual
+             keys of the context to which processor writes or a tuple
+             of the actual keys to write.
     """
 
     name = 'apimas.components.BaseProcessor'
@@ -41,15 +44,7 @@ class BaseProcessor(object):
             The value of the desired key.
         """
         key = _normalize_keys(key)
-        for k in key:
-            try:
-                context = context.get(k)
-            except (AttributeError, IndexError, KeyError):
-                try:
-                    context = getattr(context, k)
-                except AttributeError:
-                    return None
-        return context
+        return doc_get(context, key)
 
     def save(self, context, key, value):
         """
@@ -65,20 +60,7 @@ class BaseProcessor(object):
             raise InvalidInput(
                 'Cannot save to context. Context is `NoneType`')
         key = _normalize_keys(key)
-        attr = key[-1]
-        while True:
-            inst = context if not key else self.extract(context, key)
-            if isinstance(inst, dict):
-                inst.update(value)
-                break
-            else:
-                try:
-                    setattr(inst, attr, value)
-                    break
-                except AttributeError:
-                    attr = key[-1]
-                    value = {key[-1]: value}
-                    key = key[:-1]
+        doc_set(context, key, value, multival=False)
 
     def read(self, context):
         """
@@ -89,8 +71,7 @@ class BaseProcessor(object):
             context: Context from which processor reads.
 
         Returns:
-            dict: Dictionary of human readable keys mapped to the extracted
-                values of context.
+            dict: Dictionary of the extracted values of context.
 
         Examples:
             >>> from apimas.components import BaseProcessor
@@ -108,8 +89,23 @@ class BaseProcessor(object):
         if keys is None:
             raise InvalidInput(
                 'No `READ_KEYS` are specified. Cannot read from context')
-        return {k: self.extract(context, v)
-                for k, v in self.READ_KEYS.iteritems()}
+        if not isinstance(keys, (list, tuple, dict)):
+            raise InvalidInput('Attribute \'READ_KEYS\' must be one of'
+                               ' list, tuple or dict, not {!r}'.format(
+                                    type(keys)))
+        if isinstance(keys, (list, tuple)):
+            keys = {k: k for k in keys}
+        return {k: self.extract(context, v) for k, v in keys.iteritems()}
+
+    def _write_list(self, context, keys, data):
+        for i, k in enumerate(keys):
+            value = data[i]
+            self.save(context, k, value)
+
+    def _write_dict(self, context, keys, data):
+        for k, v in keys.iteritems():
+            value = data.get(k)
+            self.save(context, v, value)
 
     def write(self, data, context):
         """
@@ -117,9 +113,12 @@ class BaseProcessor(object):
         by the processor.
 
         Args:
-            data (dict): Data keyed by human readable identifiers which are
-                saved to the actual keys of the context.
-            content: Context to which processor writes.
+            data: Data can be in the form of args, which means that each item
+                is written to the corresponding item of `WRITE_KEYS`,
+                otherwise, data may be keyed by human readable identifiers
+                which are saved to the actual keys of the context. Note that
+                data *must* have the same type as `WRITE_KEYS`.
+            context: Context to which processor writes.
 
         Examples:
             >>> from apimas.components import BaseProcessor
@@ -139,9 +138,17 @@ class BaseProcessor(object):
         if keys is None:
             raise InvalidInput(
                 'No `READ_KEYS` are specified. Cannot read from context')
-        for k, v in self.WRITE_KEYS.iteritems():
-            value = data.get(k)
-            self.save(context, v, value)
+        if not isinstance(keys, (list, tuple, dict)):
+            raise InvalidInput('Attribute \'WRITE_KEYS\' must be one of'
+                               ' list, tuple or dict, not {!r}'.format(
+                                    type(keys)))
+        assert len(data) == len(keys)
+        if isinstance(data, (list, tuple)) and isinstance(keys, (list, tuple)):
+            return self._write_list(context, keys, data)
+        if isinstance(data, dict) and isinstance(keys, dict):
+            return self._write_dict(context, keys, data)
+        raise InvalidInput('Incompatible types for \'keys\' ({!r}) and'
+                           ' \'data\' ({!r})'.format(type(keys), type(data)))
 
     def process(self, collection, url, action, context):
         """

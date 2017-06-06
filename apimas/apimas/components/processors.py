@@ -191,6 +191,7 @@ class Serialization(BaseSerialization):
     READ_KEYS = {
         'data': 'response/content',
     }
+
     WRITE_KEYS = {
         'data': 'response/content',
     }

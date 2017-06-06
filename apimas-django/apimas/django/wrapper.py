@@ -2,7 +2,6 @@ import json
 import re
 from django.http import HttpResponse
 from apimas.errors import ConflictError
-from apimas.adapters.actions import Request
 
 
 HTTP_REGEX = re.compile(r'^HTTP_+$')
@@ -100,13 +99,13 @@ class DjangoWrapper(object):
         Returns:
             Django native response.
         """
-        if response.get_native() is not None:
+        if response.get('native') is not None:
             raise ConflictError('Native Response object already exists')
-        content = response.content
-        content_type = response.kwargs.get('content_type')
+        content = response.get('content')
+        content_type = response.get('meta', {}).get('content_type')
         if content_type == 'application/json':
             content = json.dumps(content)
-        status_code = response.kwargs.get('status_code')
+        status_code = response.get('meta', {}).get('status_code')
         return HttpResponse(content=content, content_type=content_type,
                             status=status_code)
 
@@ -125,7 +124,11 @@ class DjangoWrapper(object):
             'files': files,
             'headers': headers,
         })
-        return Request(content=data, native=request, **kwargs)
+        return {
+            'content': data,
+            'native': request,
+            'meta': kwargs,
+        }
 
     def execute_action(self, action, request, **kwargs):
         apimas_request = self._get_apimas_request(request, **kwargs)

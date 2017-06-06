@@ -64,7 +64,7 @@ class DjangoBaseHandler(BaseHandler):
 
     READ_KEYS = {
         'model': 'store/orm_model',
-        'pk': 'request/kwargs/pk',
+        'pk': 'request/meta/pk',
     }
     READ_KEYS.update(DeSerialization.WRITE_KEYS)
 
@@ -274,8 +274,10 @@ class DjangoBaseHandler(BaseHandler):
             'content': {
                 'details': ex.message,
             },
-            'content_type': 'application/json',
-            'status_code': status,
+            'meta': {
+                'content_type': 'application/json',
+                'status_code': status,
+            }
         }
 
     def adapt_instance(self, resource, context_data, context):
@@ -308,8 +310,10 @@ class DjangoBaseHandler(BaseHandler):
                     else self.to_dict(model, resource)
         return {
             'content': instance,
-            'content_type': self.CONTENT_TYPE,
-            'status_code': self.STATUS_CODE,
+            'meta': {
+                'content_type': self.CONTENT_TYPE,
+                'status_code': self.STATUS_CODE,
+            }
         }
 
     def process(self, collection, url, action, context):

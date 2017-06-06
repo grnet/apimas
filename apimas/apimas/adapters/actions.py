@@ -31,12 +31,12 @@ def handle_exception(func):
             return func(*args, **kwargs)
         except:
             if self._error_context is not None:
-                response_args = self.handler.handle_error(
+                response_kwargs = self.handler.handle_error(
                     *self._error_context)
-                assert response_args is not None, (
+                assert response_kwargs is not None, (
                     'Error handler returned a `NoneType` response'
                 )
-                return Response(response_args)
+                return response_kwargs
             # An unexpectedly error occurred.
             raise
     return wrapper
@@ -89,7 +89,7 @@ class ApimasAction(object):
             response_kwargs = self.handler.handle_error(*self._error_context)
         assert response_kwargs is not None, (
             'handler returned a `None` object')
-        return Response(**response_kwargs)
+        return response_kwargs
 
     @handle_exception
     def process_response(self, response):
