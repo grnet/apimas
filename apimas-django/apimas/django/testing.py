@@ -88,7 +88,7 @@ class TestCase(DjangoTestCase):
         for model in top_ordered_models:
             if model in excluded:
                 continue
-            instance = mutils.populate_model(model, instances=instances)
+            instance = mutils.populate_random_model(model, instances=instances)
             instances[model] = instance
             for collection, collection_model in models.iteritems():
                 if model is collection_model:

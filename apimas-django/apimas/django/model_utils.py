@@ -69,7 +69,7 @@ def get_models_to_create(models):
     return schema
 
 
-def populate_model(model, instances, save=True):
+def populate_random_model(model, instances, save=True):
     """
     Creates a new instance of a model using random data.
 
