@@ -9,10 +9,9 @@ import sys
 from random import choice, randint
 import re
 
-from documents import (
-    register_constructor, doc_construct, doc_value,
-    ValidationError, InvalidInput,
-)
+from apimas.documents import register_constructor, doc_value
+from apimas.errors import ValidationError, ConflictError
+from apimas.decorators import last as last_d, after as after_d
 
 
 MAXINT = sys.maxint
@@ -181,7 +180,6 @@ def construct_text(instance, spec, loc, context):
         raise ValidationError(m)
 
     if regex is not None:
-        flags = re.UNICODE
         pattern = re.compile(regex, re.UNICODE)
         if pattern.match(text) is None:
             m = "{loc}: {text!r} does not match regex {regex!r}"
@@ -211,3 +209,190 @@ def construct_text(instance, spec, loc, context):
 
 register_constructor(construct_integer, 'integer')
 register_constructor(construct_text, 'text')
+
+
+class Constructor(object):
+    """
+    This interface defines the behaviour of class-like constructors.
+
+    Typically, these constructors are initialized and parameterized with some
+    arguments which change the behaviour and logic of construction process.
+
+    Then, the initialized objects are treated as callables. The actual
+    implementation of construction is at method `construct()`.
+
+    Args:
+        last (bool): (optional) `True` if constructor should be executed after
+            all constructors of the same node; `False` otherwise. Default is
+            `False`.
+        after (list): (optional) List of constructors after which the current
+            constructor should be executed. Default is empty list.
+    """
+    def __init__(self, last=False, after=None):
+        self.last = last
+        self.after = after or []
+
+        assert not (last and after), ('`last` and `after` are mutually'
+                ' exclusive')
+
+        if self.last:
+            # Attach `last` decorator at `construct()` runtime.
+            setattr(self, 'construct', last_d(self.construct))
+
+        if self.after:
+            # Attach `after` decorator at `construct()` runtime.
+            setattr(self, 'construct', after_d(after)(self.construct))
+
+    def construct(self, context):
+        """
+        The actual hook of construction.
+
+        This should be implemented by other constructors.
+        """
+        raise NotImplementedError('construct() must be implemented')
+
+    def __call__(self, context):
+        return self.construct(context=context)
+
+
+class Object(Constructor):
+    """
+    Construct an instance of a specified class.
+
+    This class can be specified on the spec, instance, or both. Also, class
+    may take spec or instance as a single argument or as keyword arguments.
+
+    Args:
+        cls: Class of the constructed object.
+        args_spec (bool): `True` if class takes spec as argument;
+            `False` otherwise.
+        kwargs_spec (bool): `True` if class takes the keys of spec
+            as arguments; `False` otherwise. In this case spec *must* be
+            a `dict`.
+        args_instance (bool): `True` if class takes instance as argument;
+            `False` otherwise.
+        kwargs_instance (bool): `True` if class takes the keys of instance
+            as arguments. In this case, instance *must* be a `dict`.
+        args_spec_name (str): (optional) Name of the argument of spec. This
+            combine with `args_spec=True`. Default is 'spec'.
+        args_instance_name (str): (optional) Name of the argument of instance.
+            This combine with `args_instance=True`. Defaullt is `instance`.
+        kwargs_spec_mapping (dict): (optional) Map keys of spec to the actual
+            names of the arguments that class takes. It combine with
+            `kwargs_spec=True`. If spec key is not found then the name of
+            argument is set as the key.
+
+    Examples:
+        A class that takes spec a single argument named 'foo'.
+
+        >>> from apimas.constructors import Object
+        >>> from apimas.testing.helpers import create_mock_constructor_context
+        >>> class MyClass(object):
+        ...     def __init__(self, foo):
+        ...         self.foo = foo
+        >>> spec = 'blah blah'
+        >>> context = create_mock_constructor_context(instance=instance)
+        >>> obj_constructor = Object(args_spec=True, args_spec_name='foo')
+        >>> obj = obj_constructor.construct(context)
+        >>> obj.foo
+        'blah blah'
+
+        A class that takes the keys of spec as arguments.
+        >>> from apimas.constructors import Object
+        >>> from apimas.testing.helpers import create_mock_constructor_context
+        >>> class MyClass(object):
+        ...     def __init__(self, foo, bar):
+        ...         self.foo = foo
+        ...         self.bar = bar
+        >>> spec = {'a': 10, 'b': 'blah blah'}
+        >>> context = create_mock_constructor_context(instance=instance)
+        >>> kwargs_spec_mapping = {'a': 'foo', 'b': 'bar'}
+        >>> obj_constructor = Object(kwargs_spec=True,
+        ...                          kwargs_spec_mapping=kwargs_spec_mapping)
+        >>> obj = obj_constructor.construct(context)
+        >>> obj.foo, obj.bar
+        (10, 'blah blah')
+
+    """
+    def __init__(self, cls, args_spec=False, kwargs_spec=False,
+                 args_instance=False, kwargs_instance=False,
+                 args_spec_name='spec', args_instance_name='instance',
+                 kwargs_spec_mapping=None, *args, **kwargs):
+        super(Object, self).__init__(*args, **kwargs)
+        self.cls = cls
+        self.args_spec = args_spec
+        self.kwargs_spec = kwargs_spec
+
+        assert not (self.kwargs_spec and self.args_spec), (
+            '`kwargs_spec` and `args_spec` are mutually exclusive')
+
+        self.args_instance = args_instance
+        self.kwargs_instance = kwargs_instance
+
+        assert not (self.kwargs_instance and args_instance), (
+            '`kwargs_instance` and `args_instance` are mutually exclusive')
+
+        self.args_spec_name = args_spec_name
+        self.args_instance_name = args_instance_name
+        self.kwargs_spec_mapping = kwargs_spec_mapping or {}
+
+    def _build_as_args(self, instance, spec):
+        kwargs = {}
+        if self.args_instance:
+            kwargs[self.args_instance_name] = instance
+        if self.args_spec:
+            kwargs[self.args_spec_name] = spec
+        return kwargs
+
+    def _build_as_kwargs(self, instance, spec):
+        kwargs = {}
+        if self.kwargs_spec:
+            assert isinstance(spec, dict), (
+                'spec must be a `dict` if `kwargs_spec` is set as `True`.')
+            kwargs.update({self.kwargs_spec_mapping.get(k, k): v
+                           for k, v in spec.iteritems()})
+        if self.kwargs_instance:
+            assert isinstance(instance, dict), (
+                'instance must be a `dict` if `kwargs_instance` is set as'
+                ' `True`.')
+            kwargs.update(instance)
+        return kwargs
+
+    def construct(self, context):
+        instance = context.instance
+        spec = context.spec
+        kwargs = self._build_as_args(instance, spec)
+        kwargs.update(self._build_as_kwargs(instance, spec))
+        return self.cls(**kwargs)
+
+
+class Flag(Constructor):
+    """
+    This constructor attaches a flag at the current instance.
+
+    Specifically, it adds a new key to instance with a value set as `True`.
+
+    Args:
+        flag_name (str): Name of the flag (i.e. key) to be added to the
+            intance.
+
+    Examples:
+        >>> from apimas.constructors import Flag
+        >>> from apimas.testing.helpers import create_mock_constructor_context
+        >>> instance = {'foo': 'bar'}
+        >>> context = create_mock_constructor_context(instance=instance)
+        >>> flag_constructor = Flag('myflag')
+        >>> flag_constructor.construct(context)
+        {'boo': 'bar', 'myflag': True}
+    """
+    def __init__(self, flagname, *args, **kwargs):
+        self.flagname = flagname
+        super(Flag, self).__init__(*args, **kwargs)
+
+    def construct(self, context):
+        if self.flagname in context.instance:
+            msg = 'Key {!r} already exists in the instance'
+            raise ConflictError(msg.format(self.flagname))
+        doc = {self.flagname: True}
+        context.instance.update(doc)
+        return context.instance

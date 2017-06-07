@@ -4,7 +4,7 @@ from apimas import documents as doc
 from apimas import serializers as srs
 from apimas.components import BaseProcessor
 from apimas.errors import InvalidSpec
-from apimas.decorators import last
+from apimas.constructors import Flag, Object
 
 
 class BaseSerialization(BaseProcessor):
@@ -15,56 +15,43 @@ class BaseSerialization(BaseProcessor):
     specification to construct them accordingly.
     """
 
-    TYPE_SERIALIZERS = {
-        '.struct': srs.Struct,
-        '.ref': srs.Ref,
-        '.serial': srs.Serial,
-        '.integer': srs.Number,
-        '.biginteger': srs.Number,
-        '.float': srs.Number,
-        '.string': srs.String,
-        '.text': srs.String,
-        '.choices': srs.Choices,
-        '.email': srs.Email,
-        '.boolean': srs.Boolean,
-        '.datetime': srs.DateTime,
-        '.date': srs.Date,
-        '.file': srs.File,
-        '.identity': srs.Identity,
-    }
-
-    COMMON_FIELDS = {
-        '.ref',
-        '.serial',
-        '.integer',
-        '.float',
-        '.string',
-        '.text',
-        '.choices',
-        '.email',
-        '.boolean',
-        '.datetime',
-        '.date',
-        '.file',
-        '.identity',
-    }
-
-    KWARGS_MAPPER = {
-        '.datetime': {
-            'format': {
-                'to': 'date_format',
-                'default': None,
-            }
-        }
-    }
-
-    EXTRA_KWARGS = {
-        '.integer': {
-            'value_type': int
-        },
-        '.float': {
-            'value_type': float,
-        }
+    CONSTRUCTORS = {
+        'ref':        Object(srs.Ref, kwargs_spec=True, kwargs_instance=True,
+                             last=True),
+        'serial':     Object(srs.Serial, kwargs_spec=True,
+                             kwargs_instance=True, last=True),
+        'integer':    Object(srs.Integer, kwargs_spec=True,
+                             kwargs_instance=True, last=True),
+        'float':      Object(srs.Float, kwargs_spec=True, kwargs_instance=True,
+                             last=True),
+        'string':     Object(srs.String, kwargs_spec=True,
+                             kwargs_instance=True, last=True),
+        'text':       Object(srs.String, kwargs_spec=True,
+                             kwargs_instance=True, last=True),
+        'choices':    Object(srs.Choices, kwargs_spec=True,
+                             kwargs_instance=True, last=True),
+        'email':      Object(srs.Email, kwargs_spec=True,
+                             kwargs_instance=True, last=True),
+        'boolean':    Object(srs.Boolean, kwargs_spec=True,
+                             kwargs_instance=True, last=True),
+        'datetime':   Object(srs.DateTime, kwargs_spec=True,
+                             kwargs_instance=True, last=True,
+                             kwargs_spec_mapping={'format': 'date_format'}),
+        'date':       Object(srs.Date, kwargs_spec=True, kwargs_instance=True,
+                             kwargs_spec_mapping={'format': 'date_format'},
+                             last=True),
+        'file':       Object(srs.File, kwargs_spec=True, kwargs_instance=True,
+                             last=True),
+        'identity':   Object(srs.Identity, kwargs_spec=True,
+                             kwargs_instance=True, last=True),
+        'struct':     Object(srs.Struct, args_spec=True,
+                             args_spec_name='schema', kwargs_instance=True,
+                             last=True),
+        'array of':   Object(srs.List, args_spec=True,
+                             args_spec_name='serializer', kwargs_instance=True,
+                             last=True),
+        'readonly':   Flag('readonly'),
+        'writeonly':  Flag('writeonly')
     }
 
     def __init__(self, spec):
@@ -74,68 +61,12 @@ class BaseSerialization(BaseProcessor):
             msg = 'Processor {!r}: Node \'*\' of given spec is empty'
             raise InvalidSpec(msg.format(self.name))
 
-        # Declare constructors of predicates understood by processor.
-        self._constructors = {
-            'struct': self._struct,
-            'array of': self._array_of,
-            'writeonly': self._writeonly,
-            'readonly': self._readonly,
-            'default': self._default,
-        }
-        self._constructors.update(
-            {k[1:]: self._type_constructor(k) for k in self.COMMON_FIELDS})
         self.serializers = self._construct()
-
-    def _default(self, context):
-        return context.instance
-
-    def _construct_property(self, instance, key):
-        doc = {
-            key: True
-        }
-        if not instance:
-            return doc
-        instance.update(doc)
-        return instance
-
-    def _writeonly(self, context):
-        return self._construct_property(context.instance, 'writeonly')
-
-    def _readonly(self, context):
-        return self._construct_property(context.instance, 'readonly')
-
-    def _type_constructor(self, field_type):
-        @last
-        def construct_type(context):
-            serializer = self.TYPE_SERIALIZERS[field_type]
-            kwargs = {}
-            kwargs.update(self.EXTRA_KWARGS.get(field_type, {}))
-            kwargs.update(context.spec)
-            kwargs.update(context.instance)
-            if field_type == '.serial':
-                kwargs.update({'readonly': True})
-            return serializer(**kwargs)
-        return construct_type
-
-    @last
-    def _struct(self, context):
-        if context.spec is None:
-            raise InvalidSpec('empty struct found')
-        kwargs = {'schema': context.spec}
-        serializer = srs.Struct(**kwargs)
-        return serializer
-
-    @last
-    def _array_of(self, context):
-        if context.spec is None:
-            raise ('Array of undefined type')
-        kwargs = {'serializer': context.spec}
-        return srs.List(**kwargs)
 
     def _construct(self):
         spec = deepcopy(self.spec)
         instance = doc.doc_construct(
-            {}, spec, constructors=self._constructors,
+            {}, spec, constructors=self.CONSTRUCTORS,
             allow_constructor_input=False, autoconstruct=True,
             construct_spec=True)
         return instance
