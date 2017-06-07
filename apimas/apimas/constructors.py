@@ -5,6 +5,7 @@ Constructors in this module validate value constraints, normalize values.
 Optionally, constructors can create random conforming values.
 
 """
+import itertools
 import sys
 from random import choice, randint
 import re
@@ -281,6 +282,7 @@ class Object(Constructor):
             names of the arguments that class takes. It combine with
             `kwargs_spec=True`. If spec key is not found then the name of
             argument is set as the key.
+        extra (dict): (optional) Dictionary of extra keyword arguments.
 
     Examples:
         A class that takes spec a single argument named 'foo'.
@@ -317,7 +319,7 @@ class Object(Constructor):
     def __init__(self, cls, args_spec=False, kwargs_spec=False,
                  args_instance=False, kwargs_instance=False,
                  args_spec_name='spec', args_instance_name='instance',
-                 kwargs_spec_mapping=None, *args, **kwargs):
+                 kwargs_spec_mapping=None, extra=None, *args, **kwargs):
         super(Object, self).__init__(*args, **kwargs)
         self.cls = cls
         self.args_spec = args_spec
@@ -335,6 +337,7 @@ class Object(Constructor):
         self.args_spec_name = args_spec_name
         self.args_instance_name = args_instance_name
         self.kwargs_spec_mapping = kwargs_spec_mapping or {}
+        self.extra = extra or {}
 
     def _build_as_args(self, instance, spec):
         kwargs = {}
@@ -361,8 +364,16 @@ class Object(Constructor):
     def construct(self, context):
         instance = context.instance
         spec = context.spec
-        kwargs = self._build_as_args(instance, spec)
-        kwargs.update(self._build_as_kwargs(instance, spec))
+        args = self._build_as_args(instance, spec)
+        kwargs = self._build_as_kwargs(instance, spec)
+        conflict_keys = []
+        for p, u in itertools.combinations([args, kwargs, self.extra], 2):
+            conflict_keys.extend(set(p.keys()).intersection(u.keys()))
+        if conflict_keys:
+            raise ConflictError('Multiple occurences of keys: ({!s})'.format(
+                ','.join(set(conflict_keys))))
+        kwargs.update(args)
+        kwargs.update(self.extra)
         return self.cls(**kwargs)
 
 
