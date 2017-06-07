@@ -2,7 +2,7 @@ import re
 from collections import Iterable, Mapping
 from datetime import date, datetime
 from urlparse import urlparse, urljoin
-from apimas.errors import ValidationError, InvalidInput
+from apimas.errors import ValidationError, InvalidInput, GenericFault
 
 
 _SKIP = object()
@@ -165,13 +165,12 @@ class Number(BaseSerializer):
         >>> field.serialize('10')
         10.0
     """
-    def __init__(self, value_type, *args, **kwargs):
-        super(Number, self).__init__(*args, **kwargs)
-        self.value_type = value_type
-
     def _get_value(self, value):
+        number_type = getattr(self, 'NUMBER_TYPE', None)
+        if number_type is None:
+            raise GenericFault('`NUMBER_TYPE` needs to be set')
         if isnumeric(value):
-            return self.value_type(value)
+            return number_type(value)
         raise ValidationError('Field is not numeric.')
 
     def get_repr_value(self, value):
@@ -179,6 +178,29 @@ class Number(BaseSerializer):
 
     def get_native_value(self, value):
         return self._get_value(value)
+
+
+class Integer(Number):
+    """
+    Serializes and deserializes a numeric value.
+
+    Attributes:
+        value_type: Type of numeric value, e.g. int, float, etc.
+
+    Examples:
+        >>> from apimas.serializers import Number
+        >>> field = Number(value_type=int)
+        >>> field.serialize('10')
+        10
+        >>> field = Number(value_type=float)
+        >>> field.serialize('10')
+        10.0
+    """
+    NUMBER_TYPE = int
+
+
+class Float(Number):
+    NUMBER_TYPE = float
 
 
 class Boolean(BaseSerializer):
