@@ -1,4 +1,5 @@
 from cStringIO import StringIO
+from copy import deepcopy
 from datetime import datetime
 import os
 import random
@@ -232,8 +233,14 @@ class RequestGenerator(object):
         Returns:
             dict: A dictionary of random data per field.
         """
+        spec = deepcopy(self.spec)
+        # Remove readonly fields.
+        for k, v in spec.items():
+            if '.readonly' in v:
+                del spec[k]
+
         instance = doc.doc_construct(
-            {}, self.spec, constructors=self._constructors,
+            {}, spec, constructors=self._constructors,
             allow_constructor_input=False, autoconstruct='default',
             construct_spec=True)
         return instance
