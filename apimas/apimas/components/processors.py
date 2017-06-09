@@ -1,10 +1,14 @@
 from copy import deepcopy
 from collections import Iterable, Mapping
-from apimas import documents as doc
-from apimas import serializers as srs
+from apimas import documents as doc, serializers as srs, utils
 from apimas.components import BaseProcessor
-from apimas.errors import InvalidSpec
+from apimas.errors import InvalidSpec, ValidationError
 from apimas.constructors import Flag, Object
+from apimas.validators import CerberusValidator
+
+
+def default(context):
+    return context.instance
 
 
 class BaseSerialization(BaseProcessor):
@@ -51,13 +55,14 @@ class BaseSerialization(BaseProcessor):
                              args_spec_name='serializer', kwargs_instance=True,
                              last=True),
         'readonly':   Flag('readonly'),
-        'writeonly':  Flag('writeonly')
+        'writeonly':  Flag('writeonly'),
+        'default':    default,
     }
 
     def __init__(self, spec):
-        self.spec = {k: v for k, v in spec.get('*').iteritems()
-                     if not k.startswith('.')}
-        if spec is None:
+        spec = deepcopy(spec)
+        self.spec = spec.get('*')
+        if self.spec is None:
             msg = 'Processor {!r}: Node \'*\' of given spec is empty'
             raise InvalidSpec(msg.format(self.name))
 
@@ -67,7 +72,7 @@ class BaseSerialization(BaseProcessor):
         spec = deepcopy(self.spec)
         instance = doc.doc_construct(
             {}, spec, constructors=self.CONSTRUCTORS,
-            allow_constructor_input=False, autoconstruct=True,
+            allow_constructor_input=False, autoconstruct='default',
             construct_spec=True)
         return instance
 
@@ -133,3 +138,131 @@ class Serialization(BaseSerialization):
             return None
         serializer = self.get_serializer(data)
         return {'data': serializer.serialize(data)}
+
+
+def _validator_constructor(context):
+    """
+    Constuctor for `.validator` predicate.
+
+    This constructor is provided by the
+    `apimas.components.processors.CerberusValidation` processor for the
+    invocation of custom validators.
+
+    These validators can be performed on field level or on top level
+    (i.e. validating all data).
+
+    The signature of custom validators should be the following:
+        - (loc, value)
+
+    where `loc` is the location of the node being validated at spec and
+    `value` is the runtime value of it based on the request data.
+
+    If validation failed, methods should raise `apimas.errors.ValidationError`.
+    """
+
+    def to_cerberus(func):
+        def cerberus_validator_wrapper(field, value, error):
+            try:
+                func(context.loc[:-1], value)
+            except ValidationError as e:
+                error(field, e.message)
+        return cerberus_validator_wrapper
+
+    funcs = context.spec
+    if not isinstance(funcs, list):
+        msg = 'A list of callables is expected, not {!r}'
+        raise InvalidSpec(msg.format(type(funcs)), loc=context.loc)
+    cerberus_funcs = [to_cerberus(utils.import_object(func)) for func in funcs]
+    context.instance.update({'validator': cerberus_funcs})
+    return context.instance
+
+
+class CerberusValidation(BaseProcessor):
+    """
+    Processor for validating request data using Cerberus
+    tool (http://docs.python-cerberus.org/en/stable/).
+    """
+    name = 'apimas.components.processors.CerberusValidation'
+
+    CONSTRUCTORS = {
+        'ref':        Object(dict, kwargs_instance=True,
+                             extra={'type': 'string'}),
+        'integer':    Object(dict, kwargs_instance=True,
+                             extra={'type': 'integer'}),
+        'float':      Object(dict, kwargs_instance=True,
+                             extra={'type': 'float'}),
+        'string':     Object(dict, kwargs_instance=True,
+                             extra={'type': 'string'}),
+        'text':       Object(dict, kwargs_instance=True,
+                             extra={'type': 'string'}),
+        'choices':    Object(dict, kwargs_instance=True,
+                             extra={'type': 'choices'}),
+        'email':      Object(dict, kwargs_instance=True,
+                             extra={'type': 'email'}),
+        'boolean':    Object(dict, kwargs_instance=True,
+                             extra={'type': 'boolean'}),
+        'datetime':   Object(dict, kwargs_instance=True,
+                             extra={'type': 'datetime'}),
+        'date':       Object(dict, kwargs_instance=True, kwargs_spec=True,
+                             extra={'type': 'string'},
+                             kwargs_spec_mapping={'date': 'date_format'}),
+        'datetime':   Object(dict, kwargs_instance=True, kwargs_spec=True,
+                             extra={'type': 'string'},
+                             kwargs_spec_mapping={'date': 'date_format'}),
+        'file':       Object(dict, kwargs_instance=True, kwargs_spec=True),
+        'struct':     Object(dict, kwargs_instance=True, args_spec=True,
+                             args_spec_name='schema', extra={'type': 'dict'}),
+        'array of':   Object(dict, kwargs_instance=True, args_spec=True,
+                             args_spec_name='schema', extra={'type': 'list'}),
+        'readonly':   Flag('readonly'),
+        'required':   Flag('required'),
+        'nullable':   Flag('nullable'),
+        'validator':  _validator_constructor,
+        'default':    default
+    }
+
+    READ_KEYS = {
+        'data': 'request/content',
+    }
+
+    def __init__(self, spec):
+        spec = deepcopy(spec)
+        self.spec = spec.get('*')
+        if self.spec is None:
+            msg = 'Processor {!r}: Node \'*\' of given spec is empty'
+            raise InvalidSpec(msg.format(self.name))
+        schema = self._construct()
+
+        # Remove validators from the field schema in order to attach it
+        # one level above.
+        global_validators = schema.pop('validator', [])
+
+        self.validation_schema = {
+            'data': {
+                'type': 'dict',
+                'schema': schema,
+                'validator': global_validators
+            }
+        }
+
+    def _construct(self):
+        spec = self.spec
+        instance = doc.doc_construct(
+            {}, spec, constructors=self.CONSTRUCTORS,
+            allow_constructor_input=False, autoconstruct='default',
+            construct_spec=True)
+        return instance
+
+    def process(self, collection, url, action, context):
+        """
+        It reads from request data and it applies Cerberus validation based
+        on the validation schema constructed during object initialization.
+
+        If validation fails, then `apimas.errors.ValidationError` is raised.
+        """
+        data = self.read(context)
+        validator = CerberusValidator(self.validation_schema)
+        isvalid = validator.validate(data)
+        if not isvalid:
+            data_errors = validator.errors.pop('data')
+            raise ValidationError(data_errors)

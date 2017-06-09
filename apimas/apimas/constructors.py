@@ -351,13 +351,14 @@ class Object(Constructor):
         kwargs = {}
         if self.kwargs_spec:
             assert isinstance(spec, dict), (
-                'spec must be a `dict` if `kwargs_spec` is set as `True`.')
+                'spec must be a \'dict\' if `kwargs_spec` is set as `True`,'
+                ' {!r}.'.format(type(spec)))
             kwargs.update({self.kwargs_spec_mapping.get(k, k): v
                            for k, v in spec.iteritems()})
         if self.kwargs_instance:
             assert isinstance(instance, dict), (
-                'instance must be a `dict` if `kwargs_instance` is set as'
-                ' `True`.')
+                'instance must be a \'dict\' if `kwargs_instance` is set as'
+                ' `True`, not {!r}'.format(type(instance)))
             kwargs.update(instance)
         return kwargs
 
