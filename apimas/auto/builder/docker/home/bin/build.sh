@@ -82,5 +82,5 @@ for source_name in "${source_vars}"; do
     else
         cmd git_repo.sh ${remote_opt} ${commit_opt} ${name_opt}
     fi
-    (cmd cd "${name}"; cmd mkdeb ${release_tag_opt} -b production; cmd cp deb_dist/*deb "${BASE}/build")
+    (cmd cd "${name}"; cmd mkdeb ${release_tag_opt} -o "${BASE}/build")
 done
