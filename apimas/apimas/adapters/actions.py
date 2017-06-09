@@ -1,28 +1,6 @@
 from functools import wraps
 
 
-class Response(object):
-    """ TODO """
-    def __init__(self, content=None, native=None, **kwargs):
-        self.content = content
-        self.native = native
-        self.kwargs = kwargs
-
-    def get_native(self):
-        return self.native
-
-
-class Request(object):
-    """ TODO """
-    def __init__(self, content=None, native=None, **kwargs):
-        self.kwargs = kwargs
-        self.native = native
-        self.content = content
-
-    def get_native(self):
-        return self.native
-
-
 def handle_exception(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
