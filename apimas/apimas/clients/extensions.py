@@ -1,7 +1,5 @@
 import random
-import re
 from datetime import datetime, date
-from cerberus import Validator
 from requests.compat import urljoin
 
 
@@ -54,22 +52,3 @@ class DateTimeNormalizer(object):
 
 class DateNormalizer(DateTimeNormalizer):
     DEFAULT_FORMAT = '%Y-%m-%d'
-
-
-class ApimasValidator(Validator):
-    """
-    Extends cerberus `Validator` by adding a new type, i.e. `file`, `email`.
-    """
-    def _validate_type_choices(self, value):
-        return isinstance(value, (bool, int, long, float, str, unicode))
-
-    def _validate_type_file(self, value):
-        return isinstance(value, file)
-
-    def _validate_type_email(self, value):
-        if not isinstance(value, (str, unicode)):
-            return False
-
-        regex = re.compile(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\."
-                           r"[a-zA-Z0-9-.]+$)")
-        return bool(regex.match(value))

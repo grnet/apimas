@@ -3,9 +3,9 @@ import requests
 from requests.exceptions import HTTPError
 from requests.compat import urljoin, quote
 from apimas import documents as doc
+from apimas.validators import CerberusValidator
 from apimas.errors import ValidationError
 from apimas.clients.auth import ApimasClientAuth
-from apimas.clients.extensions import ApimasValidator
 
 
 TRAILING_SLASH = '/'
@@ -105,7 +105,7 @@ class ApimasClient(object):
     def __init__(self, endpoint, schema):
         self.endpoint = endpoint
         self.validation_schema = schema
-        self.api_validator = ApimasValidator(self.validation_schema)
+        self.api_validator = CerberusValidator(self.validation_schema)
         self.auth = None
 
     @handle_exception
@@ -286,7 +286,7 @@ class ApimasClient(object):
             path: doc.doc_get(schema, path.split('/'))
             for path in cerberus_paths}
         partial_schema = doc.doc_from_ns(partial_schema_paths)
-        validator = ApimasValidator(partial_schema)
+        validator = CerberusValidator(partial_schema)
         is_valid = validator.validate(data)
         if raise_exception and not is_valid:
             raise ValidationError(validator.errors)

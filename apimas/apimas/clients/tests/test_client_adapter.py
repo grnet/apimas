@@ -25,7 +25,7 @@ class TestClientAdapter(unittest.TestCase):
 
     @mock.patch(
         'apimas.adapters.cookbooks.NaiveAdapter.construct_collection')
-    @mock.patch('apimas.clients.clients.ApimasValidator')
+    @mock.patch('apimas.clients.clients.CerberusValidator')
     def test_construct_collection(self, mock_validator, mock_constructor):
         mock_client = create_mock_object(
             ApimasClientAdapter, ['construct_collection', 'ADAPTER_CONF'],
