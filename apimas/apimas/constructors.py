@@ -408,3 +408,12 @@ class Flag(Constructor):
         doc = {self.flagname: True}
         context.instance.update(doc)
         return context.instance
+
+
+class Dummy(Constructor):
+    """
+    A naive constructor that simply returns the current instance.
+    """
+
+    def construct(self, context):
+        return context.instance
