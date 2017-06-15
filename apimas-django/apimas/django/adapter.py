@@ -305,13 +305,15 @@ class DjangoAdapter(object):
         if handler is None:
             msg = 'Handler not found for action {!r}'.format(action_name)
             raise InvalidSpec(msg, loc=collection_path.split('/'))
-        pre_proc = [proc(collection_spec) for proc in pre_proc]
-        post_proc = [proc(collection_spec) for proc in post_proc]
+        pre_proc = [proc(collection_path, collection_spec)
+                    for proc in pre_proc]
+        post_proc = [proc(collection_path, collection_spec)
+                     for proc in post_proc]
         context = self._get_orm_context(
             collection_spec.get('.collection'), collection_path)
         apimas_action = ApimasAction(
             collection_path, action_url, action_name,
-            handler(collection_spec), request_proc=pre_proc,
+            handler(collection_path, collection_spec), request_proc=pre_proc,
             response_proc=post_proc, **context)
         return apimas_action
 

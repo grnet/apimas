@@ -1,11 +1,7 @@
+from copy import deepcopy
 from apimas.errors import InvalidInput
 from apimas.documents import doc_set, doc_get
-
-
-def _normalize_keys(keys):
-    if isinstance(keys, str):
-        return keys.split('/')
-    return keys
+from apimas.utils import normalize_path
 
 
 class BaseProcessor(object):
@@ -28,39 +24,40 @@ class BaseProcessor(object):
 
     name = 'apimas.components.BaseProcessor'
 
-    def __init__(self, spec, **kwargs):
-        self.spec = spec
+    def __init__(self, collection, spec):
+        self.collection = normalize_path(collection)
+        self.spec = deepcopy(spec)
 
-    def extract(self, context, key):
+    def extract(self, context, path):
         """
         Extracts a specific key from context.
 
         Args:
             context: Context from which processor reads.
-            key (str|tuple): Key where desired value is located, either
+            path (str|tuple): Key where desired value is located, either
                 string or tuple format (e.g. `foo/bar` or `('foo', bar')`.
 
         Returns:
             The value of the desired key.
         """
-        key = _normalize_keys(key)
-        return doc_get(context, key)
+        path = normalize_path(path)
+        return doc_get(context, path)
 
-    def save(self, context, key, value):
+    def save(self, context, path, value):
         """
         Saves a value to the context.
 
         Args:
             context: Context to which processor writes.
-            key (str|tuple): Key where desired value is located, either
+            path (str|tuple): Path where desired value is located, either
                 string or tuple format (e.g. `foo/bar` or `('foo', bar')`.
             value: Value to be saved to the context.
         """
         if context is None:
             raise InvalidInput(
                 'Cannot save to context. Context is `NoneType`')
-        key = _normalize_keys(key)
-        doc_set(context, key, value, multival=False)
+        path = normalize_path(path)
+        doc_set(context, path, value, multival=False)
 
     def read(self, context):
         """
