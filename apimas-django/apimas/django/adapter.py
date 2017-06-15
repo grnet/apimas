@@ -67,7 +67,8 @@ class DjangoAdapter(object):
             'url': '/',
             'handler': 'apimas.django.handlers.CreateHandler',
             'pre': [
-                'apimas.components.processors.DeSerialization'
+                'apimas.components.processors.DeSerialization',
+                'apimas.components.processors.CerberusValidation',
             ],
             'post': [
                 'apimas.components.processors.Serialization'
@@ -94,6 +95,7 @@ class DjangoAdapter(object):
             'url': '/',
             'pre': [
                 'apimas.components.processors.DeSerialization',
+                'apimas.components.processors.CerberusValidation',
             ],
             'handler': 'apimas.django.handlers.UpdateHandler',
             'post': [
