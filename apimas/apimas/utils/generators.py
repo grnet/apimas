@@ -8,6 +8,7 @@ import zipfile
 from faker import Factory
 from pytz import timezone as py_timezone
 from apimas import documents as doc
+from apimas.errors import InvalidInput
 from apimas.decorators import after
 
 
@@ -51,7 +52,7 @@ class DateGenerator(object):
     def __init__(self, native):
         self.native = native
 
-    def __call__(self, date_formats=None):
+    def __call__(self, date_formats=None, **kwargs):
         """
         Generates a random python date object or a string representing a date
         based on the allowed date formats.
@@ -65,7 +66,6 @@ class DateGenerator(object):
             return date_obj
         date_formats = date_formats or self.DEFAULT_FORMATS
         return datetime.strftime(date_obj, random.choice(date_formats))
-        return date_obj
 
 
 class DateTimeGenerator(DateGenerator):
@@ -90,29 +90,53 @@ class DateTimeGenerator(DateGenerator):
             return date_obj
         date_formats = date_formats or self.DEFAULT_FORMATS
         return datetime.strftime(date_obj, random.choice(date_formats))
-        return date_obj
 
 
-def generate_fake_file(file_name=None, size=8, archived=False):
+def generate_fake_file(size=8, archived=False):
     """
     Generates a file-like object using `cStringIO` library.
 
     Args:
-        file_name (str): (optional) Name of the mock file. If `None` a
-            random name is generated.
-        size (int):  (optional) Size of the generated file in bytes.
+        size (int): (optional) Size of the generated file in bytes.
         archived (bool): `True` if generated file should be archived.
     """
+    if archived:
+        return generate_zipfile(files=1, size=size)
     content = os.urandom(size)
     buff = StringIO()
     buff.write(content)
-    file_name = file_name or fake.file_name()
-    if not archived:
-        return buff
-    with zipfile.ZipFile(buff, mode='w',
-                         compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr(file_name, buff.getvalue())
     return buff
+
+
+def generate_zipfile(files, size=8):
+    """
+    Generates a fake a zip file which includes the number of specified
+    files.
+
+    The files included in zip file are also fake.
+
+    Args:
+        files: A positive integer which specifies the number of files
+            included in zip file or a list of file names. In the former case
+            random files names are generated.
+        size (int):  (optional) Size of every file in zip in bytes.
+    """
+    files_type = type(files)
+    if files_type not in [int, list]:
+        raise InvalidInput('"files" must be either an integer or a list of'
+                           ' file names')
+    if files_type is int:
+        if files <= 0:
+            raise InvalidInput('Number of files must be positive')
+        files = [fake.file_name() for _ in range(files)]
+    zip_file = generate_fake_file()
+    with zipfile.ZipFile(zip_file, mode='w',
+                         compression=zipfile.ZIP_DEFLATED) as zf:
+        for filename in files:
+            fil = generate_fake_file(size=size)
+            zf.writestr(filename, fil.getvalue())
+            fil.close()
+    return zip_file
 
 
 def generate_ref(to):

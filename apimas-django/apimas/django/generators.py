@@ -20,8 +20,7 @@ def generate_file(file_name=None, size=8, archived=True):
         archived (bool): `True` if generated file should be archived.
     """
     file_name = file_name or gen.fake.file_name()
-    mock_file = gen.generate_fake_file(size=size, file_name=file_name,
-                                       archived=archived)
+    mock_file = gen.generate_fake_file(size=size, archived=archived)
     uploaded = SimpleUploadedFile(
         file_name, mock_file.getvalue(), content_type=gen.fake.mime_type())
     mock_file.close()
