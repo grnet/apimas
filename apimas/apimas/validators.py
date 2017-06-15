@@ -1,6 +1,7 @@
 from datetime import date, datetime
 import re
 import time
+import zipfile
 from cerberus import Validator
 
 
@@ -40,3 +41,12 @@ class CerberusValidator(Validator):
             except ValueError:
                 msg = '{!r} does not match with {!r} format'
                 self._error(field, msg.format(value, date_format))
+
+    def _validate_archived(self, date_format, field, value):
+        """
+        The rule's arguments are validated against this schema:
+        {'type': 'boolean'}
+        """
+        if value and not zipfile.is_zipfile(value):
+            msg = 'is not a arhived file'
+            self._error(field, msg)
