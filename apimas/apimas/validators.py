@@ -29,7 +29,11 @@ class CerberusValidator(Validator):
                            r"[a-zA-Z0-9-.]+$)")
         return bool(regex.match(value))
 
-    def _validate_date_format(self, date_format, field, value):
+    def _validate_data_format(self, date_format, field, value):
+        """
+        The rule's arguments are validated against this schema:
+        {'type': 'string'}
+        """
         if isinstance(value, (str, unicode)):
             try:
                 time.strptime(value, date_format)
