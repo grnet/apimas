@@ -131,9 +131,8 @@ class DjangoBaseHandler(BaseHandler):
         source = doc.doc_get(
             field_spec, ('.field', 'source')) or field.name
         if many:
-            array_type = field_spec[ARRAY_OF].keys()[0]
             value = self._extract_many(instance, source)
-            if array_type == REF:
+            if REF in field_spec[ARRAY_OF]:
                 return [getattr(v, 'pk') for v in value]
             return [
                 self.to_dict(
