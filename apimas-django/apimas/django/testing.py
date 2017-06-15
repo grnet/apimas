@@ -4,7 +4,7 @@ import json
 import random
 from urlparse import urljoin
 from django.test import TestCase as DjangoTestCase
-from django.test.client import MULTIPART_CONTENT
+from django.test.client import MULTIPART_CONTENT, RequestFactory, Client
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from apimas import documents as doc
 from apimas.errors import InvalidInput
@@ -229,7 +229,20 @@ TESTING_CONTEXT_PARAMS = [
 TestingContext = namedtuple('TestingContext', TESTING_CONTEXT_PARAMS)
 
 
+class ApimasRequestFactory(RequestFactory):
+    def put(self, path, data='', content_type='application/octet-stream',
+            secure=False, **extra):
+        data = self._encode_data(data, content_type)
+        return super(ApimasRequestFactory, self).put(path, data, content_type,
+                                                     secure, **extra)
+
+
+class TestClient(ApimasRequestFactory, Client):
+    pass
+
+
 class TestCase(DjangoTestCase):
+    client_class = TestClient
 
     def setUp(self):
         self.test_url = None
