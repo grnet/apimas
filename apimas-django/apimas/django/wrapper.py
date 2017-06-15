@@ -1,5 +1,6 @@
 import json
 import re
+from django.conf import settings
 from django.http import HttpResponse
 from apimas.errors import ConflictError
 
@@ -60,11 +61,11 @@ class DjangoWrapper(object):
         Returns:
             dict: Dictionary with body of the request.
         """
-        if not request.body:
-            return {}
         content_type = self.get_content_type(request)
         if content_type == 'application/json':
-            body_unicode = request.body.decode('utf-8')
+            if not request.body:
+                return {}
+            body_unicode = request.body.decode(settings.DEFAULT_CHARSET)
             return json.loads(body_unicode)
         else:
             # `request.POST` is a multival dict so we create
@@ -109,10 +110,25 @@ class DjangoWrapper(object):
         return HttpResponse(content=content, content_type=content_type,
                             status=status_code)
 
+    def _load_form_data(self, request):
+        """
+        Load form data, (data and files) in there is a multipart/form-data
+        request in request method except for POST.
+        """
+        content_type = self.get_content_type(request)
+        if not content_type:
+            return
+        if request.method != 'POST' and content_type.startswith(
+                'multipart/form-data;'):
+            data, files = request.parse_file_upload(request.META, request)
+            request.POST.update(data)
+            request.FILES.update(files)
+
     def _get_apimas_request(self, request, **kwargs):
         """
         Creates an APIMAS request object based on the initial django request.
         """
+        self._load_form_data(request)
         params = self.get_query_params(request)
         body = self.get_body(request)
         headers = self.get_headers(request)
