@@ -69,3 +69,15 @@ def topological_sort(adj):
         if not visited[k]:
             dfs(adj, k)
     return top_sort
+
+
+def normalize_path(path):
+    """
+    Converts a string representing a path to a tuple of segments.
+
+    Example: 'foo/bar' -> ('foo', 'bar')
+    """
+    if isinstance(path, str):
+        return tuple(path.split('/'))
+    assert isinstance(path, (list, tuple))
+    return tuple(path)
