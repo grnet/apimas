@@ -1,4 +1,6 @@
 from functools import wraps
+from apimas import utils
+from apimas.errors import InvalidInput
 
 
 def handle_exception(func):
@@ -86,3 +88,18 @@ class ApimasAction(object):
         args = (self.collection, self.url, self.action, self.context)
         self._iter_processors(self.response_proc, clear_err=True, *args)
         return response
+
+
+def extract_from_action(action_spec):
+    handler = action_spec.get('handler')
+    if handler is None:
+        raise InvalidInput('Handler cannot be None')
+
+    action_url = action_spec.get('url')
+    if action_url is None:
+        raise InvalidInput('URL not found for action')
+
+    handler = utils.import_object(handler)
+    pre = [utils.import_object(x) for x in action_spec.get('pre', [])]
+    post = [utils.import_object(x) for x in action_spec.get('post', [])]
+    return action_url, handler, pre, post
