@@ -1,4 +1,5 @@
 import importlib
+from urlparse import urljoin as urlparse_urljoin
 
 
 def import_object(obj_path):
@@ -81,3 +82,12 @@ def normalize_path(path):
         return tuple(path.split('/'))
     assert isinstance(path, (list, tuple))
     return tuple(path)
+
+
+def urljoin(*urls):
+    """ Constructs a URL based on multiple URL segments. """
+    slash = '/'
+    url = '/'
+    for ufs in urls:
+        url = urlparse_urljoin(url, ufs.strip(slash)).strip(slash) + slash
+    return url
