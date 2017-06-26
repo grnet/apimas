@@ -11,6 +11,48 @@ from apimas.clients.auth import ApimasClientAuth
 TRAILING_SLASH = '/'
 
 
+def extract_data_and_files(content):
+    """
+    This functions checks if data which are going to be sent to request
+    include files and it extract them.
+
+    Then it performs two checks:
+    a) It checks that the location of files is not nested.
+    b) If files were detected, then it checks that request data does
+    not include nested data.
+
+    When uploading files, the `Content-Type` header of request is set
+    to `multipart/form-data`.
+
+    :param data: Dictionary of data which are going to be sent to request.
+
+    :returns: A dictionary keyed by the name of the field and it includes
+    all files to be uploaded.
+    """
+    data = {}
+    files = {}
+    files_present = False
+    error_msg = ('Content-Type `application/json is not supported when'
+                 ' uploading files`')
+    for path, val in doc.doc_iter(content):
+        if not path:
+            continue
+        if isinstance(val, file):
+            files_present = True
+
+            # Files must be only on top level
+            if len(path) > 1:
+                raise ValidationError(error_msg)
+            files[path[-1]] = val
+        else:
+            # Compound types, i.e. dicts and lists are not supported along
+            # with files.
+            if isinstance(val, (list, dict)) and files_present:
+                raise ValidationError(error_msg)
+            doc.doc_set(data, path, val, multival=False)
+    return data, files
+
+
 class RequestError(HTTPError):
     def __init__(self, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
@@ -307,35 +349,6 @@ class ApimasClient(object):
             raise ValidationError(self.api_validator.errors)
         return self.api_validator.document
 
-    def extract_files(self, data):
-        """
-        This functions checks if data which are going to be sent to request
-        include files and it extract them.
-
-        Then it performs two checks:
-        a) It checks that the location of files is not nested.
-        b) If files were detected, then it checks that request data does
-        not include nested data.
-
-        When uploading files, the `Content-Type` header of request is set
-        to `multipart/form-data`.
-
-        :param data: Dictionary of data which are going to be sent to request.
-
-        :returns: A dictionary keyed by the name of the field and it includes
-        all files to be uploaded.
-        """
-        paths = [path for path, val in doc.doc_iter(data)
-                 if isinstance(val, file)]
-        error_msg = ('Content-Type `application/json is not supported when'
-                     ' uploading files`')
-        if any(len(path) > 1 for path in paths):
-            raise ValidationError(error_msg)
-        if paths and any(isinstance(v, (list, dict))
-                         for _, v in data.iteritems()):
-            raise ValidationError(error_msg)
-        return {path[-1]: doc.doc_pop(data, path) for path in paths}
-
     def extract_write_data(self, data, raise_exception, partial=False):
         """
         This function extracts data, sent for CREATE and UPDATE requests of
@@ -357,7 +370,7 @@ class ApimasClient(object):
             data = self.partial_validate(data or {}, raise_exception)
         else:
             data = self.validate(data or {}, raise_exception)
-        files = self.extract_files(data)
+        files = extract_data_and_files(data)
         return {'data': data, 'files': files} if files else {'json': data}
 
     def set_credentials(self, auth_type, **credentials):

@@ -4,7 +4,8 @@ import unittest
 import mock
 from requests.exceptions import HTTPError
 from apimas.clients import (
-    ApimasClient, requests, get_subdocuments, to_cerberus_paths, RequestError)
+    ApimasClient, requests, get_subdocuments, extract_data_and_files,
+    to_cerberus_paths, RequestError)
 from apimas.errors import ValidationError
 from apimas.testing.helpers import create_mock_object
 
@@ -109,24 +110,25 @@ class TestClients(unittest.TestCase):
         self.assertEquals(validated, {('field',): [sub], ('field2',): [sub]})
         mock_client.partial_validate.assert_called
 
-    def test_extract_files(self):
+    def test_extract_data_and_files(self):
         mock_file = mock.MagicMock(spec=file)
-        data = {'field1': {'field2': mock_file}}
-        self.assertRaises(ValidationError, self.client.extract_files,
-                          data)
-        data['field1']['field2'] = 'a value'
-        data['field3'] = mock_file
-        self.assertRaises(ValidationError, self.client.extract_files,
-                          data)
+        content = {'field1': {'field2': mock_file}}
+        self.assertRaises(ValidationError, extract_data_and_files,
+                          content)
+        content['field1']['field2'] = 'a value'
+        content['field3'] = mock_file
+        self.assertRaises(ValidationError, extract_data_and_files,
+                          content)
 
-        data = {'field1': 'a value', 'field2': mock_file,
-                'field3': 'another value'}
-        files = self.client.extract_files(data)
+        content = {'field1': 'a value', 'field2': mock_file,
+                   'field3': 'another value'}
+        data, files = extract_data_and_files(content)
         self.assertEqual(files, {'field2': mock_file})
         self.assertEqual(data, {'field1': 'a value',
                                 'field3': 'another value'})
 
-    def test_extract_file_data(self):
+    @mock.patch('apimas.clients.clients.extract_data_and_files')
+    def test_extract_file_data(self, mock_func):
         mock_client = mock.Mock(
             extract_write_data=ApimasClient.__dict__['extract_write_data'])
         mock_client.extract_write_data(mock_client, {}, True)
@@ -139,12 +141,12 @@ class TestClients(unittest.TestCase):
         self.assertEqual(mock_client.validate.call_count, 1)
         self.assertEqual(mock_client.partial_validate.call_count, 1)
 
-        mock_client.extract_files.return_value = {}
+        mock_func.return_value = {}
         data = mock_client.extract_write_data(mock_client, {}, True)
         self.assertEqual(len(data), 1)
         self.assertIsNotNone(data['json'])
 
-        mock_client.extract_files.return_value = 'a value'
+        mock_func.return_value = 'a value'
         data = mock_client.extract_write_data(mock_client, {}, True)
         self.assertEqual(len(data), 2)
         self.assertIsNotNone(data['files'])
