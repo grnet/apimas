@@ -1,10 +1,16 @@
+import copy
+import json
 from requests.compat import urljoin
-from apimas import documents as doc
-from apimas.errors import InvalidSpec, NotFound
+from apimas import documents as doc, utils
+from apimas.decorators import last
+from apimas.errors import (
+    AdapterError, ConflictError, InvalidInput, InvalidSpec, NotFound)
 from apimas.adapters.cookbooks import NaiveAdapter
-from apimas.clients import ApimasClient, TRAILING_SLASH
+from apimas.adapters.actions import extract_from_action, ApimasAction
+from apimas.clients import ApimasClient, TRAILING_SLASH, Client
 from apimas.clients.extensions import (
     RefNormalizer, DateNormalizer, DateTimeNormalizer)
+from apimas.components import BaseHandler
 
 
 class ApimasClientAdapter(NaiveAdapter):
@@ -200,3 +206,260 @@ class ApimasClientAdapter(NaiveAdapter):
 
     def construct_writeonly(self, context):
         return context.instance
+
+
+class ClientHandler(BaseHandler):
+    READ_KEYS = {
+        'session': 'request/meta/session',
+        'native': 'request/native',
+        'data': 'request/meta/data',
+        'headers': 'request/meta/headers',
+        'files': 'request/meta/files',
+        'params': 'request/meta/params',
+    }
+
+    def prepare_request(self, request, request_context):
+        headers = request_context['headers']
+        files = request_context['files']
+        data = request_context['data']
+        content_type = headers.get('Content-Type')
+        if content_type is None:
+            if not files:
+                headers['Content-Type'] = 'application/json'
+            else:
+                headers['Content-Type'] = 'multipart/form-data'
+
+        if headers['Content-Type'] == 'application/json':
+            data = json.dumps(data)
+
+        # Update native request object.
+        request.data = data
+        request.headers = headers
+        request.files = files
+        request.params = request_context['params']
+        return request.prepare()
+
+    def process(self, collection, url, action, context):
+        handler_data = self.read(context)
+        session = handler_data.get('session')
+        if session is None:
+            raise InvalidInput('"session" object is None')
+        native_request = handler_data['native']
+        if native_request is None:
+            raise InvalidInput('"request" object is None')
+
+        prepared_request = self.prepare_request(native_request, handler_data)
+        response = session.send(prepared_request)
+        return {
+            'content': response.content,
+            'native': response,
+            'meta': {
+                'status_code': response.status_code,
+                'headers': response.headers,
+                'cookies': response.cookies,
+            }
+        }
+
+    def handle_error(self, processor, processor_args, ex):
+        raise ex
+
+
+def _iscollection(loc):
+    return loc[-2] != '*'
+
+
+def _get_collection_action(action_name, action_content,
+                           collection_path, action_url, method):
+    url_segments = collection_path + (action_url,)
+
+    def action(self, content=None, params=None, headers=None):
+        url = utils.urljoin(self.root_url, *url_segments)
+        return self._request(url, method, action_content, content, params,
+                             headers)
+
+    setattr(action, '__name__', action_name)
+    return action
+
+
+def _get_resource_action(action_name, action_content, collection_path,
+                         action_url, method):
+
+    def action(self, pk, content=None, params=None, headers=None):
+        url_segments = collection_path + (str(pk), action_url)
+        url = utils.urljoin(self.root_url, *url_segments)
+        return self._request(url, method, action_content, content, params,
+                             headers)
+
+    setattr(action, '__name__', action_name)
+    return action
+
+
+class ClientAdapter(object):
+    AUTOMATED_ACTIONS = {
+        'create': {
+            'method': 'POST',
+            'url': '/',
+            'pre': [
+            ],
+            'post': [
+            ],
+            'handler': 'apimas.clients.adapter.ClientHandler',
+        },
+        'list': {
+            'method': 'GET',
+            'url': '/',
+            'pre': [
+            ],
+            'post': [
+            ],
+            'handler': 'apimas.clients.adapter.ClientHandler',
+        },
+        'retrieve': {
+            'method': 'GET',
+            'url': '/',
+            'pre': [
+            ],
+            'post': [
+            ],
+            'handler': 'apimas.clients.adapter.ClientHandler',
+        },
+        'update': {
+            'method': 'PUT',
+            'url': '/',
+            'pre': [
+            ],
+            'post': [
+            ],
+            'handler': 'apimas.clients.adapter.ClientHandler',
+        },
+        'partial_update': {
+            'method': 'PATCH',
+            'url': '/',
+            'pre': [
+            ],
+            'post': [
+            ],
+            'handler': 'apimas.clients.adapter.ClientHandler',
+        },
+        'delete': {
+            'method': 'DELETE',
+            'url': '/',
+            'pre': [
+            ],
+            'post': [
+            ],
+            'handler': 'apimas.clients.adapter.ClientHandler',
+        },
+    }
+
+    def __init__(self):
+        self._constructors = {
+            'create': self._automated_action('create'),
+            'list': self._automated_action('list'),
+            'retrieve': self._automated_action('retrieve'),
+            'update': self._automated_action('update'),
+            'partial_update': self._automated_action('partial_update'),
+            'delete': self._automated_action('delete'),
+            'actions': self._actions,
+            'collection': self._collection,
+        }
+        self._clients = {}
+
+    @last
+    def _collection(self, context):
+        collection_name = context.parent_name
+        resource_actions = (
+            doc.doc_get(context.instance, ('*', 'actions')) or {})
+        collection_actions = context.instance.get('actions', {})
+        if set(collection_actions).intersection(resource_actions):
+            raise ConflictError(
+                'Duplicate actions found on collection {!r}'.format(
+                    collection_name))
+
+        cls_name = collection_name.capitalize() + 'Client'
+        client = type(cls_name, (Client,),
+                      dict(collection_actions, **resource_actions))
+        return client
+
+    def _construct_action(self, action_name, action_spec, context):
+        collection_path = context.loc[:2]
+        collection_spec = doc.doc_get(context.top_spec, collection_path)
+        action_url, handler, pre, post = extract_from_action(action_spec)
+        action = ApimasAction(
+            collection=collection_path,
+            action=action_name,
+            url=action_url,
+            handler=handler(collection_path, collection_spec),
+            request_proc=[p(collection_path, collection_spec) for p in pre],
+            response_proc=[p(collection_path, collection_spec) for p in post],
+        )
+        method = action_spec.get('method')
+        if _iscollection(context.loc):
+            func = _get_collection_action(
+                action_name, action, collection_path, action_url, method)
+        else:
+            func = _get_resource_action(
+                action_name, action, collection_path, action_url, method)
+        return func
+
+    def _actions(self, context):
+        actions = {}
+        for action_name, action_spec in context.spec.items():
+            if action_name.startswith('.'):
+                automated_action_spec = self.AUTOMATED_ACTIONS.get(action_name)
+                if automated_action_spec is None:
+                    continue
+                action_spec = dict(automated_action_spec, **action_spec)
+            func = self._construct_action(action_name, action_spec, context)
+
+            if action_name in actions:
+                raise ConflictError('Action {!r} already exists'.format(
+                    action_name))
+            actions[action_name] = func
+        context.instance.update({'actions': actions})
+        return context.instance
+
+    def _automated_action(self, action_name):
+        def _action(context):
+            action_spec = self.AUTOMATED_ACTIONS[action_name]
+
+            if action_name in context.instance:
+                raise ConflictError('Action {!r} already exists'.format(
+                    action_name))
+            context.instance.update({action_name: action_spec})
+            return context.instance
+        return _action
+
+    def _check_construction(self):
+        if not self._clients:
+            msg = ('Clients have not been constructed yet. Run construct()'
+                   ' first.')
+            raise AdapterError(msg)
+
+    def construct(self, spec):
+        self.spec = copy.deepcopy(spec)
+        self._clients = doc.doc_construct(
+            {}, spec, constructors=self._constructors,
+            allow_constructor_input=False, autoconstruct=True,
+            construct_spec=True)
+
+    @property
+    def clients(self):
+        self._check_construction()
+        return self._clients
+
+    def get_endpoint_clients(self, endpoint):
+        self._check_construction()
+        clients = self.clients_.get(endpoint)
+        if clients is None:
+            raise NotFound('Clients for endpoint {!r} not found'.format(
+                endpoint))
+        return clients
+
+    def get_client(self, endpoint, collection):
+        self._check_construction()
+        client = doc.doc_get(self._clients, (endpoint, collection))
+        if client is None:
+            msg = 'Client for endpoint {!r} and collection {!r} not found'
+            raise NotFound(msg.format(endpoint, collection))
+        return client

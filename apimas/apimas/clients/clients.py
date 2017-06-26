@@ -379,3 +379,35 @@ class ApimasClient(object):
             If resource is protected) based on the selected auth type.
         """
         self.auth = ApimasClientAuth(auth_type, **credentials)
+
+
+class Client(object):
+    def __init__(self, root_url):
+        self.root_url = root_url
+        self._session = requests.Session()
+
+    def close(self):
+        if self._session:
+            self._session.close()
+
+    def _request(self, url, method, action, content, params, headers):
+        content = content or {}
+        params = params or {}
+        headers = headers or {}
+        data, files = extract_data_and_files(content)
+        request = requests.Request(method, url, data=content, files=files,
+                                   headers=headers)
+        apimas_request = {
+            'content': content,
+            'native': request,
+            'meta': {
+                'headers': headers,
+                'files': files,
+                'data': data,
+                'params': params,
+                'session': self._session,
+            }
+        }
+        apimas_response = action.process_request(apimas_request)
+        action.process_response(apimas_response)
+        return apimas_response
