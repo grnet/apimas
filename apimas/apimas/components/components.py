@@ -24,9 +24,10 @@ class BaseProcessor(object):
 
     name = 'apimas.components.BaseProcessor'
 
-    def __init__(self, collection, spec):
+    def __init__(self, collection, spec, **meta):
         self.collection = normalize_path(collection)
         self.spec = deepcopy(spec)
+        self.meta = meta
 
     def extract(self, context, path):
         """

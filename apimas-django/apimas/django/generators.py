@@ -1,11 +1,10 @@
 import random
-from urlparse import urljoin
 from django.db import models
 from django.core.files.uploadedfile import SimpleUploadedFile
 from apimas import documents as doc
 from apimas.errors import InvalidInput
 from apimas.decorators import after
-from apimas.utils import generators as gen, import_object
+from apimas.utils import generators as gen, import_object, urljoin
 
 
 def generate_file(file_name=None, size=8, archived=True):
@@ -27,7 +26,7 @@ def generate_file(file_name=None, size=8, archived=True):
     return uploaded
 
 
-def generate_ref(to, instances=None):
+def generate_ref(to, instances=None, root_url=None):
     """
     Generates a ref URL based on the given endpoint which points to one of
     the existing model instances.
@@ -36,6 +35,7 @@ def generate_ref(to, instances=None):
         to (str): Collection path from which URL is constructed, e.g. api/foo.
         instances (dict): A dictionary of lists which containts the existing
             model instances per collection path.
+        root_url (str): Root of URL, e.g. http://localhost.
 
     Returns:
         URL pointing to a specific instance of a collection, e.g. api/foo/1/.
@@ -46,7 +46,10 @@ def generate_ref(to, instances=None):
     if random_instance is None:
         return None
     ref = to.strip('/') + '/'
-    return urljoin(ref, str(random_instance.pk) + '/')
+    if root_url:
+        return urljoin(root_url, ref, str(random_instance.pk))
+    else:
+        return urljoin(ref, str(random_instance.pk))
 
 
 class DjangoRequestGenerator(gen.RequestGenerator):
@@ -57,9 +60,9 @@ class DjangoRequestGenerator(gen.RequestGenerator):
     # Override generator for files.
     gen.RequestGenerator.RANDOM_GENERATORS['.file'] = generate_file
 
-    def __init__(self, spec, instances):
+    def __init__(self, spec, instances, **meta):
         self.instances = instances
-        super(DjangoRequestGenerator, self).__init__(spec)
+        super(DjangoRequestGenerator, self).__init__(spec, **meta)
 
     def _common_constructor(self, field_type):
         @after(['.readonly'])
@@ -67,8 +70,9 @@ class DjangoRequestGenerator(gen.RequestGenerator):
             if context.instance is self._SKIP:
                 return None
             if field_type == '.ref':
-                return generate_ref(
-                    **dict(context.spec, **{'instances': self.instances}))
+                kwargs = dict(context.spec, **{'instances': self.instances})
+                kwargs.update({'root_url': self.meta.get('root_url')})
+                return generate_ref(**kwargs)
             return self.RANDOM_GENERATORS[field_type](**context.spec)
         return generate
 

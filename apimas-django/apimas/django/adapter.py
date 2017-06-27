@@ -301,9 +301,9 @@ class DjangoAdapter(object):
         return type(name, (TestCase,), content)
 
     def _construct_view(self, action_name, collection_path, collection_spec,
-                        **kwargs):
+                        action_params, meta):
         method, action_url, handler, pre_proc, post_proc = (
-                self._get_action_params(**kwargs))
+                self._get_action_params(action_params))
         if method is None:
             msg = 'URL not found for action {!r}'.format(action_name)
             raise InvalidSpec(msg, loc=collection_path.split('/'))
@@ -313,9 +313,9 @@ class DjangoAdapter(object):
         if handler is None:
             msg = 'Handler not found for action {!r}'.format(action_name)
             raise InvalidSpec(msg, loc=collection_path.split('/'))
-        pre_proc = [proc(collection_path, collection_spec)
+        pre_proc = [proc(collection_path, collection_spec, **meta)
                     for proc in pre_proc]
-        post_proc = [proc(collection_path, collection_spec)
+        post_proc = [proc(collection_path, collection_spec, **meta)
                      for proc in post_proc]
         context = self._get_orm_context(
             collection_spec.get('.collection'), collection_path)
@@ -357,16 +357,18 @@ class DjangoAdapter(object):
         # we refer to a resource.
         return loc[-3] != '*'
 
-    def _get_action_params(self, **kwargs):
-        method = kwargs.get('method')
-        action_url = kwargs.get('url')
-        handler = kwargs.get('handler')
+    def _get_action_params(self, action_params):
+        method = action_params.get('method')
+        action_url = action_params.get('url')
+        handler = action_params.get('handler')
         if handler is not None:
             handler = utils.import_object(handler)
 
         # Initialize pre processors and post processors with spec.
-        pre_proc = [utils.import_object(x) for x in kwargs.get('pre', [])]
-        post_proc = [utils.import_object(x) for x in kwargs.get('post', [])]
+        pre_proc = [utils.import_object(x)
+                    for x in action_params.get('pre', [])]
+        post_proc = [utils.import_object(x)
+                     for x in action_params.get('post', [])]
         return (method, action_url, handler, pre_proc, post_proc)
 
     def _construct_test_method(self, action_name, action_spec, collection_path,
@@ -392,9 +394,9 @@ class DjangoAdapter(object):
         self._test_methods[key] = wrapper(template)
 
     def _construct_action(self, action_name, action_params, collection_spec,
-                          collection_path, is_collection):
+                          collection_path, is_collection, meta):
         view = self._construct_view(action_name, collection_path,
-                                    collection_spec, **action_params)
+                                    collection_spec, action_params, meta)
         self.views[collection_path] = view
         urlpattern = self._construct_url(
             collection_path, view, action_params['url'], is_collection)
@@ -421,10 +423,11 @@ class DjangoAdapter(object):
         default_params = self.AUTOMATED_ACTIONS[action_name]
         # Override default params if users specified their params.
         action_params = dict(default_params, **context.spec)
+        meta = context.top_spec.get('.meta', {})
         self._construct_action(action_name,
                                action_params,
                                collection_spec, collection_path,
-                               is_collection)
+                               is_collection, meta)
         return context.instance
 
     def _endpoint(self, context):
@@ -450,6 +453,7 @@ class DjangoAdapter(object):
             collection_spec = doc.doc_get(top_spec, context.loc[:2])
             collection_path = '/'.join(context.loc[:2])
             is_collection = self._is_collection(context.loc)
+            meta = context.top_spec.get('.meta', {})
             self._construct_action(action_name, action_params, collection_spec,
-                                   collection_path, is_collection)
+                                   collection_path, is_collection, meta)
         return context.instance

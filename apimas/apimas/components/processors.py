@@ -76,17 +76,22 @@ class BaseSerialization(BaseProcessor):
         'default':    Dummy(),
     }
 
-    def __init__(self, collection, spec):
-        super(BaseSerialization, self).__init__(collection, spec)
+    def __init__(self, collection, spec, **meta):
+        super(BaseSerialization, self).__init__(collection, spec, **meta)
         self.spec = self.spec.get('*')
         if self.spec is None:
             msg = 'Processor {!r}: Node \'*\' of given spec is empty'
             raise InvalidSpec(msg.format(self.name))
 
+        self.root_url = self.meta.get('root_url')
         self.serializers = self._construct()
 
     def _construct(self):
         spec = deepcopy(self.spec)
+        ref_paths = doc.doc_search(spec, '.ref')
+        for ref_path in ref_paths:
+            ref_spec = doc.doc_get(spec, ref_path)
+            ref_spec.update({'root_url': self.root_url})
         instance = doc.doc_construct(
             {}, spec, constructors=self.CONSTRUCTORS,
             allow_constructor_input=False, autoconstruct='default',
@@ -202,8 +207,8 @@ class CerberusValidation(BaseProcessor):
 
     READ_KEYS = DeSerialization.WRITE_KEYS
 
-    def __init__(self, collection, spec):
-        super(CerberusValidation, self).__init__(collection, spec)
+    def __init__(self, collection, spec, **meta):
+        super(CerberusValidation, self).__init__(collection, spec, **meta)
 
         # Attach constructor for '.validator' predicate.
         self.constructors.update({'validator': self._validator_constructor})

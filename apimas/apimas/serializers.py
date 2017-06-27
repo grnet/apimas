@@ -1,7 +1,8 @@
 import re
 from collections import Iterable, Mapping
 from datetime import date, datetime
-from urlparse import urlparse, urljoin
+from urlparse import urlparse
+from apimas import utils
 from apimas.errors import ValidationError, InvalidInput, GenericFault
 
 
@@ -357,14 +358,20 @@ class Identity(BaseSerializer):
     """
     TRAILING_SLASH = '/'
 
-    def __init__(self, to, *args, **kwargs):
-        self.to = to.strip(
+    def __init__(self, to, root_url=None, *args, **kwargs):
+        to = to.strip(
             self.TRAILING_SLASH) + self.TRAILING_SLASH
+
+        # In case `root_url` (e.g. http://localhost) is not given, then we
+        # work only with the relative URL.
+        self.absolute_url = utils.urljoin(root_url, to) if root_url \
+            else None
+        self.rel_url = to
         super(Identity, self).__init__(*args, **kwargs)
 
     def get_repr_value(self, value):
         if isnumeric(value) or isinstance(value, (str, unicode)):
-            return urljoin(self.to, str(value)) + self.TRAILING_SLASH
+            return utils.urljoin(self.absolute_url or self.rel_url, str(value))
         try:
             return self.get_repr_value(
                 extract_value(value, 'pk'))
@@ -381,12 +388,16 @@ class Ref(Identity):
     def get_native_value(self, value):
         if value is None:
             return None
-        path = urlparse(value).path
-        _, match, suffix = path.partition(self.to)
-        if not match or not suffix:
-            raise ValidationError('Given URL does not correspond to'
-                                  ' the collection of {to!r}'.format(
-                                         to=self.to))
+        parsed_value = urlparse(value)
+        parsed_url = urlparse(self.absolute_url or self.rel_url)
+        _, match, suffix = parsed_value.path.partition(self.rel_url)
+        issame = (parsed_value.scheme == parsed_url.scheme and
+                  parsed_value.netloc == parsed_url.netloc)
+        if not match or not suffix and not issame:
+            msg = ('Given URL {!r} does not correspond to the collection'
+                   ' of {!r}')
+            raise ValidationError(msg.format(
+                value, self.absolute_url or self.rel_url))
         return suffix.split(self.TRAILING_SLASH, 1)[0]
 
 

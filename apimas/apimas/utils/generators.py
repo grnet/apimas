@@ -3,11 +3,11 @@ from copy import deepcopy
 from datetime import datetime
 import os
 import random
-from urlparse import urljoin
 import zipfile
 from faker import Factory
 from pytz import timezone as py_timezone
 from apimas import documents as doc
+from apimas.utils import urljoin
 from apimas.errors import InvalidInput
 from apimas.decorators import after
 
@@ -139,10 +139,13 @@ def generate_zipfile(files, size=8):
     return zip_file
 
 
-def generate_ref(to):
+def generate_ref(to, root_url=None):
     random_pk = random.randint(1, 10)
     ref = to.strip('/') + '/'
-    return urljoin(ref, str(random_pk) + '/')
+    if root_url:
+        return urljoin(ref, str(random_pk))
+    else:
+        return urljoin(root_url, ref, str(random_pk))
 
 
 class RequestGenerator(object):
@@ -206,7 +209,7 @@ class RequestGenerator(object):
 
     _SKIP = object()
 
-    def __init__(self, spec):
+    def __init__(self, spec, **meta):
         self.spec = spec.get('*')
         self._constructors = {
             'struct': self._struct,
@@ -215,6 +218,7 @@ class RequestGenerator(object):
             'serial': self._serial,
             'default': self._default
         }
+        self.meta = meta
         self._constructors.update(
             {k[1:]: self._common_constructor(k) for k in self.COMMON_FIELDS})
 
@@ -226,6 +230,10 @@ class RequestGenerator(object):
         def generate(context):
             if context.instance is self._SKIP:
                 return None
+            if field_type == '.ref':
+                root_url = self.meta.get('root_url')
+                return generate_ref(
+                    **dict(context.spec, **{'root_url': root_url}))
             return self.RANDOM_GENERATORS[field_type](**context.spec)
         return generate
 
