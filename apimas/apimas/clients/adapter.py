@@ -1,5 +1,6 @@
 import copy
 import json
+import requests
 from requests.compat import urljoin
 from apimas import documents as doc, utils
 from apimas.decorators import last
@@ -218,18 +219,29 @@ class ClientHandler(BaseHandler):
         'params': 'request/meta/params',
     }
 
+    _CONTENT_TYPE_HEADER = 'Content-Type'
+
+    _MEDIA_TYPE_JSON = 'application/json'
+
+    _MEDIA_TYPE_MULTIPART = 'multipart/form-data'
+
+    def __init__(self, collection, collection_spec, **meta):
+        super(ClientHandler, self).__init__(collection, collection_spec,
+                                            **meta)
+        self._cache_refs = {}
+
     def prepare_request(self, request, request_context):
         headers = request_context['headers']
         files = request_context['files']
         data = request_context['data']
-        content_type = headers.get('Content-Type')
+        content_type = headers.get(self._CONTENT_TYPE_HEADER)
         if content_type is None:
             if not files:
-                headers['Content-Type'] = 'application/json'
+                headers[self._CONTENT_TYPE_HEADER] = self._MEDIA_TYPE_JSON
             else:
-                headers['Content-Type'] = 'multipart/form-data'
+                headers[self._CONTENT_TYPE_HEADER] = self._MEDIA_TYPE_MULTIPART
 
-        if headers['Content-Type'] == 'application/json':
+        if headers[self._CONTENT_TYPE_HEADER] == self._MEDIA_TYPE_JSON:
             data = json.dumps(data)
 
         # Update native request object.
@@ -239,7 +251,53 @@ class ClientHandler(BaseHandler):
         request.params = request_context['params']
         return request.prepare()
 
+    def _fetch_ref(self, ref_url, included=None, excluded=None):
+
+        if ref_url not in self._cache_refs:
+            response = requests.get(ref_url)
+            # FIXME Handle case when ref cannot be retrieved.
+            assert response.status_code == 200
+            data = self._json_to_dict(response)
+            self._cache_refs[ref_url] = data
+        else:
+            data = self._cache_refs[ref_url]
+
+        included = included or data.keys()
+        included = set(included).difference(excluded or [])
+
+        return {
+            k: v
+            for k, v in data.iteritems()
+            if k in included
+        }
+
+    def _json_to_dict(self, response):
+        response_data = response.content
+        if response.headers.get(
+                self._CONTENT_TYPE_HEADER) == self._MEDIA_TYPE_JSON:
+            response_data = response.json()
+        return response_data
+
+    def fetch_refs(self, response_data):
+        converted_data = {}
+        for field_name, field_spec in self.spec.get('*').iteritems():
+            if field_name.startswith('.') or '.writeonly' in field_spec:
+                continue
+
+            value = response_data[field_name]
+            if '.ref' in field_spec:
+                kwargs = field_spec.get('.fetch', {})
+                value = self._fetch_ref(value, **kwargs)
+
+            if doc.doc_get(field_spec, ('.array of=', '.ref')):
+                kwargs = field_spec['.array of='].get('.fetch', {})
+                value = [self._fetch_ref(ref, **kwargs) for ref in value]
+
+            converted_data[field_name] = value
+        return converted_data
+
     def process(self, collection, url, action, context):
+        self._cache_refs = {}
         handler_data = self.read(context)
         session = handler_data.get('session')
         if session is None:
@@ -250,8 +308,17 @@ class ClientHandler(BaseHandler):
 
         prepared_request = self.prepare_request(native_request, handler_data)
         response = session.send(prepared_request)
+        response_data = self._json_to_dict(response)
+
+        # if `fetch_refs` setting is enabled, then we fetch data from ref
+        # fields.
+        if self.meta.get('fetch_refs') and response.status_code == 200:
+            if isinstance(response_data, list):
+                response_data = [self.fetch_refs(p) for p in response_data]
+            else:
+                response_data = self.fetch_refs(response_data)
         return {
-            'content': response.content,
+            'content': response_data,
             'native': response,
             'meta': {
                 'status_code': response.status_code,
@@ -385,13 +452,15 @@ class ClientAdapter(object):
         collection_path = context.loc[:2]
         collection_spec = doc.doc_get(context.top_spec, collection_path)
         action_url, handler, pre, post = extract_from_action(action_spec)
+        meta = context.top_spec.get('.meta', {})
+        processor_args = (collection_path, collection_spec)
         action = ApimasAction(
             collection=collection_path,
             action=action_name,
             url=action_url,
-            handler=handler(collection_path, collection_spec),
-            request_proc=[p(collection_path, collection_spec) for p in pre],
-            response_proc=[p(collection_path, collection_spec) for p in post],
+            handler=handler(*processor_args, **meta),
+            request_proc=[p(*processor_args, **meta) for p in pre],
+            response_proc=[p(*processor_args, **meta) for p in post],
         )
         method = action_spec.get('method')
         if _iscollection(context.loc):
