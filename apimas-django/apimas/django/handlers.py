@@ -1,4 +1,4 @@
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, FieldDoesNotExist
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from apimas import documents as doc
@@ -118,6 +118,8 @@ class DjangoBaseHandler(BaseHandler):
         for k in many_ref_keys:
             field = orm_model._meta.get_field(k)
             ids = data.pop(k, [])
+            if not ids:
+                continue
             many[k] = [field.related_model.objects.get(
                 pk=refid) for refid in ids]
         return data, many
@@ -170,13 +172,18 @@ class DjangoBaseHandler(BaseHandler):
             # Ignore predicates.
             if k.startswith('.'):
                 continue
-            source = doc.doc_get(v, ('.field', 'source')) or k
-            field = orm_model._meta.get_field(source)
-            if field.related_model is None:
-                value = getattr(instance, field.name)
-            else:
-                value = self._extract_rel(orm_model, instance, field,
-                                          v)
+            source = doc.doc_get(v, ('.meta', 'source')) or k
+            try:
+                field = orm_model._meta.get_field(source)
+                if field.related_model is None:
+                    value = getattr(instance, field.name)
+                else:
+                    value = self._extract_rel(orm_model, instance, field,
+                                              v)
+            except FieldDoesNotExist:
+                # If instance does not have any field with that name, then
+                # check if there is any property-like.
+                value = getattr(instance, source)
             data[source] = value
         return data
 
