@@ -17,41 +17,44 @@ STRUCT = '.struct='
 ARRAY_OF = '.array of='
 
 
-def _ref(spec, field_spec):
+def _ref(spec, field_spec, excluded):
     refs = []
     ref = field_spec[REF]['to']
-    refs.append(ref)
-    refs.extend(get_ref_collections(spec, ref))
+    if ref not in excluded:
+        excluded.append(ref)
+        refs.append(ref)
+        refs.extend(get_ref_collections(spec, ref, excluded))
     return refs
 
 
-def _array_of(spec, field_spec):
+def _array_of(spec, field_spec, excluded):
     array_type = field_spec.get(ARRAY_OF)
     if REF in array_type:
-        return _ref(spec, field_spec[ARRAY_OF])
+        return _ref(spec, field_spec[ARRAY_OF], excluded)
     if STRUCT in array_type:
-        return _get_refs(array_type.get(STRUCT), spec)
+        return _get_refs(array_type.get(STRUCT), spec, excluded)
     return []
 
 
-def _get_refs(field_schema, spec):
+def _get_refs(field_schema, spec, excluded):
     refs = []
     for field, field_spec in field_schema.iteritems():
         if REF in field_spec:
-            refs.extend(_ref(spec, field_spec))
+            refs.extend(_ref(spec, field_spec, excluded))
         elif STRUCT in field_spec:
-            refs.extend(_get_refs(field_spec.get(STRUCT), spec))
+            refs.extend(_get_refs(field_spec.get(STRUCT), spec, excluded))
         elif ARRAY_OF in field_spec:
-            refs.extend(_array_of(spec, field_spec))
+            refs.extend(_array_of(spec, field_spec, excluded))
     return refs
 
 
-def get_ref_collections(spec, collection):
+def get_ref_collections(spec, collection, excluded=None):
+    excluded = excluded or []
     endpoint, _, collection = collection.partition('/')
     loc = (endpoint, collection, '*')
     field_schema = {k: v for k, v in doc.doc_get(spec, loc).iteritems()
                     if not k.startswith('.')}
-    return _get_refs(field_schema, spec)
+    return _get_refs(field_schema, spec, excluded)
 
 
 def get_url(context, instances):
