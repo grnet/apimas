@@ -321,8 +321,8 @@ class DjangoAdapter(object):
             collection_spec.get('.collection'), collection_path)
         apimas_action = ApimasAction(
             collection_path, action_url, action_name,
-            handler(collection_path, collection_spec), request_proc=pre_proc,
-            response_proc=post_proc, **context)
+            handler(collection_path, collection_spec, **meta),
+            request_proc=pre_proc, response_proc=post_proc, **context)
         return apimas_action
 
     def _construct_url(self, path, view, action_url, is_collection):
