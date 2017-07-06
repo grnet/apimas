@@ -71,6 +71,7 @@ class DjangoAdapter(object):
                 'apimas.components.processors.CerberusValidation',
             ],
             'post': [
+                'apimas.django.processors.InstanceToDict',
                 'apimas.components.processors.Serialization'
             ]
         },
@@ -79,6 +80,7 @@ class DjangoAdapter(object):
             'url': '/',
             'handler': 'apimas.django.handlers.ListHandler',
             'post': [
+                'apimas.django.processors.InstanceToDict',
                 'apimas.components.processors.Serialization'
             ]
         },
@@ -87,6 +89,7 @@ class DjangoAdapter(object):
             'url': '/',
             'handler': 'apimas.django.handlers.RetrieveHandler',
             'post': [
+                'apimas.django.processors.InstanceToDict',
                 'apimas.components.processors.Serialization'
             ]
         },
@@ -99,6 +102,7 @@ class DjangoAdapter(object):
             ],
             'handler': 'apimas.django.handlers.UpdateHandler',
             'post': [
+                'apimas.django.processors.InstanceToDict',
                 'apimas.components.processors.Serialization',
             ]
 
@@ -111,6 +115,7 @@ class DjangoAdapter(object):
             ],
             'handler': 'apimas.django.handlers.UpdateHandler',
             'post': [
+                'apimas.django.processors.InstanceToDict',
                 'apimas.components.processors.Serialization',
             ]
 

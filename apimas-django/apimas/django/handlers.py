@@ -1,7 +1,6 @@
-from django.core.exceptions import ObjectDoesNotExist, FieldDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Model
 from django.db.models.query import QuerySet
-from apimas import documents as doc
 from apimas.errors import NotFound, InvalidInput, ValidationError
 from apimas.components import BaseHandler
 from apimas.components.processors import DeSerialization
@@ -28,7 +27,8 @@ class DjangoBaseHandler(BaseHandler):
 
     The final response of the handler is a dictionary of kwargs needed by
     APIMAS in order response can be constructed later. This includes:
-        * `content`: A dictionary with the content of response.
+        * `content`: A `django.db.models.Model` or
+            `django.db.models.query.QuerySet` instance.
         * `content_type`: Content type of response, e.g. `application/json`.
         * `status_code`: Status code of response, e.g. 201.
 
@@ -72,26 +72,6 @@ class DjangoBaseHandler(BaseHandler):
         'model',
     }
 
-    def _extract_many(self, instance, field_name):
-        """
-        Extracts the value of a many to many or one to many django model
-        relation.
-        """
-        try:
-            return getattr(instance, field_name).all()
-        except AttributeError:
-            return getattr(instance, field_name + '_set').all()
-
-    def _extract_rel_id(self, instance, field_name):
-        """
-        Extracts the id of a one to one or many to one django model
-        relation.
-        """
-        try:
-            return getattr(instance, field_name + '_id')
-        except AttributeError:
-            return getattr(instance, field_name)
-
     def _parse_ref(self, orm_model, data):
         """
         A function used to handle the case of related fields (either one
@@ -124,68 +104,6 @@ class DjangoBaseHandler(BaseHandler):
                 pk=refid) for refid in ids]
         return data, many
 
-    def _extract_rel(self, orm_model, instance, field, field_spec):
-        """
-        Helper function to get the python native format of a django
-        related field.
-        """
-        many = field.many_to_many or field.one_to_many
-        source = doc.doc_get(
-            field_spec, ('.field', 'source')) or field.name
-        if many:
-            value = self._extract_many(instance, source)
-            if REF in field_spec[ARRAY_OF]:
-                return [getattr(v, 'pk') for v in value]
-            return [
-                self.to_dict(
-                    field.related_model, v,
-                    field_spec[ARRAY_OF][STRUCT]
-                ) for v in value
-            ]
-        if not hasattr(instance, field.name):
-            return None
-        if REF in field_spec:
-            return self._extract_rel_id(instance, field.name)
-        return self.to_dict(field.related_model, getattr(instance, source),
-                            field_spec['.struct='])
-
-    def to_dict(self, orm_model, instance, spec=None):
-        """
-        Constructs a given model instance a python dict.
-
-        Only the model attributes which are declared on specification are
-        included in the returned dictionary.
-
-        Args:
-            orm_model: Django model associated with the instance.
-            instance: Model instance to be converted into a python dict.
-            spec (dict): Specification of collection.
-
-        Returns:
-            dict: Dictionary format of a model instance.
-        """
-        if instance is None:
-            return None
-        spec_properties = spec or self.spec.get('*')
-        data = {}
-        for k, v in spec_properties.iteritems():
-            # Ignore predicates.
-            if k.startswith('.'):
-                continue
-            source = doc.doc_get(v, ('.meta', 'source')) or k
-            try:
-                field = orm_model._meta.get_field(source)
-                if field.related_model is None:
-                    value = getattr(instance, field.name)
-                else:
-                    value = self._extract_rel(orm_model, instance, field,
-                                              v)
-            except FieldDoesNotExist:
-                # If instance does not have any field with that name, then
-                # check if there is any property-like.
-                value = getattr(instance, source)
-            data[source] = value
-        return data
 
     def get_resource(self, orm_model, resource_id):
         """
@@ -308,14 +226,9 @@ class DjangoBaseHandler(BaseHandler):
                        isinstance(resource, QuerySet)):
             msg = 'A model instance or a queryset is expected. {!r} found.'
             raise InvalidInput(msg.format(str(type(resource))))
-        model = context_data['model']
-        if isinstance(resource, QuerySet):
-            instance = [self.to_dict(model, inst) for inst in resource]
-        else:
-            instance = None if resource is None\
-                    else self.to_dict(model, resource)
+
         return {
-            'content': instance,
+            'content': resource,
             'meta': {
                 'content_type': self.CONTENT_TYPE,
                 'status_code': self.STATUS_CODE,
