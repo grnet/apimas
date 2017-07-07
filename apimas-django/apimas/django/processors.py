@@ -2,8 +2,10 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db.models  import Model
 from django.db.models.query import QuerySet
 from apimas import documents as doc
-from apimas.errors import InvalidInput
+from apimas.errors import ConflictError, InvalidInput, InvalidSpec
 from apimas.components import BaseProcessor
+from apimas.serializers import Date, DateTime, Integer, Float, Boolean, List
+from apimas.constructors import Dummy, Object
 
 
 REF = '.ref'
@@ -125,9 +127,266 @@ class InstanceToDict(BaseProcessor):
             msg = 'A model instance or a queryset is expected. {!r} found.'
             raise InvalidInput(msg.format(type(instance)))
         model = processor_data['model']
-        if isinstance(instance, QuerySet):
-            instance = [self.to_dict(model, inst) for inst in instance]
-        else:
+        if isinstance(instance, Model):
             instance = None if instance is None else self.to_dict(
                 model, instance)
+        else:
+            instance = [self.to_dict(model, inst) for inst in instance]
         self.write((instance,), context)
+
+
+def _get_filter_spec(params):
+    """
+    Extracts field name, operator and value from a query string.
+    """
+    filter_spec = {}
+    for k, v in params.iteritems():
+        field_name, _, spec = k.partition('__')
+        filter_spec[field_name] = (spec, v)
+    return filter_spec
+
+
+class Filter(object):
+    """
+    A class to filter a queryset based on a condition.
+
+    Typically, a condition consists of three parts:
+        * The field (aka column) based on which filter is executed.
+        * Lookup operators, e.g. regex, contains, etc. An absence of a
+          lookup operator means exact match.
+        * The value which must be satified.
+
+    Args:
+        source (string): The name of the field, as it is specified in the
+            django models.
+    """
+
+    def __init__(self, source=None, **serializer_kwargs):
+        self.source = source
+        self.serializer_kwargs = serializer_kwargs
+
+    def _get_serializer(self, operator):
+        serializer_cls = getattr(self, 'SERIALIZER', None)
+        if serializer_cls:
+            return serializer_cls(**self.serializer_kwargs)
+        return None
+
+    def to_native(self, value, operator):
+        """
+        Converts value of query parameter into a native represenation, using
+        an appropriate serializer.
+
+        If a serializer class is not specified, then the given value is used
+        as is.
+        """
+        serializer = self._get_serializer(operator)
+        if serializer:
+            return serializer.deserialize(value)
+        return value
+
+    def filter(self, operator, queryset, value):
+        """
+        Filter a given queryset based on a specific lookup operator, and a
+        value.
+        """
+        operators = getattr(self, 'OPERATORS', [])
+        if operator and operator not in operators:
+            return queryset
+        value = self.to_native(value, operator)
+        kwargs = {
+            self.source + ('__' + operator if operator else ''): value
+        }
+        return queryset.filter(**kwargs)
+
+    def __call__(self, operator, queryset, value):
+        return self.filter(operator, queryset, value)
+
+
+class BooleanFilter(Filter):
+    SERIALIZER = Boolean
+
+
+class DateFilter(Filter):
+    OPERATORS = (
+        'gt',
+        'gte',
+        'lt',
+        'lte',
+        'range',
+    )
+    SERIALIZER = Date
+
+    def to_native(self, value, operator):
+        """
+        Override the conversion of a query parameter to handle the case when
+        the 'range' lookup operator is given. This operator expects two dates
+        (comma seperated).
+
+        Example:
+            /?datefield__range=2015-01-01,2017-01-01
+        """
+        if operator != 'range':
+            return super(DateFilter, self).to_native(value, operator)
+        # Then we expect multiple values (comma seperated).
+        values = value.split(',')
+        if len(values) != 2:
+            msg = "Operator 'range' requires two values."
+            raise InvalidInput(msg)
+        serializer = List(Date(self.serializer_kwargs))
+        return serializer.deserialize(values)
+
+
+class DateTimeFilter(DateFilter):
+    SERIALIZER = DateTime
+
+
+class StringFilter(Filter):
+    OPERATORS = (
+        'contains',
+        'startswith',
+        'endswith',
+        'regex',
+    )
+
+
+class IntegerFilter(Filter):
+    OPERATORS = (
+        'gt',
+        'gte',
+        'lt',
+        'lte',
+    )
+    SERIALIZER = Integer
+
+
+class FloatFilter(IntegerFilter):
+    SERIALIZER = Float
+
+
+class StructFilter(Filter):
+    """
+    This class allows nested filtering, i.e. to filter based on the fields
+    of a struct entity.
+    """
+    def __init__(self, filters, source=None, **kwargs):
+        super(StructFilter, self).__init__(source=source, **kwargs)
+        self.filters = filters
+
+    def filter(self, operator, queryset, value):
+        nested_field, _, operator = operator.partition('__')
+        filter_obj = self.filters.get(nested_field)
+        if not filter_obj:
+            return queryset
+        filter_obj.source = self.source + '__' + nested_field
+        return filter_obj(operator, queryset, value)
+
+
+def _construct_meta(context):
+    node = doc.doc_get(context.top_spec, context.loc[:-1])
+    meta = node.get('.meta', {})
+    source = meta.get('source', context.parent_name)
+
+    if 'source' in context.spec:
+        msg = 'Key {!r} has already been set. ({!s})'
+        raise ConflictError(msg.format('source', ','.join(context.loc)))
+    return {'source': source}
+
+
+class Filtering(BaseProcessor):
+    """
+    A django processor responsible for the filtering of a response, based
+    on a query string.
+    """
+    name = 'apimas.django.processors.Filtering'
+
+    READ_KEYS = {
+        'params': 'request/meta/params',
+        'queryset': 'response/content',
+    }
+
+    WRITE_KEYS = (
+        'response/content',
+    )
+
+    CONSTRUCTORS = {
+        'ref':        Object(Filter, pre_hook=_construct_meta,
+                             conditionals=['.filterable']),
+        'serial':     Object(Filter, pre_hook=_construct_meta,
+                             conditionals=['.filterable']),
+        'integer':    Object(IntegerFilter, pre_hook=_construct_meta,
+                             conditionals=['.filterable']),
+        'float':      Object(FloatFilter, pre_hook=_construct_meta,
+                             conditionals=['.filterable']),
+        'string':     Object(StringFilter, pre_hook=_construct_meta,
+                             conditionals=['.filterable']),
+        'text':       Object(StringFilter, pre_hook=_construct_meta,
+                             conditionals=['.filterable']),
+        'choices':    Object(StringFilter, pre_hook=_construct_meta,
+                             conditionals=['.filterable']),
+        'email':      Object(StringFilter, pre_hook=_construct_meta,
+                             conditionals=['.filterable']),
+        'boolean':    Object(BooleanFilter, pre_hook=_construct_meta,
+                             conditionals=['.filterable']),
+        'datetime':   Object(
+                         DateTimeFilter,
+                         kwargs_spec_mapping={'format': 'date_format'},
+                         kwargs_spec=True, pre_hook=_construct_meta,
+                         conditionals=['.filterable']),
+        'date':       Object(
+                         DateFilter,
+                         kwargs_spec_mapping={'format': 'date_format'},
+                         kwargs_spec=True, pre_hook=_construct_meta,
+                         conditionals=['.filterable']),
+        'struct':     Object(
+                         StructFilter, args_spec=True,
+                         args_spec_name='filters',
+                         pre_hook=_construct_meta,
+                         conditionals=['.filterable']),
+        'default':    Dummy()
+    }
+
+    def __init__(self, collection, spec, **meta):
+        super(Filtering, self).__init__(collection, spec, **meta)
+        field_spec = self.spec.get('*')
+        if not field_spec:
+            msg = 'Processor {!r}: Node \'*\' of given spec is empty'
+            raise InvalidSpec(msg.format(self.name))
+        self.spec = field_spec
+        self.filters = self._construct()
+
+    def _construct(self):
+        instance = doc.doc_construct(
+            {}, self.spec, constructors=self.CONSTRUCTORS,
+            allow_constructor_input=False, autoconstruct='default',
+            construct_spec=True)
+        return instance
+
+    def process(self, collection, url, action, context):
+        """
+        The expected response is a `django.db.models.queryset.QuerySet` object
+        returned by a django handler.
+
+        After filtering, this processor substitutes the previous `QuerySet`
+        object with the new one.
+        """
+        processor_data = self.read(context)
+        params = processor_data['params']
+        queryset = processor_data['queryset']
+        if not queryset or not params:
+            return
+        if not isinstance(queryset, QuerySet):
+            msg = 'A queryset is expected, {!r} found'
+            raise InvalidInput(msg.format(type(queryset)))
+        filter_spec = _get_filter_spec(params)
+        for field_name, (operator, value) in filter_spec.iteritems():
+            field_spec = self.spec.get(field_name)
+            # If a given query parameter is not included in the spec, we just
+            # ignore it.
+            if not field_spec:
+                continue
+
+            filter_obj = self.filters.get(field_name)
+            if filter_obj:
+                queryset = filter_obj(operator, queryset, value)
+
+        self.write((queryset,), context)

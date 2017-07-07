@@ -80,6 +80,7 @@ class DjangoAdapter(object):
             'url': '/',
             'handler': 'apimas.django.handlers.ListHandler',
             'post': [
+                'apimas.django.processors.Filtering',
                 'apimas.django.processors.InstanceToDict',
                 'apimas.components.processors.Serialization'
             ]
