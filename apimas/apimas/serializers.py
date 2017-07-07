@@ -275,7 +275,7 @@ class Date(BaseSerializer):
         except ValueError as e:
             msg = ('Date object cannot be converted into string with '
                    ' the given format: {format!r}.')
-            return ValidationError(
+            raise ValidationError(
                 msg.format(format=self.date_format) + e.message)
 
     def get_native_value(self, value):
@@ -284,7 +284,7 @@ class Date(BaseSerializer):
         except ValueError as e:
             msg = ('String cannot be converted into a date object with'
                    ' the given format: {format!r}.')
-            return ValidationError(
+            raise ValidationError(
                 msg.format(format=self.date_format) + e.message)
 
 
