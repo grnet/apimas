@@ -1,6 +1,38 @@
+import warnings
 from functools import wraps
 from apimas.errors import InvalidInput
 from apimas.documents import DeferConstructor
+
+
+def _check_type(constructors):
+    if not isinstance(constructors, (tuple, list)):
+        msg = ('Given constructors must be either `list` or `tuple`,'
+               ' type of {type!s} found instead')
+        raise InvalidInput(msg.format(type=type(constructors)))
+
+
+def conditional(constructors):
+    """
+    Run constructor only if the given constructors are in the list of its
+    constructors siblings.
+    """
+    _check_type(constructors)
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            context = kwargs.get('context')
+            missing_cons = set(constructors).difference(context.cons_siblings)
+            if missing_cons:
+                msg = ('Constructor ({!r}) will not run because it is '
+                       'dependent on missing constructors ({!r})')
+                warnings.warn(
+                    msg.format(', '.join(context.loc), ', '.join(missing_cons)),
+                    UserWarning)
+                return context.instance
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def after(constructors):
@@ -8,10 +40,7 @@ def after(constructors):
     Defer the construction of the given decorated function until all the
     constuctors given as parameter are finished.
     """
-    if not isinstance(constructors, (tuple, list)):
-        msg = ('Given constructors must be either `list` or `tuple`,'
-               ' type of {type!s} found instead')
-        raise InvalidInput(msg.format(type=type(constructors)))
+    _check_type(constructors)
 
     def decorator(func):
         @wraps(func)
@@ -20,8 +49,14 @@ def after(constructors):
             constructed = context.constructed
             all_constructors = context.cons_siblings
 
-            actual_cons = set(constructors).intersection(all_constructors)
-            if not all(c in constructed for c in actual_cons):
+            missing_cons = set(constructors).difference(all_constructors)
+            if missing_cons:
+                msg = ('Constructor ({!r}) cannot run because it is'
+                       ' dependent on missing constructors ({!r})')
+                raise InvalidInput(
+                    msg.format(', '.join(context.loc),
+                        ', '.join(missing_cons)))
+            if not all(c in constructed for c in constructors):
                 raise DeferConstructor
             return func(*args, **kwargs)
         return wrapper
