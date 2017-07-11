@@ -12,7 +12,8 @@ import re
 
 from apimas.documents import register_constructor, doc_value
 from apimas.errors import ValidationError, ConflictError
-from apimas.decorators import last as last_d, after as after_d
+from apimas.decorators import (
+    last as last_d, after as after_d, conditional as cond_d)
 
 
 MAXINT = sys.maxint
@@ -228,11 +229,22 @@ class Constructor(object):
             `False`.
         after (list): (optional) List of constructors after which the current
             constructor should be executed. Default is empty list.
+        conditionals (list): (optional) List of constructors which are required
+            to be present to run this constructor.
+        pre_hook (callable): (optional) A callable which runs before the
+            execution of this constructor. The return value of this callable
+            (if any) is passed to the hook of construction.
     """
-    def __init__(self, last=False, after=None):
+    def __init__(self, last=False, after=None, conditionals=None,
+                 pre_hook=None):
         self.last = last
         self.after = after or []
+        self.conditionals = conditionals or []
+        self.pre_hook = pre_hook
 
+        if self.pre_hook:
+            assert callable(pre_hook), (
+                    "'pre_hook' parameter should be a callable")
         assert not (last and after), ('`last` and `after` are mutually'
                 ' exclusive')
 
@@ -244,7 +256,11 @@ class Constructor(object):
             # Attach `after` decorator at `construct()` runtime.
             setattr(self, 'construct', after_d(after)(self.construct))
 
-    def construct(self, context):
+        if self.conditionals:
+            # Attach `conditionals` decorator at `construct()` runtime.
+            setattr(self, 'construct', cond_d(conditionals)(self.construct))
+
+    def construct(self, context, **meta):
         """
         The actual hook of construction.
 
@@ -253,7 +269,10 @@ class Constructor(object):
         raise NotImplementedError('construct() must be implemented')
 
     def __call__(self, context):
-        return self.construct(context=context)
+        meta = {}
+        if self.pre_hook:
+            meta = self.pre_hook(context)
+        return self.construct(context=context, **meta)
 
 
 class Object(Constructor):
@@ -282,7 +301,6 @@ class Object(Constructor):
             names of the arguments that class takes. It combine with
             `kwargs_spec=True`. If spec key is not found then the name of
             argument is set as the key.
-        extra (dict): (optional) Dictionary of extra keyword arguments.
 
     Examples:
         A class that takes spec a single argument named 'foo'.
@@ -319,7 +337,7 @@ class Object(Constructor):
     def __init__(self, cls, args_spec=False, kwargs_spec=False,
                  args_instance=False, kwargs_instance=False,
                  args_spec_name='spec', args_instance_name='instance',
-                 kwargs_spec_mapping=None, extra=None, *args, **kwargs):
+                 kwargs_spec_mapping=None, *args, **kwargs):
         super(Object, self).__init__(*args, **kwargs)
         self.cls = cls
         self.args_spec = args_spec
@@ -337,7 +355,6 @@ class Object(Constructor):
         self.args_spec_name = args_spec_name
         self.args_instance_name = args_instance_name
         self.kwargs_spec_mapping = kwargs_spec_mapping or {}
-        self.extra = extra or {}
 
     def _build_as_args(self, instance, spec):
         kwargs = {}
@@ -354,7 +371,7 @@ class Object(Constructor):
                 'spec must be a \'dict\' if `kwargs_spec` is set as `True`,'
                 ' {!r}.'.format(type(spec)))
             kwargs.update({self.kwargs_spec_mapping.get(k, k): v
-                           for k, v in spec.iteritems()})
+                           for k, v in spec.iteritems() if k != '.meta'})
         if self.kwargs_instance:
             assert isinstance(instance, dict), (
                 'instance must be a \'dict\' if `kwargs_instance` is set as'
@@ -362,19 +379,21 @@ class Object(Constructor):
             kwargs.update(instance)
         return kwargs
 
-    def construct(self, context):
+    def construct(self, context, **meta):
         instance = context.instance
         spec = context.spec
         args = self._build_as_args(instance, spec)
         kwargs = self._build_as_kwargs(instance, spec)
         conflict_keys = []
-        for p, u in itertools.combinations([args, kwargs, self.extra], 2):
+        for p, u in itertools.combinations([args, kwargs, meta], 2):
             conflict_keys.extend(set(p.keys()).intersection(u.keys()))
         if conflict_keys:
             raise ConflictError('Multiple occurences of keys: ({!s})'.format(
                 ','.join(set(conflict_keys))))
         kwargs.update(args)
-        kwargs.update(self.extra)
+        # Pass meta, i.e. the return value of the 'pre_hook' callable as
+        # extra keyword arguments to the class.
+        kwargs.update(meta)
         return self.cls(**kwargs)
 
 
@@ -401,7 +420,7 @@ class Flag(Constructor):
         self.flagname = flagname
         super(Flag, self).__init__(*args, **kwargs)
 
-    def construct(self, context):
+    def construct(self, context, **meta):
         if self.flagname in context.instance:
             msg = 'Key {!r} already exists in the instance'
             raise ConflictError(msg.format(self.flagname))
@@ -415,5 +434,5 @@ class Dummy(Constructor):
     A naive constructor that simply returns the current instance.
     """
 
-    def construct(self, context):
+    def construct(self, context, **meta):
         return context.instance
