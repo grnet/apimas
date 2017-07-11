@@ -50,14 +50,14 @@ class TestDecorators(unittest.TestCase):
         mock_function.assert_not_called
 
         # Case C: A invalid constructor, i.e. 'k'.
-        decorated_func = after(['k'])(mock_function)
+        decorated_func = after(['k'], ignore_missing=False)(mock_function)
         context.constructed.append('y')
         self.assertRaises(InvalidInput, decorated_func,
                           context=context)
         mock_function.assert_not_called
 
         # Case D: Decorated function runs successfully.
-        decorated_func = after(['y'])(mock_function)
+        decorated_func = after(['y', 'k'], ignore_missing=True)(mock_function)
         decorated_func(context=context)
         mock_function.assert_called_once_with(context=context)
 

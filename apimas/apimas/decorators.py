@@ -35,7 +35,7 @@ def conditional(constructors):
     return decorator
 
 
-def after(constructors):
+def after(constructors, ignore_missing=True):
     """
     Defer the construction of the given decorated function until all the
     constuctors given as parameter are finished.
@@ -48,15 +48,16 @@ def after(constructors):
             context = kwargs.get('context')
             constructed = context.constructed
             all_constructors = context.cons_siblings
-
-            missing_cons = set(constructors).difference(all_constructors)
-            if missing_cons:
+            cons_set = set(constructors)
+            missing_cons = cons_set.difference(all_constructors)
+            if missing_cons and not ignore_missing:
                 msg = ('Constructor ({!r}) cannot run because it is'
                        ' dependent on missing constructors ({!r})')
                 raise InvalidInput(
                     msg.format(', '.join(context.loc),
                         ', '.join(missing_cons)))
-            if not all(c in constructed for c in constructors):
+            if not all(c in constructed
+                       for c in cons_set.intersection(all_constructors)):
                 raise DeferConstructor
             return func(*args, **kwargs)
         return wrapper
