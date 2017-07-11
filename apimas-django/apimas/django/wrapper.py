@@ -149,7 +149,7 @@ class DjangoWrapper(object):
     def execute_action(self, action, request, **kwargs):
         apimas_request = self._get_apimas_request(request, **kwargs)
         apimas_response = action.process_request(apimas_request)
-        action.process_response(apimas_response)
+        apimas_response = action.process_response(apimas_response)
         django_response = self.create_native_response(apimas_response)
         return django_response
 

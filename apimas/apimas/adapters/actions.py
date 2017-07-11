@@ -9,11 +9,14 @@ def handle_exception(func):
             return func(*args, **kwargs)
         except:
             if self._error_context is not None:
+                clear_err = self._error_context[-1]
                 response_kwargs = self.handler.handle_error(
-                    *self._error_context)
+                    *self._error_context[:-1])
                 assert response_kwargs is not None, (
                     'Error handler returned a `NoneType` response'
                 )
+                if clear_err:
+                    self._error_context = None
                 return response_kwargs
             # An unexpectedly error occurred.
             raise
@@ -35,7 +38,7 @@ class ApimasAction(object):
         self.context = {
             'store': self._create_context()
         }
-        self._error_context = ()
+        self._error_context = None
 
     def _create_context(self):
         return {
@@ -43,12 +46,14 @@ class ApimasAction(object):
             'orm_type': self.orm_type,
         }
 
-    def _iter_processors(self, processors, *processor_args):
+    def _iter_processors(self, processors, *processor_args, **kwargs):
+        clear_err = kwargs.get('clear_err', False)
         for processor in processors:
             try:
                 processor.process(*processor_args)
             except Exception as e:
-                self._error_context = (processor.name, processor_args, e)
+                self._error_context = (processor.name, processor_args, e,
+                                       clear_err)
                 raise
 
     def get_post_processors(self):
@@ -79,5 +84,5 @@ class ApimasAction(object):
             return response
         # Args for the response processors.
         args = (self.collection, self.url, self.action, self.context)
-        self._iter_processors(self.response_proc, *args)
+        self._iter_processors(self.response_proc, clear_err=True, *args)
         return response
