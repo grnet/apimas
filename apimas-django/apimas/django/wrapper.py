@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from apimas.errors import ConflictError
 
 
-HTTP_REGEX = re.compile(r'^HTTP_+$')
+HTTP_REGEX = re.compile(r'^HTTP_[a-zA-Z]+$')
 CONTENT_TYPE_REGEX = re.compile(r'^CONTENT_TYPE$')
 CONTENT_LENGTH_REGEX = re.compile(r'^CONTENT_LENGTH$')
 
