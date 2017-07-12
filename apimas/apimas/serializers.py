@@ -408,32 +408,29 @@ class Struct(BaseSerializer):
     of fields.
 
     Args:
-        schema (dict): A dictionary of serializers per field.
-        mapper (dict): (optional) Map displayed field names to different
-            internal field names.
+        schema (dict): A dictionary of serializers and internal names
+            per field.
 
     Examples:
         >>> from apimas.serializers import Struct, String, Number
-        >>> schema = {'foo': String(), 'bar': Number()}
-        >>> mapper = {'foo': 'foo_mapped', 'bar': 'bar_mapped'}
-        >>> field = Struct(schema=schema, mapper=mapper)
+        >>> schema = {'foo': (String(), 'foo_bar'),
+        ...           'bar': (Number(), 'bar_mapped')}
+        >>> field = Struct(schema=schema)
         >>> field.deserialize({'foo': 'x', 'bar': 10})
         {'foo_mapped': 'x', 'bar_mapped': 10}
         >>> field.serialize('foo_mapped': 'x', 'bar_mapped': 10})
         {'foo': 'x', 'bar': 10}
     """
 
-    def __init__(self, schema, mapper=None, *args, **kwargs):
+    def __init__(self, schema, *args, **kwargs):
         self.schema = schema
-        self.mapper = mapper or {}
         super(Struct, self).__init__(*args, **kwargs)
 
     def get_repr_value(self, obj):
         if obj is None:
             return obj
         serialized_data = {}
-        for field_name, serializer in self.schema.iteritems():
-            map_to = self.mapper.get(field_name, field_name)
+        for field_name, (serializer, map_to) in self.schema.iteritems():
             value = extract_value(obj, map_to)
             try:
                 ser_value = serializer.serialize(value)
@@ -450,10 +447,9 @@ class Struct(BaseSerializer):
             return value
         deserialized_data = {}
         for k, v in value.iteritems():
-            serializer = self.schema.get(k)
+            serializer, map_to = self.schema.get(k)
             if serializer is None:
                 raise ValidationError('Invalid field {!r}'.format(k))
-            map_to = self.mapper.get(k, k)
             try:
                 value = serializer.deserialize(v)
             except ValidationError as e:
