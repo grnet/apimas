@@ -234,17 +234,23 @@ class Constructor(object):
         pre_hook (callable): (optional) A callable which runs before the
             execution of this constructor. The return value of this callable
             (if any) is passed to the hook of construction.
+        post_hook (callable): (optional) A callable which runs after the
+           execution of this constructor.
     """
     def __init__(self, last=False, after=None, conditionals=None,
-                 pre_hook=None):
+                 pre_hook=None, post_hook=None):
         self.last = last
         self.after = after or []
         self.conditionals = conditionals or []
         self.pre_hook = pre_hook
+        self.post_hook = post_hook
 
         if self.pre_hook:
             assert callable(pre_hook), (
                     "'pre_hook' parameter should be a callable")
+        if self.post_hook:
+            assert callable(post_hook), (
+                    "'post_hook' parameter should be a callable")
         assert not (last and after), ('`last` and `after` are mutually'
                 ' exclusive')
 
@@ -272,7 +278,11 @@ class Constructor(object):
         meta = {}
         if self.pre_hook:
             meta = self.pre_hook(context)
-        return self.construct(context=context, **meta)
+        instance = self.construct(context=context, **meta)
+        if self.post_hook:
+            # Post hook gets the newly created instance and the context.
+            instance = self.post_hook(context, instance)
+        return instance
 
 
 class Object(Constructor):
