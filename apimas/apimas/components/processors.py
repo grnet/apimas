@@ -7,6 +7,18 @@ from apimas.constructors import Flag, Object, Dummy
 from apimas.validators import CerberusValidator
 
 
+def _post_hook(context, instance):
+    # If the parent node is `.array of` constructor, then simply return the
+    # constructed instance. Otherwise, we need to pass the information
+    # regarding the source of the field.
+    if context.parent_name == '.array of=':
+        return instance
+    node = doc.doc_get(context.top_spec, context.loc[:-1])
+    meta = node.get('.meta', {})
+    source = meta.get('source', context.parent_name)
+    return (instance, source)
+
+
 class BaseSerialization(BaseProcessor):
     """
     Base processor used for serialization purposes.
@@ -17,39 +29,48 @@ class BaseSerialization(BaseProcessor):
 
     CONSTRUCTORS = {
         'ref':        Object(srs.Ref, kwargs_spec=True, kwargs_instance=True,
-                             last=True),
+                             last=True, post_hook=_post_hook),
         'serial':     Object(srs.Serial, kwargs_spec=True,
-                             kwargs_instance=True, last=True),
+                             kwargs_instance=True, last=True,
+                             post_hook=_post_hook),
         'integer':    Object(srs.Integer, kwargs_spec=True,
-                             kwargs_instance=True, last=True),
+                             kwargs_instance=True, last=True,
+                             post_hook=_post_hook),
         'float':      Object(srs.Float, kwargs_spec=True, kwargs_instance=True,
-                             last=True),
+                             last=True, post_hook=_post_hook),
         'string':     Object(srs.String, kwargs_spec=True,
-                             kwargs_instance=True, last=True),
+                             kwargs_instance=True, last=True,
+                             post_hook=_post_hook),
         'text':       Object(srs.String, kwargs_spec=True,
-                             kwargs_instance=True, last=True),
+                             kwargs_instance=True, last=True,
+                             post_hook=_post_hook),
         'choices':    Object(srs.Choices, kwargs_spec=True,
-                             kwargs_instance=True, last=True),
+                             kwargs_instance=True, last=True,
+                             post_hook=_post_hook),
         'email':      Object(srs.Email, kwargs_spec=True,
-                             kwargs_instance=True, last=True),
+                             kwargs_instance=True, last=True,
+                             post_hook=_post_hook),
         'boolean':    Object(srs.Boolean, kwargs_spec=True,
-                             kwargs_instance=True, last=True),
+                             kwargs_instance=True, last=True,
+                             post_hook=_post_hook),
         'datetime':   Object(srs.DateTime, kwargs_spec=True,
                              kwargs_instance=True, last=True,
-                             kwargs_spec_mapping={'format': 'date_format'}),
+                             kwargs_spec_mapping={'format': 'date_format'},
+                             post_hook=_post_hook),
         'date':       Object(srs.Date, kwargs_spec=True, kwargs_instance=True,
                              kwargs_spec_mapping={'format': 'date_format'},
-                             last=True),
+                             last=True, post_hook=_post_hook),
         'file':       Object(srs.File, kwargs_spec=True, kwargs_instance=True,
-                             last=True),
+                             last=True, post_hook=_post_hook),
         'identity':   Object(srs.Identity, kwargs_spec=True,
-                             kwargs_instance=True, last=True),
+                             kwargs_instance=True, last=True,
+                             post_hook=_post_hook),
         'struct':     Object(srs.Struct, args_spec=True,
                              args_spec_name='schema', kwargs_instance=True,
-                             last=True),
+                             last=True, post_hook=_post_hook),
         'array of':   Object(srs.List, args_spec=True,
                              args_spec_name='serializer', kwargs_instance=True,
-                             last=True),
+                             last=True, post_hook=_post_hook),
         'readonly':   Flag('readonly'),
         'writeonly':  Flag('writeonly'),
         'default':    Dummy(),
@@ -192,7 +213,7 @@ class CerberusValidation(BaseProcessor):
             raise InvalidSpec(msg.format(self.name))
         schema = self._construct()
 
-        # Remove validators from the field schema in order to attach it
+        # Remove validators from the field schema in order to attach them
         # one level above.
         global_validators = schema.pop('validator', [])
 
