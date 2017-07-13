@@ -93,6 +93,11 @@ class TimeoutError(GenericFault):
     pass
 
 
+class AccessDeniedError(GenericException):
+    """ Access to a particular resource is denied. """
+    pass
+
+
 class AdapterError(GenericException):
     """ A runtime error during construction process of adapter. """
     def __init__(self, message=None, loc=(), *args, **kwargs):
