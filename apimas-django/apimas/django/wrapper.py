@@ -107,8 +107,13 @@ class DjangoWrapper(object):
         if content_type == 'application/json':
             content = json.dumps(content)
         status_code = response.get('meta', {}).get('status_code')
-        return HttpResponse(content=content, content_type=content_type,
-                            status=status_code)
+        headers = response.get('meta', {}).get('headers', {})
+
+        response = HttpResponse(content=content, content_type=content_type,
+                                status=status_code)
+        for k, v in headers.iteritems():
+            response[k] = v
+        return response
 
     def _load_form_data(self, request):
         """
