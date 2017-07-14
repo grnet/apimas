@@ -165,4 +165,9 @@ class DjangoWrapper(object):
         The actual view which is mapped with a url pattern.
         """
         action = self.actions.get(request.method)
-        return self.execute_action(action, request, **kwargs)
+        if action:
+            return self.execute_action(action, request, **kwargs)
+
+        # Return 405 `METHOD_NOT_ALLOWED` if not any action found for the
+        # particular request method.
+        return HttpResponse(status=405)
