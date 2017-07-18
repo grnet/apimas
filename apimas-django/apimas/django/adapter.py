@@ -11,6 +11,7 @@ from apimas.errors import (InvalidInput, ConflictError, AdapterError,
 from apimas.adapters.actions import ApimasAction
 from apimas.django.wrapper import DjangoWrapper
 from apimas.django.testing import TestCase
+from apimas.components.processors import Authentication
 
 
 def _path_to_pattern_set(pattern):
@@ -67,6 +68,7 @@ class DjangoAdapter(object):
             'url': '/',
             'handler': 'apimas.django.handlers.CreateHandler',
             'pre': [
+                'apimas.components.processors.Authentication',
                 'apimas.components.processors.DeSerialization',
                 'apimas.components.processors.CerberusValidation',
             ],
@@ -78,8 +80,12 @@ class DjangoAdapter(object):
         'list': {
             'method': 'GET',
             'url': '/',
+            'pre': [
+                'apimas.components.processors.Authentication',
+            ],
             'handler': 'apimas.django.handlers.ListHandler',
             'post': [
+                'apimas.components.processors.Authentication',
                 'apimas.django.processors.Filtering',
                 'apimas.django.processors.InstanceToDict',
                 'apimas.components.processors.Serialization'
@@ -88,6 +94,9 @@ class DjangoAdapter(object):
         'retrieve': {
             'method': 'GET',
             'url': '/',
+            'pre': [
+                'apimas.components.processors.Authentication',
+            ],
             'handler': 'apimas.django.handlers.RetrieveHandler',
             'post': [
                 'apimas.django.processors.InstanceToDict',
@@ -98,6 +107,7 @@ class DjangoAdapter(object):
             'method': 'PUT',
             'url': '/',
             'pre': [
+                'apimas.components.processors.Authentication',
                 'apimas.components.processors.DeSerialization',
                 'apimas.components.processors.CerberusValidation',
             ],
@@ -112,6 +122,7 @@ class DjangoAdapter(object):
             'method': 'PATCH',
             'url': '/',
             'pre': [
+                'apimas.components.processors.Authentication',
                 'apimas.components.processors.Serialization',
             ],
             'handler': 'apimas.django.handlers.UpdateHandler',
@@ -124,6 +135,9 @@ class DjangoAdapter(object):
         'delete': {
             'method': 'DELETE',
             'url': '/',
+            'pre': [
+                'apimas.components.processors.Authentication',
+            ],
             'handler': 'apimas.django.handlers.DeleteHandler',
         },
     }
@@ -142,8 +156,12 @@ class DjangoAdapter(object):
             'update': self._automated_action('update'),
             'delete': self._automated_action('delete'),
             'actions': self._actions,
+            'auth':   self._auth,
+            'basic': Authentication.CONSTRUCTORS['basic'],
+            'token':   Authentication.CONSTRUCTORS['token'],
         }
         self._action_urls = defaultdict(dict)
+        self._auth_urls = []
 
     def construct(self, spec):
         """
@@ -180,8 +198,10 @@ class DjangoAdapter(object):
             msg = ('Adapter has not constructed the urls yet.'
                    ' Run construct() first.')
             raise AdapterError(msg)
-        return [url for endpoint_urls in self.urls.values()
-                for url in endpoint_urls]
+        urlpatterns = [url for endpoint_urls in self.urls.values()
+                       for url in endpoint_urls]
+        urlpatterns.extend(self._auth_urls)
+        return urlpatterns
 
     def _update_testcase_content(self, matches, pattern_spec, content):
         for row in matches:
@@ -313,6 +333,7 @@ class DjangoAdapter(object):
         if handler is None:
             msg = 'Handler not found for action {!r}'.format(action_name)
             raise InvalidSpec(msg, loc=collection_path.rsplit('/', 1))
+        method = method.upper()
         pre_proc = [proc(collection_path, collection_spec, **meta)
                     for proc in pre_proc]
         post_proc = [proc(collection_path, collection_spec, **meta)
@@ -400,7 +421,7 @@ class DjangoAdapter(object):
         self.views[collection_path] = view
         urlpattern = self._construct_url(
             collection_path, view, action_params['url'], is_collection)
-        method = action_params['method']
+        method = action_params['method'].upper()
         value = doc.doc_get(self._action_urls, (urlpattern, method))
         if value is not None:
             msg = 'Multiple actions found for {url!r} and {method!r} method'
@@ -457,3 +478,35 @@ class DjangoAdapter(object):
             self._construct_action(action_name, action_params, collection_spec,
                                    collection_path, is_collection, meta)
         return context.instance
+
+    def _get_auth_params(self, context):
+        handler = context.spec.get('handler')
+        if handler is None:
+            raise InvalidSpec("'auth_handler' must not be None",
+                              loc=context.loc)
+        handler = utils.import_object(handler)
+
+        auth_method = context.spec.get('auth_method')
+        if auth_method is None:
+            raise InvalidSpec("'auth method' must not be None",
+                              loc=context.loc)
+
+        auth_url = context.spec.get('url')
+        if auth_url is None:
+            raise InvalidSpec("'auth url must not be None'", loc=context.loc)
+        return handler, auth_method, auth_url
+
+    def _auth(self, context):
+        handler, auth, auth_url = self._get_auth_params(context)
+        meta = context.top_spec.get('.meta', {})
+        path = context.parent_name or None
+
+        # We use apimas built-in processor for authentication.
+        apimas_action = ApimasAction(
+            path, url=auth_url, action='auth',
+            handler=handler(path, context.top_spec, auth_method=auth, **meta))
+        django_view = DjangoWrapper({'POST': apimas_action})
+        http_methods = require_http_methods(['POST'])
+        django_view = csrf_exempt(http_methods(django_view))
+        url_pattern = r'^%s/$' % (auth_url.strip('/'))
+        self._auth_urls.append(url(url_pattern, django_view))
