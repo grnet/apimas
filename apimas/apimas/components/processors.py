@@ -1,8 +1,8 @@
 from copy import deepcopy
 from collections import Iterable, Mapping
-from apimas import documents as doc, serializers as srs, utils
+from apimas import documents as doc, serializers as srs, utils, auth
 from apimas.components import BaseProcessor
-from apimas.errors import InvalidSpec, ValidationError
+from apimas.errors import AccessDeniedError, InvalidSpec, ValidationError
 from apimas.constructors import Flag, Object, Dummy
 from apimas.validators import CerberusValidator
 
@@ -293,3 +293,84 @@ class CerberusValidation(BaseProcessor):
         if not isvalid:
             data_errors = validator.errors.pop('data')
             raise ValidationError(data_errors)
+
+
+def _get_verifier(verifier_type):
+    def func(context):
+        meta = context.top_spec.get('.meta', {})
+        verifier = meta.get(verifier_type)
+        if verifier is None:
+            raise InvalidSpec('Verifier is missing.', loc=context.loc)
+        verifier = utils.import_object(verifier)
+        if not callable(verifier):
+            raise InvalidSpec('Verifier must be a callable', loc=context.loc)
+        return {'verifier': verifier}
+    return func
+
+
+def protected(context):
+    return context.spec
+
+
+class Authentication(BaseProcessor):
+    """
+    Processor for performing authentication based on a selected method.
+    """
+    name = 'apimas.components.processors.Authentication'
+
+    READ_KEYS = {
+        'headers': 'request/meta/headers'
+    }
+
+    WRITE_KEYS = (
+        'store/auth/identity',
+    )
+
+    CONSTRUCTORS = {
+        'token':     Object(auth.TokenAuthentication, kwargs_spec=True,
+                            pre_hook=_get_verifier('token_verifier')),
+        'basic':     Object(auth.BasicAuthentication, kwargs_spec=True,
+                            pre_hook=_get_verifier('basic_verifier')),
+        'protected': protected,
+        'default':   Dummy()
+    }
+
+    def __init__(self, collection, spec, **meta):
+        super(Authentication, self).__init__(collection, spec)
+        self.spec.update({'.meta': meta})
+        if spec.get('.protected=') is not None:
+            # Construct an authentication backend only if `.protected=` is
+            # present.
+            self.authentication_backend = self._construct()
+        else:
+            self.authentication_backend = None
+
+    def _construct(self):
+        spec = deepcopy(self.spec)
+        instance = doc.doc_construct(
+            {}, spec, constructors=self.CONSTRUCTORS,
+            allow_constructor_input=False, autoconstruct='default',
+            construct_spec=True)
+        return instance
+
+    def process(self, collection, url, action, context):
+        if self.authentication_backend is None:
+            # If there is not any constructed authentication backend, then
+            # we presume that the collection is not protrected, so we skip
+            # this processor.
+            return
+        data = self.read(context)
+        try:
+            identity = self.authentication_backend.authenticate(
+                data['headers'])
+        except AccessDeniedError:
+            # Provide the appropriate headers, so that handler can read them
+            # later.
+            auth_headers = getattr(self.authentication_backend, 'AUTH_HEADERS',
+                                   None)
+            if auth_headers:
+                response_headers = {'WWW-Authenticate': auth_headers}
+                path = 'response/meta/headers'
+                self.save(context, path, response_headers)
+            raise
+        self.write((identity,), context)
