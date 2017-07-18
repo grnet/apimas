@@ -1,7 +1,9 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Model
 from django.db.models.query import QuerySet
-from apimas.errors import NotFound, InvalidInput, ValidationError
+from apimas import utils
+from apimas.errors import (NotFound, InvalidInput, ValidationError,
+                           AccessDeniedError)
 from apimas.components import BaseHandler
 from apimas.components.processors import DeSerialization
 
@@ -185,6 +187,7 @@ class DjangoBaseHandler(BaseHandler):
                 code and and HTTP content type).
         """
         exceptions = {
+            AccessDeniedError: 401,
             NotFound: 404,
             ValidationError: 400,
             Exception: 500,
@@ -194,6 +197,9 @@ class DjangoBaseHandler(BaseHandler):
             status = 500
         else:
             status = exceptions[type_ex]
+        context = cmp_args[-1]
+        # Check if any processor has provided response headers.
+        headers = self.extract(context, 'response/meta/headers') or {}
         return {
             'content': {
                 'details': ex.message,
@@ -201,6 +207,7 @@ class DjangoBaseHandler(BaseHandler):
             'meta': {
                 'content_type': 'application/json',
                 'status_code': status,
+                'headers': headers,
             }
         }
 
@@ -358,3 +365,72 @@ class DeleteHandler(RetrieveHandler):
             collection, url, action, context_data)
         instance.delete()
         return None
+
+
+class TokenAuthHandler(BaseHandler):
+    """
+    Add handler for generating JWT tokens to authenticated parties.
+    """
+    READ_KEYS = {
+        'headers': 'request/meta/headers',
+    }
+
+    def __init__(self, collection, spec, auth_method,
+                 **meta):
+        super(TokenAuthHandler, self).__init__(collection, spec, **meta)
+
+        secret_key_extractor = meta.get('secret_key')
+        if secret_key_extractor is None:
+            raise InvalidInput('Secret key is missing')
+        secret_key_extractor = utils.import_object(secret_key_extractor)
+        assert callable(secret_key_extractor), 'Secret key must be a callable'
+
+        self.auth_method = auth_method
+
+        user_processor = meta.get('user_processor')
+        if user_processor:
+            self.user_processor = utils.import_object(user_processor)
+            assert callable(self.user_processor), (
+                '"user_processor" must be a callable')
+
+        token_gen = meta.get('token_generator')
+        if token_gen is None:
+            raise InvalidInput('Token generator is required')
+        self.token_gen = utils.import_object(token_gen)
+        assert callable(self.token_gen), ('"token_gen" must be a callable')
+
+    def process(self, collection, url, action, context):
+        """
+        Client is authenticated based on a specific authentication method,
+        specified by `auth_method` and then generates a new JWT token.
+        """
+        context_data = self.read(context)
+        user = self.auth_method.authenticate(context_data['headers'])
+        if self.user_processor:
+            user = self.user_processor(user)
+        content = self.token_gen(user)
+        return {
+            'content': content,
+            'meta': {
+                'content_type': 'application/json',
+                'status_code': 200,
+            }
+        }
+
+    def handle_error(self, component, cmp_args, ex):
+        # This handler maps only `AccessDeniedError` exceptions to status
+        # codes.
+        status_code = 401 if isinstance(ex, AccessDeniedError) else 500
+        return {
+            'content': {
+                'details': ex.message,
+            },
+            'meta': {
+                'content_type': 'application/json',
+                'status_code': status_code,
+                'headers': {
+                    'WWW-Authenticate': getattr(
+                        self.auth_method, 'AUTH_HEADERS', None)
+                },
+            }
+        }
