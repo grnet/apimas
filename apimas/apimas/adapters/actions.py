@@ -70,8 +70,9 @@ class ApimasAction(object):
         try:
             response_kwargs = self.handler.process(*args)
         except Exception as e:
-            self._error_context = (self.handler.name, args, e)
-            response_kwargs = self.handler.handle_error(*self._error_context)
+            self._error_context = (self.handler.name, args, e, False)
+            response_kwargs = self.handler.handle_error(
+                *self._error_context[:-1])
         assert response_kwargs is not None, (
             'handler returned a `None` object')
         return response_kwargs
