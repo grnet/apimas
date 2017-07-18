@@ -25,7 +25,11 @@ class BaseProcessor(object):
     name = 'apimas.components.BaseProcessor'
 
     def __init__(self, collection, spec, **meta):
-        self.collection = normalize_path(collection, right_order=True, max_splits=1)
+        if collection:
+            self.collection = normalize_path(
+                collection, right_order=True, max_splits=1)
+        else:
+            self.collection = collection
         self.spec = deepcopy(spec)
         self.meta = meta
 
@@ -171,14 +175,14 @@ class BaseHandler(BaseProcessor):
     """
     name = 'apimas.components.BaseHandler'
 
-    def handle_error(self, processor, processor_args, ex):
+    def handle_error(self, component, cmp_args, ex):
         """
         Handles any error occcured in handler or processors.
 
         Args:
             component (str): Identifier of handler/processor in which error
                 occured.
-            proc_args (tuple): Args with which handler/processors was called
+            cmp_args (tuple): Args with which handler/processors was called
                  by apimas.
             ex (Exception): Error instance raised by handler of processors.
         """
