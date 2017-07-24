@@ -341,9 +341,9 @@ class Authentication(BaseProcessor):
         if spec.get('.protected=') is not None:
             # Construct an authentication backend only if `.protected=` is
             # present.
-            self.authentication_backend = self._construct()
+            self.auth = self._construct()
         else:
-            self.authentication_backend = None
+            self.auth = None
 
     def _construct(self):
         spec = deepcopy(self.spec)
@@ -354,19 +354,18 @@ class Authentication(BaseProcessor):
         return instance
 
     def process(self, collection, url, action, context):
-        if self.authentication_backend is None:
+        if self.auth is None:
             # If there is not any constructed authentication backend, then
             # we presume that the collection is not protrected, so we skip
             # this processor.
             return
         data = self.read(context)
         try:
-            identity = self.authentication_backend.authenticate(
-                data['headers'])
+            identity = self.auth.authenticate(data['headers'])
         except UnauthorizedError:
             # Provide the appropriate headers, so that handler can read them
             # later.
-            auth_headers = getattr(self.authentication_backend, 'AUTH_HEADERS',
+            auth_headers = getattr(self.auth, 'AUTH_HEADERS',
                                    None)
             if auth_headers:
                 response_headers = {'WWW-Authenticate': auth_headers}
@@ -374,3 +373,28 @@ class Authentication(BaseProcessor):
                 self.save(context, path, response_headers)
             raise
         self.write((identity,), context)
+
+
+class ClientAuthentication(Authentication):
+    READ_KEYS = {
+        'credentials': 'request/meta/credentials'
+    }
+
+    WRITE_KEYS = (
+        'request/meta/headers',
+    )
+
+    CONSTRUCTORS = {
+        'token':     Object(auth.ClientTokenAuthentication, kwargs_spec=True),
+        'basic':     Object(auth.ClientBasicAuthentication, kwargs_spec=True),
+        'protected': protected,
+        'default':   Dummy()
+    }
+
+    def process(self, collection, url, action, context):
+        if self.auth is None:
+            return
+
+        credentials = self.read(context)['credentials']
+        headers = self.auth.attach_to_headers(**credentials)
+        self.write((headers,), context)
