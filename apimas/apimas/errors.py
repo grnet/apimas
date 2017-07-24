@@ -98,6 +98,13 @@ class AccessDeniedError(GenericException):
     pass
 
 
+class UnauthorizedError(GenericException):
+    """
+    A party requests for a particular resource but it cannot be authenticated.
+    """
+    pass
+
+
 class AdapterError(GenericException):
     """ A runtime error during construction process of adapter. """
     def __init__(self, message=None, loc=(), *args, **kwargs):
