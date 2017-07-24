@@ -382,15 +382,17 @@ class ApimasClient(object):
 
 
 class Client(object):
-    def __init__(self, root_url):
+    def __init__(self, root_url, **credentials):
         self.root_url = root_url
         self._session = requests.Session()
+        self.credentials = credentials
 
     def close(self):
         if self._session:
             self._session.close()
 
-    def _request(self, url, method, action, content, params, headers):
+    def _request(self, url, method, action, content, params, headers,
+                 fetch_refs=False):
         content = content or {}
         params = params or {}
         headers = headers or {}
@@ -406,6 +408,8 @@ class Client(object):
                 'data': data,
                 'params': params,
                 'session': self._session,
+                'credentials': self.credentials,
+                'fetch_refs': fetch_refs,
             }
         }
         apimas_response = action.process_request(apimas_request)
