@@ -5,7 +5,8 @@ from requests.compat import urljoin
 from apimas import documents as doc, utils
 from apimas.decorators import last
 from apimas.errors import (
-    AdapterError, ConflictError, InvalidInput, InvalidSpec, NotFound)
+    AccessDeniedError, AdapterError, ConflictError, GenericException,
+    InvalidInput, InvalidSpec, NotFound, UnauthorizedError, ValidationError)
 from apimas.adapters.cookbooks import NaiveAdapter
 from apimas.adapters.actions import extract_from_action, ApimasAction
 from apimas.clients import ApimasClient, TRAILING_SLASH, Client
@@ -217,6 +218,7 @@ class ClientHandler(BaseHandler):
         'headers': 'request/meta/headers',
         'files': 'request/meta/files',
         'params': 'request/meta/params',
+        'fetch_refs': 'request/meta/fetch_refs',
     }
 
     _CONTENT_TYPE_HEADER = 'Content-Type'
@@ -251,12 +253,12 @@ class ClientHandler(BaseHandler):
         request.params = request_context['params']
         return request.prepare()
 
-    def _fetch_ref(self, ref_url, included=None, excluded=None):
+    def _fetch_ref(self, ref_url, headers, included=None, excluded=None):
 
         if ref_url not in self._cache_refs:
-            response = requests.get(ref_url)
-            # FIXME Handle case when ref cannot be retrieved.
-            assert response.status_code == 200
+            response = requests.get(ref_url, headers=headers)
+            msg = 'Resource {!r} cannot be retrieved'
+            self._check_response(response, msg.format(ref_url))
             data = self._json_to_dict(response)
             self._cache_refs[ref_url] = data
         else:
@@ -278,7 +280,7 @@ class ClientHandler(BaseHandler):
             response_data = response.json()
         return response_data
 
-    def fetch_refs(self, response_data):
+    def fetch_refs(self, response_data, headers):
         converted_data = {}
         for field_name, field_spec in self.spec.get('*').iteritems():
             if field_name.startswith('.') or '.writeonly' in field_spec:
@@ -287,14 +289,29 @@ class ClientHandler(BaseHandler):
             value = response_data[field_name]
             if '.ref' in field_spec:
                 kwargs = field_spec.get('.fetch', {})
-                value = self._fetch_ref(value, **kwargs)
+                value = self._fetch_ref(value, headers, **kwargs)
 
             if doc.doc_get(field_spec, ('.array of=', '.ref')):
                 kwargs = field_spec['.array of='].get('.fetch', {})
-                value = [self._fetch_ref(ref, **kwargs) for ref in value]
+                value = [self._fetch_ref(ref, headers, **kwargs)
+                         for ref in value]
 
             converted_data[field_name] = value
         return converted_data
+
+    def _check_response(self, response, message=None):
+        """ Raise appropriate exception based on the returned status code. """
+        # FIXME Add more exceptions.
+        exceptions = {
+            requests.codes.bad_request: ValidationError,
+            requests.codes.unauthorized: UnauthorizedError,
+            requests.codes.forbidden: AccessDeniedError,
+            requests.codes.not_found: NotFound,
+            requests.codes.internal_server_error: GenericException,
+        }
+        ex = exceptions.get(response.status_code)
+        if ex is not None:
+            raise ex(message=message, response=response)
 
     def process(self, collection, url, action, context):
         self._cache_refs = {}
@@ -308,15 +325,17 @@ class ClientHandler(BaseHandler):
 
         prepared_request = self.prepare_request(native_request, handler_data)
         response = session.send(prepared_request)
+        self._check_response(response)
         response_data = self._json_to_dict(response)
 
-        # if `fetch_refs` setting is enabled, then we fetch data from ref
-        # fields.
-        if self.meta.get('fetch_refs') and response.status_code == 200:
+        if handler_data.get('fetch_refs') and (
+                response.status_code == requests.codes.ok):
             if isinstance(response_data, list):
-                response_data = [self.fetch_refs(p) for p in response_data]
+                response_data = [self.fetch_refs(p, native_request.headers)
+                                 for p in response_data]
             else:
-                response_data = self.fetch_refs(response_data)
+                response_data = self.fetch_refs(
+                    response_data, native_request.headers)
         return {
             'content': response_data,
             'native': response,
@@ -339,10 +358,11 @@ def _get_collection_action(action_name, action_content,
                            collection_path, action_url, method):
     url_segments = collection_path + (action_url,)
 
-    def action(self, content=None, params=None, headers=None):
+    def action(self, content=None, params=None, headers=None,
+               fetch_refs=False):
         url = utils.urljoin(self.root_url, *url_segments)
         return self._request(url, method, action_content, content, params,
-                             headers)
+                             headers, fetch_refs)
 
     setattr(action, '__name__', action_name)
     return action
@@ -351,11 +371,12 @@ def _get_collection_action(action_name, action_content,
 def _get_resource_action(action_name, action_content, collection_path,
                          action_url, method):
 
-    def action(self, pk, content=None, params=None, headers=None):
+    def action(self, pk, content=None, params=None, headers=None,
+               fetch_refs=False):
         url_segments = collection_path + (str(pk), action_url)
         url = utils.urljoin(self.root_url, *url_segments)
         return self._request(url, method, action_content, content, params,
-                             headers)
+                             headers, fetch_refs)
 
     setattr(action, '__name__', action_name)
     return action
@@ -376,6 +397,7 @@ class ClientAdapter(object):
             'method': 'GET',
             'url': '/',
             'pre': [
+                'apimas.components.processors.ClientAuthentication'
             ],
             'post': [
             ],
@@ -385,6 +407,7 @@ class ClientAdapter(object):
             'method': 'GET',
             'url': '/',
             'pre': [
+                'apimas.components.processors.ClientAuthentication'
             ],
             'post': [
             ],
@@ -394,6 +417,7 @@ class ClientAdapter(object):
             'method': 'PUT',
             'url': '/',
             'pre': [
+                'apimas.components.processors.ClientAuthentication'
             ],
             'post': [
             ],
@@ -403,6 +427,7 @@ class ClientAdapter(object):
             'method': 'PATCH',
             'url': '/',
             'pre': [
+                'apimas.components.processors.ClientAuthentication'
             ],
             'post': [
             ],
@@ -412,6 +437,7 @@ class ClientAdapter(object):
             'method': 'DELETE',
             'url': '/',
             'pre': [
+                'apimas.components.processors.ClientAuthentication'
             ],
             'post': [
             ],
