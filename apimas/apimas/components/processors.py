@@ -2,7 +2,7 @@ from copy import deepcopy
 from collections import Iterable, Mapping
 from apimas import documents as doc, serializers as srs, utils, auth
 from apimas.components import BaseProcessor
-from apimas.errors import AccessDeniedError, InvalidSpec, ValidationError
+from apimas.errors import UnauthorizedError, InvalidSpec, ValidationError
 from apimas.constructors import Flag, Object, Dummy
 from apimas.validators import CerberusValidator
 
@@ -363,7 +363,7 @@ class Authentication(BaseProcessor):
         try:
             identity = self.authentication_backend.authenticate(
                 data['headers'])
-        except AccessDeniedError:
+        except UnauthorizedError:
             # Provide the appropriate headers, so that handler can read them
             # later.
             auth_headers = getattr(self.authentication_backend, 'AUTH_HEADERS',

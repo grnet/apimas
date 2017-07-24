@@ -1,5 +1,5 @@
 import base64
-from apimas.errors import AccessDeniedError
+from apimas.errors import UnauthorizedError
 
 
 class AuthenticationMethod(object):
@@ -50,23 +50,23 @@ class BasicAuthentication(AuthenticationMethod):
         username, password = self.extract_from_headers(headers)
         user = self.verifier(username, password)
         if user is None:
-            raise AccessDeniedError('Given credentials does not match')
+            raise UnauthorizedError('Given credentials does not match')
         return user
 
     def extract_from_headers(self, headers):
         authorization = headers.get('HTTP_AUTHORIZATION')
         if authorization is None:
-            raise AccessDeniedError('Missing credentials')
+            raise UnauthorizedError('Missing credentials')
         _, match, credentials = authorization.partition('Basic ')
         if not match:
-            raise AccessDeniedError('Invalid credentials')
+            raise UnauthorizedError('Invalid credentials')
         try:
             username, match, password = base64.b64decode(
                 credentials).partition(':')
         except TypeError:
-            raise AccessDeniedError('Invalid credentials')
+            raise UnauthorizedError('Invalid credentials')
         if not match:
-            raise AccessDeniedError('Invalid credentials')
+            raise UnauthorizedError('Invalid credentials')
         return username, password
 
 
@@ -82,14 +82,14 @@ class TokenAuthentication(AuthenticationMethod):
         token = self.extract_from_headers(headers)
         user = self.verifier(token)
         if user is None:
-            raise AccessDeniedError('Given credentials does not match')
+            raise UnauthorizedError('Given credentials does not match')
         return user
 
     def extract_from_headers(self, headers):
         authorization = headers.get('HTTP_AUTHORIZATION')
         if authorization is None:
-            raise AccessDeniedError('Missing token')
+            raise UnauthorizedError('Missing token')
         _, match, token = authorization.partition('Bearer ')
         if not match:
-            raise AccessDeniedError('Invalid token given')
+            raise UnauthorizedError('Invalid token given')
         return token

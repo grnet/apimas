@@ -3,7 +3,7 @@ from django.db.models import Model
 from django.db.models.query import QuerySet
 from apimas import utils
 from apimas.errors import (NotFound, InvalidInput, ValidationError,
-                           AccessDeniedError)
+                           UnauthorizedError)
 from apimas.components import BaseHandler
 from apimas.components.processors import DeSerialization
 
@@ -187,7 +187,7 @@ class DjangoBaseHandler(BaseHandler):
                 code and and HTTP content type).
         """
         exceptions = {
-            AccessDeniedError: 401,
+            UnauthorizedError: 401,
             NotFound: 404,
             ValidationError: 400,
             Exception: 500,
@@ -418,9 +418,9 @@ class TokenAuthHandler(BaseHandler):
         }
 
     def handle_error(self, component, cmp_args, ex):
-        # This handler maps only `AccessDeniedError` exceptions to status
+        # This handler maps only `UnauthorizedError` exceptions to status
         # codes.
-        status_code = 401 if isinstance(ex, AccessDeniedError) else 500
+        status_code = 401 if isinstance(ex, UnauthorizedError) else 500
         return {
             'content': {
                 'details': ex.message,
