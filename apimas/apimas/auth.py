@@ -93,3 +93,25 @@ class TokenAuthentication(AuthenticationMethod):
         if not match:
             raise UnauthorizedError('Invalid token given')
         return token
+
+
+class ClientBasicAuthentication(object):
+    AUTH_HEADERS = 'Basic'
+
+    def attach_to_headers(self, username, password):
+        credentials = '%s:%s' % (username, password)
+        encoded_credentials = base64.b64encode(credentials)
+        auth = '%s %s' % (self.AUTH_HEADERS, encoded_credentials)
+        return {
+            'Authorization': auth,
+        }
+
+
+class ClientTokenAuthentication(object):
+    AUTH_HEADERS = 'Bearer'
+
+    def attach_to_headers(self, token):
+        auth = '%s %s' % (self.AUTH_HEADERS, token)
+        return {
+            'Authorization': auth
+        }
