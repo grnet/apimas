@@ -287,6 +287,8 @@ class ClientHandler(BaseHandler):
                 continue
 
             value = response_data[field_name]
+            if value is None:
+                continue
             if '.ref' in field_spec:
                 kwargs = field_spec.get('.fetch', {})
                 value = self._fetch_ref(value, headers, **kwargs)
@@ -311,6 +313,21 @@ class ClientHandler(BaseHandler):
         }
         ex = exceptions.get(response.status_code)
         if ex is not None:
+            # We construct a dict representing the apimas response and pass it
+            # to the exception.
+            content_type = response.headers.get(self._CONTENT_TYPE_HEADER)
+            response = {
+                'content': (
+                    response.json() if content_type == self._MEDIA_TYPE_JSON
+                    else response.text
+                ),
+                'native': response,
+                'meta': {
+                    'status_code': response.status_code,
+                    'headers': response.headers,
+                    'cookies': response.cookies,
+                }
+            }
             raise ex(message=message, response=response)
 
     def process(self, collection, url, action, context):
