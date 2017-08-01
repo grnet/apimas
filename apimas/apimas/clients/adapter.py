@@ -301,6 +301,17 @@ class ClientHandler(BaseHandler):
             converted_data[field_name] = value
         return converted_data
 
+    def _construct_dict_response(self, response, content):
+        return {
+            'content': content,
+            'native': response,
+            'meta': {
+                'status_code': response.status_code,
+                'headers': response.headers,
+                'cookies': response.cookies,
+            }
+        }
+
     def _check_response(self, response, message=None):
         """ Raise appropriate exception based on the returned status code. """
         # FIXME Add more exceptions.
@@ -316,18 +327,12 @@ class ClientHandler(BaseHandler):
             # We construct a dict representing the apimas response and pass it
             # to the exception.
             content_type = response.headers.get(self._CONTENT_TYPE_HEADER)
-            response = {
-                'content': (
-                    response.json() if content_type == self._MEDIA_TYPE_JSON
-                    else response.text
-                ),
-                'native': response,
-                'meta': {
-                    'status_code': response.status_code,
-                    'headers': response.headers,
-                    'cookies': response.cookies,
-                }
-            }
+            content = (
+                response.json()
+                if content_type == self._MEDIA_TYPE_JSON
+                else response.text
+            )
+            response = self._construct_dict_response(response, content)
             raise ex(message=message, response=response)
 
     def process(self, collection, url, action, context):
@@ -353,15 +358,7 @@ class ClientHandler(BaseHandler):
             else:
                 response_data = self.fetch_refs(
                     response_data, native_request.headers)
-        return {
-            'content': response_data,
-            'native': response,
-            'meta': {
-                'status_code': response.status_code,
-                'headers': response.headers,
-                'cookies': response.cookies,
-            }
-        }
+        return self._construct_dict_response(response, response_data)
 
     def handle_error(self, processor, processor_args, ex):
         raise ex
