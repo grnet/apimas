@@ -396,5 +396,8 @@ class ClientAuthentication(Authentication):
             return
 
         credentials = self.read(context)['credentials']
-        headers = self.auth.attach_to_headers(**credentials)
+        try:
+            headers = self.auth.attach_to_headers(**credentials)
+        except TypeError:
+            raise UnauthorizedError('Missing or invalid credentials')
         self.write((headers,), context)
