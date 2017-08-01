@@ -381,6 +381,8 @@ class Identity(BaseSerializer):
         super(Identity, self).__init__(*args, **kwargs)
 
     def get_repr_value(self, value):
+        if value is None:
+            return value
         if isnumeric(value) or isinstance(value, (str, unicode)):
             return utils.urljoin(self.absolute_url or self.rel_url, str(value))
         try:
