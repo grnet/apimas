@@ -52,7 +52,7 @@ class InstanceToDict(BaseProcessor):
         """
         many = field.many_to_many or field.one_to_many
         source = doc.doc_get(
-            field_spec, ('.field', 'source')) or field.name
+            field_spec, ('.meta', 'source')) or field.name
         if many:
             value = self._extract_many(instance, source)
             if REF in field_spec[ARRAY_OF]:
