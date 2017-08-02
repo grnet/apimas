@@ -69,6 +69,7 @@ class DjangoAdapter(object):
             'handler': 'apimas.django.handlers.CreateHandler',
             'pre': [
                 'apimas.components.processors.Authentication',
+                'apimas.django.processors.UserRetrieval',
                 'apimas.components.processors.DeSerialization',
                 'apimas.components.processors.CerberusValidation',
             ],
@@ -82,6 +83,7 @@ class DjangoAdapter(object):
             'url': '/',
             'pre': [
                 'apimas.components.processors.Authentication',
+                'apimas.django.processors.UserRetrieval',
             ],
             'handler': 'apimas.django.handlers.ListHandler',
             'post': [
@@ -96,6 +98,7 @@ class DjangoAdapter(object):
             'url': '/',
             'pre': [
                 'apimas.components.processors.Authentication',
+                'apimas.django.processors.UserRetrieval',
             ],
             'handler': 'apimas.django.handlers.RetrieveHandler',
             'post': [
@@ -108,6 +111,7 @@ class DjangoAdapter(object):
             'url': '/',
             'pre': [
                 'apimas.components.processors.Authentication',
+                'apimas.django.processors.UserRetrieval',
                 'apimas.components.processors.DeSerialization',
                 'apimas.components.processors.CerberusValidation',
             ],
@@ -123,6 +127,7 @@ class DjangoAdapter(object):
             'url': '/',
             'pre': [
                 'apimas.components.processors.Authentication',
+                'apimas.django.processors.UserRetrieval',
                 'apimas.components.processors.Serialization',
             ],
             'handler': 'apimas.django.handlers.UpdateHandler',
@@ -137,6 +142,7 @@ class DjangoAdapter(object):
             'url': '/',
             'pre': [
                 'apimas.components.processors.Authentication',
+                'apimas.django.processors.UserRetrieval',
             ],
             'handler': 'apimas.django.handlers.DeleteHandler',
         },
