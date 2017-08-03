@@ -1,6 +1,5 @@
 import random
 import re
-from collections import Iterable
 from datetime import datetime, date
 from cerberus import Validator
 from requests.compat import urljoin
@@ -70,8 +69,6 @@ class ApimasValidator(Validator):
     def _validate_type_email(self, value):
         if not isinstance(value, (str, unicode)):
             return False
-        # http://haacked.com/archive/2007/08/21/i-knew-how-to-validate-an-email-address-until-i.aspx/
-        regex = re.compile(r"^(?!\.)(""([^""\r\\]|\\[""\r\\])*""|"
-                           r"([-a-z0-9!#$%&'*+/=?^_`{|}~]|(?<!\.)\.)*)(?<!\.)"
-                           r"@[a-z0-9][\w\.-]*[a-z0-9]\.[a-z][a-z\.]*[a-z]$")
+        regex = re.compile(
+            r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
         return bool(regex.match(value))
