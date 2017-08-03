@@ -1,9 +1,9 @@
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from apimas import utils
-from apimas.errors import (NotFound, InvalidInput, ValidationError,
-                           UnauthorizedError)
+from apimas.django import utils as django_utils
+from apimas.errors import (NotFound, InvalidInput,
+                           ValidationError, UnauthorizedError)
 from apimas.components import BaseHandler
 from apimas.components.processors import DeSerialization
 
@@ -107,7 +107,7 @@ class DjangoBaseHandler(BaseHandler):
         return data, many
 
 
-    def get_resource(self, orm_model, resource_id):
+    def get_resource(self, orm_model, resource_id, context):
         """
         Get model instance based on the given resource id.
 
@@ -119,11 +119,10 @@ class DjangoBaseHandler(BaseHandler):
         Raises:
             NotFound: A model instance with the given id cannot be found.
         """
-        try:
-            return orm_model.objects.get(pk=resource_id)
-        except (ObjectDoesNotExist, ValueError, TypeError):
-            msg = 'Resource with ID {pk!r} not found'
-            raise NotFound(msg.format(pk=str(resource_id)))
+        instance = context.get('instance')
+        if not instance:
+            instance = django_utils.get_instance(orm_model, resource_id)
+        return instance
 
     def read_context(self, context):
         """
@@ -300,6 +299,10 @@ class RetrieveHandler(DjangoBaseHandler):
     name = 'apimas.django.handlers.RetrieveHandler'
 
     STATUS_CODE = 200
+    READ_KEYS = {
+        'instance': 'store/instance',
+    }
+    READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     CONTENT_TYPE = 'application/json'
     REQUIRED_KEYS = {
         'model',
@@ -313,13 +316,17 @@ class RetrieveHandler(DjangoBaseHandler):
         """
         model = context_data['model']
         pk = context_data['pk']
-        return self.get_resource(model, pk)
+        return self.get_resource(model, pk, context_data)
 
 
 class UpdateHandler(CreateHandler):
     name = 'apimas.django.handlers.UpdateHandler'
 
     STATUS_CODE = 200
+    READ_KEYS = {
+        'instance': 'store/instance',
+    }
+    READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     CONTENT_TYPE = 'application/json'
     REQUIRED_KEYS = {
         'model',
@@ -340,7 +347,7 @@ class UpdateHandler(CreateHandler):
         model = context_data['model']
         pk = context_data['pk']
         data = context_data['data']
-        instance = self.get_resource(model, pk)
+        instance = self.get_resource(model, pk, context_data)
         data, many = self._parse_ref(model, data)
         instance = self._update_obj(instance, data)
         if many:
@@ -353,6 +360,10 @@ class DeleteHandler(RetrieveHandler):
     name = 'apimas.django.handlers.DeleteHandler'
 
     STATUS_CODE = 204
+    READ_KEYS = {
+        'instance': 'store/instance',
+    }
+    READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     CONTENT_TYPE = None
     REQUIRED_KEYS = {
         'model',
