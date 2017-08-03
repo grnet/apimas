@@ -2,7 +2,7 @@ from django.db.models import Model
 from django.db.models.query import QuerySet
 from apimas import utils
 from apimas.django import utils as django_utils
-from apimas.errors import (NotFound, InvalidInput,
+from apimas.errors import (AccessDeniedError, NotFound, InvalidInput,
                            ValidationError, UnauthorizedError)
 from apimas.components import BaseHandler
 from apimas.components.processors import DeSerialization
@@ -186,9 +186,10 @@ class DjangoBaseHandler(BaseHandler):
                 code and and HTTP content type).
         """
         exceptions = {
-            UnauthorizedError: 401,
-            NotFound: 404,
             ValidationError: 400,
+            UnauthorizedError: 401,
+            AccessDeniedError: 403,
+            NotFound: 404,
             Exception: 500,
         }
         type_ex = type(ex)
