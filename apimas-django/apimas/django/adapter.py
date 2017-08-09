@@ -306,13 +306,13 @@ class DjangoAdapter(object):
                 self._get_action_params(action_params))
         if method is None:
             msg = 'URL not found for action {!r}'.format(action_name)
-            raise InvalidSpec(msg, loc=collection_path.split('/'))
+            raise InvalidSpec(msg, loc=collection_path.rsplit('/', 1))
         if action_url is None:
             msg = 'HTTP method not found for action {!r}'.format(action_name)
-            raise InvalidSpec(msg, loc=collection_path.split('/'))
+            raise InvalidSpec(msg, loc=collection_path.rsplit('/', 1))
         if handler is None:
             msg = 'Handler not found for action {!r}'.format(action_name)
-            raise InvalidSpec(msg, loc=collection_path.split('/'))
+            raise InvalidSpec(msg, loc=collection_path.rsplit('/', 1))
         pre_proc = [proc(collection_path, collection_spec, **meta)
                     for proc in pre_proc]
         post_proc = [proc(collection_path, collection_spec, **meta)
@@ -379,7 +379,7 @@ class DjangoAdapter(object):
             'method': action_spec['method'],
             'iscollection': is_collection
         }
-        endpoint, collection = collection_path.split('/')
+        endpoint, collection = collection_path.rsplit('/', 1)
 
         def wrapper(func):
             def method(self):

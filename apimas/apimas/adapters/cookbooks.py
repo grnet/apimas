@@ -144,7 +144,7 @@ class NaiveAdapter(Adapter):
         if not ref:
             raise InvalidSpec(
                 'You have to specify `to` parameter', loc=context.loc)
-        segments = ref.split('/')
+        segments = ref.rsplit('/', 1)
         if len(segments) != 2:
             msg = ('Reference target {!r} cannot be understood'
                    'Must be of the form: <endpoint>/<collection>.')

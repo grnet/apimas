@@ -96,7 +96,7 @@ def get_content_and_type(context, instances):
     """
     # Create random data based on the spec.
     gen = DjangoRequestGenerator(
-        doc.doc_get(context.spec, tuple(context.collection.split('/'))),
+        doc.doc_get(context.spec, tuple(context.collection.rsplit('/', 1))),
         instances=instances, **context.spec.get('.meta', {}))
     data = gen.construct()
     if any(isinstance(v, (file, InMemoryUploadedFile))
