@@ -72,14 +72,19 @@ def topological_sort(adj):
     return top_sort
 
 
-def normalize_path(path):
+def normalize_path(path, sep='/', right_order=False, max_splits=None):
     """
     Converts a string representing a path to a tuple of segments.
 
     Example: 'foo/bar' -> ('foo', 'bar')
     """
     if isinstance(path, str):
-        return tuple(path.split('/'))
+        args = (sep,) if max_splits is None else (sep, max_splits)
+        return tuple((
+            path.rsplit(*args)
+            if right_order
+            else path.split(*args)
+        ))
     assert isinstance(path, (list, tuple))
     return tuple(path)
 
