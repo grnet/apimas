@@ -1,3 +1,4 @@
+import numbers
 import re
 from collections import Iterable, Mapping
 from datetime import date, datetime
@@ -10,7 +11,7 @@ _SKIP = object()
 
 
 def isnumeric(value):
-    return isinstance(value, (int, float)) or (
+    return isinstance(value, numbers.Number) or (
             isinstance(value, (str, unicode)) and value.isdigit())
 
 
