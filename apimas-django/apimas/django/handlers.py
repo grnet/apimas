@@ -200,10 +200,14 @@ class DjangoBaseHandler(BaseHandler):
         context = cmp_args[-1]
         # Check if any processor has provided response headers.
         headers = self.extract(context, 'response/meta/headers') or {}
+        details = getattr(ex, 'kwargs', {}).get('details')
+        content = (
+            details
+            if details
+            else {'details': ex.message}
+        )
         return {
-            'content': {
-                'details': ex.message,
-            },
+            'content': content,
             'meta': {
                 'content_type': 'application/json',
                 'status_code': status,
