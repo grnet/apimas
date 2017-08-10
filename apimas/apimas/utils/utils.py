@@ -1,5 +1,6 @@
 import importlib
 from urlparse import urljoin as urlparse_urljoin
+from apimas import documents as doc
 
 
 def import_object(obj_path):
@@ -96,3 +97,52 @@ def urljoin(*urls):
     for ufs in urls:
         url = urlparse_urljoin(url, ufs.strip(slash)).strip(slash) + slash
     return url
+
+
+def _doc_keys(path, val):
+    str_path = '/'.join(path)
+    return [str_path + '/' + k for k in doc_get_keys(val)]
+
+
+def _list_keys(path, val):
+    keys = []
+    for value in val:
+        if isinstance(value, dict):
+            keys.extend(_doc_keys(path, value))
+    return keys
+
+
+def doc_get_keys(data):
+    """
+    Gets the set of keys from a documents.
+
+    This method also checks documents inside a list.
+    """
+    keys = []
+    for path, val in doc.doc_iter(data):
+        if not path:
+            continue
+        if isinstance(val, list):
+            keys.extend(_list_keys(path, val))
+        elif isinstance(val, dict):
+            keys.extend(_doc_keys(path, val))
+        else:
+            keys.append('/'.join(path))
+    return set(keys)
+
+
+def paths_to_dict(paths):
+    """
+    Converts a list of paths into a dict.
+
+    Example:
+        >>> paths = ['a', 'b/c']
+        >>> paths_to_dict(paths)
+        {'a': {}, 'b': {'c': {}}}
+    """
+    return doc.doc_from_ns(
+        {
+            path: {}
+            for path in paths
+        }
+    )
