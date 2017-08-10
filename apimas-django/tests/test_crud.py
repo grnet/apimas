@@ -12,9 +12,23 @@ TEST_MODELS = [
     'tests.models.OneToOneModel',
 ]
 
+# Permission rules: Free for all for testing reasons.
+def _get_rules():
+    return [
+        ('*', '*', '*', '*', '*')
+    ]
+
 
 generator = SpecGenerator(endpoint='foo')
 SPEC = generator.generate(TEST_MODELS)
+# Add permission rules
+SPEC.update(
+    {
+        '.meta': {
+            'get_rules': 'tests.test_crud._get_rules'
+        }
+    }
+)
 
 # Override settings so that the ROOT_URLCONF is the current module.
 settings.ROOT_URLCONF = __name__

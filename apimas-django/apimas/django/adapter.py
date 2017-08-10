@@ -70,6 +70,7 @@ class DjangoAdapter(object):
             'pre': [
                 'apimas.components.processors.Authentication',
                 'apimas.django.processors.UserRetrieval',
+                'apimas.django.processors.Permissions',
                 'apimas.components.processors.DeSerialization',
                 'apimas.components.processors.CerberusValidation',
             ],
@@ -84,10 +85,10 @@ class DjangoAdapter(object):
             'pre': [
                 'apimas.components.processors.Authentication',
                 'apimas.django.processors.UserRetrieval',
+                'apimas.django.processors.Permissions',
             ],
             'handler': 'apimas.django.handlers.ListHandler',
             'post': [
-                'apimas.components.processors.Authentication',
                 'apimas.django.processors.Filtering',
                 'apimas.django.processors.InstanceToDict',
                 'apimas.components.processors.Serialization'
@@ -99,6 +100,7 @@ class DjangoAdapter(object):
             'pre': [
                 'apimas.components.processors.Authentication',
                 'apimas.django.processors.UserRetrieval',
+                'apimas.django.processors.Permissions',
             ],
             'handler': 'apimas.django.handlers.RetrieveHandler',
             'post': [
@@ -112,6 +114,7 @@ class DjangoAdapter(object):
             'pre': [
                 'apimas.components.processors.Authentication',
                 'apimas.django.processors.UserRetrieval',
+                'apimas.django.processors.Permissions',
                 'apimas.components.processors.DeSerialization',
                 'apimas.components.processors.CerberusValidation',
             ],
@@ -128,6 +131,7 @@ class DjangoAdapter(object):
             'pre': [
                 'apimas.components.processors.Authentication',
                 'apimas.django.processors.UserRetrieval',
+                'apimas.django.processors.Permissions',
                 'apimas.components.processors.Serialization',
             ],
             'handler': 'apimas.django.handlers.UpdateHandler',
@@ -143,6 +147,7 @@ class DjangoAdapter(object):
             'pre': [
                 'apimas.components.processors.Authentication',
                 'apimas.django.processors.UserRetrieval',
+                'apimas.django.processors.Permissions',
             ],
             'handler': 'apimas.django.handlers.DeleteHandler',
         },

@@ -3,8 +3,10 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db.models  import Model
 from django.db.models.query import QuerySet
 from apimas import documents as doc, utils
-from apimas.errors import ConflictError, InvalidInput, InvalidSpec
+from apimas.errors import (AccessDeniedError, ConflictError, InvalidInput,
+                           InvalidSpec)
 from apimas.components import BaseProcessor
+from apimas.tabmatch import Tabmatch
 from apimas.django import utils as django_utils
 from apimas.serializers import Date, DateTime, Integer, Float, Boolean, List
 from apimas.constructors import Dummy, Object
@@ -20,7 +22,8 @@ class InstanceToDict(BaseProcessor):
 
     READ_KEYS = {
         'instance': 'response/content',
-        'model': 'store/orm_model'
+        'model': 'store/orm_model',
+        'allowed_fields': 'store/permissions/allowed_fields',
     }
 
     WRITE_KEYS = (
@@ -451,3 +454,236 @@ class ObjectRetrieval(BaseProcessor):
 
         instance = django_utils.get_instance(model, resource_id)
         self.write((instance,), context)
+
+
+def _get_allowed_fields(matches, action, data):
+    """
+    Checks which fields are allowed to be modified or viewed based on
+    matches.
+
+    There are two possible scenarios:
+        * If request data includes any fields that are not in the list of
+          allowed, then an error is raised.
+        * Otherwise, it returns the list of allowed fields for later use.
+    """
+    allowed_keys = {row.field for row in matches}
+    data_fields = utils.doc_get_keys(data)
+    allowed_keys = set()
+    for row in matches:
+        if isinstance(row.field, doc.AnyPattern):
+            return doc.ANY
+        allowed_keys.add(row.field)
+    not_allowed_fields = set(data_fields).difference(allowed_keys)
+    if not_allowed_fields:
+        details = {
+            field: 'You do not have permission to write this field'
+            for field in not_allowed_fields
+        }
+        raise AccessDeniedError(details=details)
+    return allowed_keys
+
+
+def _default_rules():
+    return []
+
+
+class Permissions(BaseProcessor):
+    """
+    This processor handles the permissions in a django application.
+
+    Permissions are expressed with a set of rules. Each rule consists of:
+
+        - `collection`: The name of the collection to which the rule is
+          applied.
+        - `action`: The name of the action for which the rule is valid.
+        - `role`: The role of the user (entity who performs the request)
+          who is authorized to make request calls.
+        - `field`: The set of fields that are allowed to be handled in this
+          request (either for writing or retrieval).
+        - `state`: The state of the collection which **must** be valid when
+          the request is performed.
+
+    When a request is performed, we know about the collection, action, role,
+    and field columns. This processor provides hooks to check the validity of
+    the last column, i.e. `state`.
+
+    Specifically, states are matched if calling a class method on the model
+    associated with the request returns true. There is a different method for
+    checking a state for collection (e.g. list, create, etc) versus resource
+    requests. The names and signatures of the methods are as follows:
+
+    Also, this processor saves which fields are allowed to be modified or
+    viewed inside request context for later use from other processors.
+
+    >>> class MyModel(models.Model):
+    ...     @classmethod
+    ...     def check_collection_state_<state name>(cls, row):
+    ...         # your code. Return True or False.
+    ...
+    ...     @classmethod
+    ...     def check_resource_state_<state name>(cls, instance, row):
+    ...         # your code. Return True or False.
+    """
+    name = 'apimas.django.processors.Permissions'
+
+    READ_KEYS = {
+        'user': 'store/auth/user',
+        'model': 'store/orm_model',
+        'instance': 'store/instance',
+        'content': 'request/content',
+    }
+
+    WRITE_KEYS = (
+        'store/permissions/allowed_fields',
+    )
+
+    _REQUIRED_KEYS = {
+        'store/orm_model',
+    }
+
+    COLUMNS = ('collection', 'action', 'role', 'field', 'state')
+
+    ANONYMOUS_ROLES = ['anonymous']
+
+    _OBJECT_CHECK_PREFIX = 'check_resource_state_'
+    _COLLECTION_CHECK_PREFIX = 'check_collection_state_'
+
+    def __init__(self, collection, collection_spec, get_rules=None, **meta):
+        super(Permissions, self).__init__(collection, collection_spec, **meta)
+        if get_rules is not None:
+            self.get_rules = utils.import_object(get_rules)
+        else:
+            self.get_rules = _default_rules
+
+    def _parse_rules(self, rules):
+        """
+        Parse given rules and construct the appropriate segment patterns.
+
+        Example:
+            '*' => doc.ANY
+        """
+        parsed_rules = []
+        for rule in rules:
+            nu_columns = len(self.COLUMNS)
+            if len(rule) != nu_columns:
+                msg = ('Rules must consist of {!s} columns. An invalid rule'
+                       ' found ({!r})')
+                raise InvalidInput(msg.format(nu_columns, ','.join(rule)))
+            parsed_rules.append([doc.parse_pattern(segment)
+                                for segment in rule])
+        return parsed_rules
+
+    def _init_rules(self):
+        rules = self.get_rules()
+        if not rules:
+            raise InvalidInput(
+                'Processor {!r} requires a set of rules'.format(self.name))
+
+        rules = self._parse_rules(rules)
+        tab_rules = Tabmatch(self.COLUMNS)
+        tab_rules.update(
+            map((lambda x: tab_rules.Row(*x)), rules))
+        return tab_rules
+
+    def _get_pattern_set(self, collection, action, user):
+        """
+        Get all patterns set from request's context.
+
+        Specifically, get groups to which user belongs, and action of request.
+        """
+        if user is None:
+            roles = self.ANONYMOUS_ROLES
+        else:
+            roles = getattr(user, 'apimas_roles', None)
+            assert roles is not None, (
+                'Cannot find propety `apimas_roles` on `user` object')
+        return [[collection], [action], roles, [doc.ANY], [doc.ANY]]
+
+    def check_state_conditions(self, matches, model, instance=None):
+        """
+        For the states that match to the pattern sets, this function checks
+        which states are statisfied.
+
+        Subsequently, it returns a dictionary which maps each state with
+        its satisfiability (`True` or `False`).
+        """
+        state_conditions = {}
+        for row in matches:
+            # Initialize all states as False.
+            state_conditions[row.state] = False
+            if isinstance(row.state, doc.AnyPattern):
+                state_conditions[row.state] = True
+                continue
+
+            # Avoid re-evaluation of state conditions.
+            if row.state in state_conditions:
+                continue
+            prefix = (
+                self._OBJECT_CHECK_PREFIX
+                if instance is not None
+                else self._COLLECTION_CHECK_PREFIX
+            )
+            method_name = prefix + row.state
+            method = getattr(model, method_name, None)
+            if callable(method):
+                kwargs = {'row': row}
+                access_ok = (
+                    method(instance, **kwargs)
+                    if instance is not None
+                    else method(**kwargs)
+                )
+                state_conditions[row.state] = access_ok
+        return state_conditions
+
+    def _get_processor_data(self, context):
+        """ Extracts the required keys from request context. """
+        context_data = {}
+        for stored_key, path in self.READ_KEYS.iteritems():
+            value = self.extract(context, path)
+            if not value and path in self._REQUIRED_KEYS:
+                msg = 'Processor {!r} requires path {!r}, nothing found'
+                raise InvalidInput(msg.format(self.name, path))
+            context_data[stored_key] = value
+        return context_data
+
+    def process(self, collection, action, url, context):
+        """
+        The steps followed by this processor to determine if there is any
+        matching rule are:
+
+        1) Get and parse all permission rules.
+        2) Get matches for the first three columns, i.e.
+           collection, action, role. If there is not any match, then raise
+           an error.
+        3) Check which states are valid, and retrieve a subset of matches (
+           those matches which meet the valid states). If there is not such
+           subset, then raise an error.
+        4) Check which fields are allowed to be modified and viewed and modify
+           context properly.
+        """
+        context_data = self._get_processor_data(context)
+        rules = self._init_rules()
+        pattern_set = self._get_pattern_set(collection, action,
+                                            context_data['user'])
+        expand_columns = {'field', 'state'}
+        matches = list(rules.multimatch(pattern_set, expand=expand_columns))
+        if not matches:
+            raise AccessDeniedError(
+                'You do not have permission to do this action')
+
+        # We check which matching states are valid, and then we get the
+        # subset of rules which match the valid states. If the is subset is
+        # empty, then the permissions is not granted.
+        instance = context_data['instance']
+        state_conditions = self.check_state_conditions(
+            matches, context_data['model'], instance=instance)
+        matches = filter((lambda x: state_conditions[x.state]), matches)
+        if not matches:
+            raise AccessDeniedError(
+                'You do not have permission to do this action')
+
+        # As a final step, we save in context the list of fields that allowed
+        # to be serialized or deserialized.
+        allowed_fields = _get_allowed_fields(
+            matches, action, context_data['content'])
+        self.write((allowed_fields,), context)
