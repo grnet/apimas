@@ -100,17 +100,67 @@ class BaseSerialization(BaseProcessor):
             construct_spec=True)
         return instance
 
-    def get_serializer(self, data):
+    def _update_nested_serializers(self, allowed_fields, serializer_info):
+        """
+        Helper function to update and filter nested serializers in case of
+        structural fields.
+        """
+        serializer, map_to = serializer_info
+        if isinstance(serializer, srs.List):
+            serializer = serializer.serializer
+        assert isinstance(serializer, srs.Struct), (
+            'Unexpected Error: You declared field {!r} in your permission'
+            ' rules as a structural one, but the field is not a compound one.')
+        allowed_serializers = self._get_serializers(
+            allowed_fields, serializers=serializer.schema)
+        serializer.schema = allowed_serializers
+        return (serializer, map_to)
+
+    def _get_serializers(self, allowed_fields, serializers=None):
+        """
+        This method gets a subset of constructed serializers.
+
+        Actually, this method gets only serializers which are responsible for
+        handling the allowed fields defined in the context of request.
+        """
+        serializers = serializers or self.serializers
+        if allowed_fields is doc.ANY:
+            return serializers
+        allowed_fields = utils.paths_to_dict(allowed_fields)
+        allowed_serializers = {}
+        for k, v in allowed_fields.iteritems():
+            serializer_info = serializers.get(k)
+            assert serializer_info is not None, (
+                'Unexpected error: Not any serializer found for field {!r}.'
+                ' Perhaps, there is a typo in permission rules or'
+                ' specification.'.format(k))
+            if not v:
+                # We reach at the end of hierarchy so we add serializer to our
+                # list
+                allowed_serializers[k] = serializer_info
+                continue
+
+            # At this point, we presume that we have nested serializers,
+            # i.e. `.struct`, or an array of structs.
+            allowed_serializers[k] = self._update_nested_serializers(
+                v.keys(), serializer_info)
+        return allowed_serializers
+
+    def get_serializer(self, data, allowed_fields):
+        if allowed_fields is not None:
+            serializers = self._get_serializers(allowed_fields)
+        else:
+            serializers = self.serializers
         if isinstance(data, Iterable) and not isinstance(data, Mapping):
-            return srs.List(srs.Struct(self.serializers))
-        return srs.Struct(self.serializers)
+            return srs.List(srs.Struct(serializers))
+        return srs.Struct(serializers)
 
     def perform_serialization(self, context_data):
         raise NotImplementedError(
             'perform_serialization() must be implemented')
 
     def process(self, collection, url, action, context):
-        """
+        """i
         Reads data which we want to serialize from context, it performs
         serialization on them and finally it saves output to context.
         """
@@ -128,6 +178,7 @@ class DeSerialization(BaseSerialization):
 
     READ_KEYS = {
         'data': 'request/content',
+        'allowed_fields': 'store/permissions/allowed_fields',
     }
 
     WRITE_KEYS = {
@@ -138,7 +189,8 @@ class DeSerialization(BaseSerialization):
         data = context_data['data']
         if data is None:
             return None
-        serializer = self.get_serializer(data)
+        allowed_fields = context_data['allowed_fields']
+        serializer = self.get_serializer(data, allowed_fields)
         return {'data': serializer.deserialize(data)}
 
 
@@ -150,6 +202,7 @@ class Serialization(BaseSerialization):
 
     READ_KEYS = {
         'data': 'response/content',
+        'allowed_fields': 'store/permissions/allowed_fields',
     }
 
     WRITE_KEYS = {
@@ -160,7 +213,8 @@ class Serialization(BaseSerialization):
         data = context_data['data']
         if data is None:
             return None
-        serializer = self.get_serializer(data)
+        allowed_fields = context_data['allowed_fields']
+        serializer = self.get_serializer(data, allowed_fields)
         return {'data': serializer.serialize(data)}
 
 
