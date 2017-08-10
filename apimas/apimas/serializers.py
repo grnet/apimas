@@ -116,6 +116,16 @@ class String(BaseSerializer):
         return self._get_value(value)
 
 
+class UUID(BaseSerializer):
+
+    def get_repr_value(self, value):
+        return str(value)
+
+    def get_native_value(self, value):
+        raise NotImplementedError('deserialize() is not meaningful for'
+                                  ' \'UUID\' field')
+
+
 class Email(String):
     # http://bit.ly/RVerWq
     EMAIL_REGEX = re.compile(

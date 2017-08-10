@@ -41,6 +41,8 @@ class BaseSerialization(BaseProcessor):
         'string':     Object(srs.String, kwargs_spec=True,
                              kwargs_instance=True, last=True,
                              post_hook=_post_hook),
+        'uuid':       Object(srs.UUID, kwargs_instance=True, last=True,
+                             post_hook=_post_hook),
         'text':       Object(srs.String, kwargs_spec=True,
                              kwargs_instance=True, last=True,
                              post_hook=_post_hook),
