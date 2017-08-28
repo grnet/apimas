@@ -36,3 +36,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Client side data validation between two consecutive calls.
 
 [0.3]: https://github.com/grnet/apimas/tree/0.3
+[0.3.1]: https://github.com/grnet/apimas/tree/0.3.1
