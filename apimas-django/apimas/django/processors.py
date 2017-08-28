@@ -419,7 +419,7 @@ class UserRetrieval(BaseProcessor):
     def process(self, collection, url, action, context):
         context_data = self.read(context)
         identity = context_data.get('identity')
-        if not identity or self.userid_extractor:
+        if not identity or not self.userid_extractor:
             user_id = None
         else:
             user_id = self.userid_extractor(identity)
@@ -576,8 +576,8 @@ class Permissions(BaseProcessor):
     def _init_rules(self):
         rules = self.get_rules()
         if not rules:
-            raise InvalidInput(
-                'Processor {!r} requires a set of rules'.format(self.name))
+            raise AccessDeniedError(
+                'You do not have permisssion to do this action')
 
         rules = self._parse_rules(rules)
         tab_rules = Tabmatch(self.COLUMNS)
@@ -599,7 +599,8 @@ class Permissions(BaseProcessor):
                 'Cannot find propety `apimas_roles` on `user` object')
         return [[collection], [action], roles, [doc.ANY], [doc.ANY]]
 
-    def check_state_conditions(self, matches, model, instance=None):
+    def check_state_conditions(self, matches, model, context,
+                               instance=None):
         """
         For the states that match to the pattern sets, this function checks
         which states are statisfied.
@@ -610,7 +611,6 @@ class Permissions(BaseProcessor):
         state_conditions = {}
         for row in matches:
             # Initialize all states as False.
-            state_conditions[row.state] = False
             if isinstance(row.state, doc.AnyPattern):
                 state_conditions[row.state] = True
                 continue
@@ -618,6 +618,7 @@ class Permissions(BaseProcessor):
             # Avoid re-evaluation of state conditions.
             if row.state in state_conditions:
                 continue
+            state_conditions[row.state] = False
             prefix = (
                 self._OBJECT_CHECK_PREFIX
                 if instance is not None
@@ -626,7 +627,7 @@ class Permissions(BaseProcessor):
             method_name = prefix + row.state
             method = getattr(model, method_name, None)
             if callable(method):
-                kwargs = {'row': row}
+                kwargs = {'row': row, 'context': context}
                 access_ok = (
                     method(instance, **kwargs)
                     if instance is not None
@@ -676,7 +677,7 @@ class Permissions(BaseProcessor):
         # empty, then the permissions is not granted.
         instance = context_data['instance']
         state_conditions = self.check_state_conditions(
-            matches, context_data['model'], instance=instance)
+            matches, context_data['model'], context, instance=instance)
         matches = filter((lambda x: state_conditions[x.state]), matches)
         if not matches:
             raise AccessDeniedError(
