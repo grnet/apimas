@@ -70,7 +70,6 @@ class DjangoAdapter(object):
             'pre': [
                 'apimas.components.processors.Authentication',
                 'apimas.django.processors.UserRetrieval',
-                'apimas.django.processors.ObjectRetrieval',
                 'apimas.django.processors.Permissions',
                 'apimas.components.processors.DeSerialization',
                 'apimas.components.processors.CerberusValidation',
