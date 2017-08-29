@@ -456,6 +456,31 @@ class ObjectRetrieval(BaseProcessor):
         self.write((instance,), context)
 
 
+def _default_rules():
+    return []
+
+
+def _to_dict(segments, v):
+    if len(segments) == 0:
+        return v
+    return {segments[0]: _to_dict(segments[1:], v)}
+
+
+def _strip_fields(fields):
+    """
+    Keep the most generic field definition.
+
+    Example:
+    ['foo/bar', 'foo'] => ['foo']
+    """
+    stripped_fields = {}
+    for path in sorted(
+            fields,
+            cmp=lambda x, y: cmp(len(y.split('/')), len(x.split('/')))):
+        stripped_fields.update(_to_dict(path.split('/'), {}))
+    return doc.doc_to_ns(stripped_fields).keys()
+
+
 def _get_allowed_fields(matches, action, data):
     """
     Checks which fields are allowed to be modified or viewed based on
@@ -480,11 +505,7 @@ def _get_allowed_fields(matches, action, data):
             for field in not_allowed_fields
         }
         raise AccessDeniedError(details=details)
-    return allowed_keys
-
-
-def _default_rules():
-    return []
+    return _strip_fields(allowed_keys)
 
 
 class Permissions(BaseProcessor):
