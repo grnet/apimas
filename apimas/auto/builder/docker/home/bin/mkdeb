@@ -141,11 +141,12 @@ export DIST="${debian_dist}"
 export DEBFULLNAME="GRNET Development Team"
 export DEBEMAIL="team@dev.grnet.gr"
 
-sed -ie "s/AUTOVERSION/${full_version}-${debian_dist_tag}/" debian/changelog
+dch --distribution "${debian_dist}" --force-distribution \
+	-v "${full_version}-${debian_dist_tag}" "New upstream"
 
 debuild -b -us -uc
 cd - > /dev/null
 
 if [ -n "${output_dir}" ]; then
-    cp -v "${build_dir}"/*.deb "${output_dir}"
+    rsync -a ${build_dir}/ "${output_dir}" --exclude "${orig_name}"
 fi
