@@ -116,17 +116,25 @@ class DjangoRestAdapter(NaiveAdapter):
             }
         },
         '.date': {
-            'format': {
+            'input_formats': {
                 'default': ['%Y-%m-%d'],
                 'map': 'input_formats',
-            }
+            },
+            'format': {
+                'default': '%Y-%m-%d',
+                'map': 'format',
+            },
         },
         '.datetime': {
-            'format': {
-                'default': ['%Y-%m-%dT%H:%M:%S'],
+            'input_formats': {
+                'default': ['%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S.%fZ'],
                 'map': 'input_formats',
-            }
-        }
+            },
+            'format': {
+                'default': '%Y-%m-%dT%H:%M:%S.%fZ',
+                'map': 'format',
+            },
+        },
     }
 
     PROPERTY_MAPPING = {
