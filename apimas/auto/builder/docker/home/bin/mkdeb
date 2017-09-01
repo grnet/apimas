@@ -3,7 +3,7 @@
 set -e
 
 help () {
-    echo "Usage: ${0} [-hr] <commit>" 
+    echo "Usage: ${0} [-hr] <commit>"
     echo 'Build a debian package from a git project.'
     echo ''
     echo 'Options:'
