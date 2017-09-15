@@ -62,7 +62,13 @@ class DjangoWrapper(object):
             dict: Dictionary with body of the request.
         """
         content_type = self.get_content_type(request)
-        if content_type == 'application/json':
+        content_type_parts = []
+
+        for part in content_type.split(';'):
+            if part.strip():
+                content_type_parts.append(part)
+
+        if 'application/json' in content_type_parts:
             if not request.body:
                 return {}
             body_unicode = request.body.decode(settings.DEFAULT_CHARSET)
