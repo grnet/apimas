@@ -61,7 +61,7 @@ class DjangoWrapper(object):
         Returns:
             dict: Dictionary with body of the request.
         """
-        content_type = self.get_content_type(request)
+        content_type = self.get_content_type(request, '')
         content_type_parts = []
 
         for part in content_type.split(';'):
@@ -87,12 +87,12 @@ class DjangoWrapper(object):
         """ Get query parameters of the Django request object. """
         return request.GET
 
-    def get_content_type(self, request):
+    def get_content_type(self, request, default=None):
         """
         Get the content type of the request based on the corresponding HTTP
         header.
         """
-        return request.META.get('CONTENT_TYPE')
+        return request.META.get('CONTENT_TYPE', default)
 
     def create_native_response(self, response):
         """
