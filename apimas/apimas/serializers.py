@@ -1,4 +1,5 @@
 import numbers
+import uuid
 import re
 from collections import Iterable, Mapping
 from datetime import date, datetime
@@ -117,7 +118,6 @@ class String(BaseSerializer):
 
 
 class UUID(BaseSerializer):
-
     def get_repr_value(self, value):
         return str(value)
 
@@ -383,14 +383,17 @@ class Identity(BaseSerializer):
     def get_repr_value(self, value):
         if value is None:
             return value
-        if isnumeric(value) or isinstance(value, (str, unicode)):
+        if isnumeric(value) \
+            or isinstance(value, (str, unicode)) \
+            or isinstance(value, uuid.UUID):
             return utils.urljoin(self.absolute_url or self.rel_url, str(value))
         try:
             return self.get_repr_value(
                 extract_value(value, 'pk'))
         except AttributeError:
             raise ValidationError(
-                'Cannot construct identity URL for the given value')
+                'Cannot construct identity URL for the given value: {}'.format(
+                    value))
 
     def get_native_value(self, value):
         raise NotImplementedError(
