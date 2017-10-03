@@ -1,6 +1,7 @@
 import numbers
 import uuid
 import re
+import types
 from collections import Iterable, Mapping
 from datetime import date, datetime
 from urlparse import urlparse
@@ -59,10 +60,11 @@ class BaseSerializer(object):
             value from a given object during serialization.
     """
     def __init__(self, default=None, readonly=False, writeonly=False,
-                 extractor=None, *args, **kwargs):
+                 extractor=None, nullable=False, *args, **kwargs):
         assert not (readonly and writeonly), (
             '`readonly` and `writeonly` properties are mutually exclusive')
         self.default = default
+        self.nullable = nullable
         self.readonly = readonly
         self.writeonly = writeonly
         if extractor:
@@ -105,9 +107,14 @@ class BaseSerializer(object):
 
 class String(BaseSerializer):
     def _get_value(self, value):
-        if not isinstance(value, (str, unicode)):
+        valid_types = (str, unicode)
+        if self.nullable:
+            valid_types += (types.NoneType,)
+
+        if not isinstance(value, valid_types):
             msg = ('Field is not of type \'string\'. {type!r} found instead.')
             raise ValidationError(msg.format(type=type(value)))
+
         return value
 
     def get_repr_value(self, value):

@@ -75,6 +75,7 @@ class BaseSerialization(BaseProcessor):
                              last=True, post_hook=_post_hook),
         'readonly':   Flag('readonly'),
         'writeonly':  Flag('writeonly'),
+        'nullable':   Flag('nullable'),
         'default':    Dummy(),
     }
 
