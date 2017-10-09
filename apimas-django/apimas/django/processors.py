@@ -562,7 +562,7 @@ class Permissions(BaseProcessor):
         'store/orm_model',
     }
 
-    COLUMNS = ('collection', 'action', 'role', 'field', 'state')
+    COLUMNS = ('collection', 'action', 'role', 'field', 'state', 'comment')
 
     ANONYMOUS_ROLES = ['anonymous']
 
@@ -618,7 +618,14 @@ class Permissions(BaseProcessor):
             roles = getattr(user, 'apimas_roles', None)
             assert roles is not None, (
                 'Cannot find propety `apimas_roles` on `user` object')
-        return [[collection], [action], roles, [doc.ANY], [doc.ANY]]
+        return [
+                [collection],
+                [action],
+                roles,
+                [doc.ANY],
+                [doc.ANY],
+                [doc.ANY],
+        ]
 
     def check_state_conditions(self, matches, model, context,
                                instance=None):
