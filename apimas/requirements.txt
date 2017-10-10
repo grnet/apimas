@@ -2,3 +2,4 @@ cerberus
 click
 pyyaml
 requests
+faker
