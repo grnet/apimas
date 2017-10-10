@@ -675,7 +675,7 @@ class Permissions(BaseProcessor):
             context_data[stored_key] = value
         return context_data
 
-    def process(self, collection, action, url, context):
+    def process(self, collection, url, action, context):
         """
         The steps followed by this processor to determine if there is any
         matching rule are:

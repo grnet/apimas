@@ -26,7 +26,7 @@ def handle_exception(func):
 
 
 class ApimasAction(object):
-    def __init__(self, collection, action, url, handler, request_proc=None,
+    def __init__(self, collection, url, action, handler, request_proc=None,
                  response_proc=None, orm_model=None, orm_type=None):
         assert bool(orm_model) == bool(orm_type)
         self.collection = collection
