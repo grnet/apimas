@@ -1,7 +1,12 @@
 from copy import deepcopy
+from collections import namedtuple
 from apimas.errors import InvalidInput
 from apimas.documents import doc_set, doc_get
 from apimas.utils import normalize_path
+
+
+ProcessorConstruction = namedtuple(
+    "ProcessorConstruction", ["constructors", "processor"])
 
 
 class BaseProcessor(object):
@@ -23,15 +28,6 @@ class BaseProcessor(object):
     """
 
     name = 'apimas.components.BaseProcessor'
-
-    def __init__(self, collection, spec, **meta):
-        if collection:
-            self.collection = normalize_path(
-                collection, right_order=True, max_splits=1)
-        else:
-            self.collection = collection
-        self.spec = deepcopy(spec)
-        self.meta = meta
 
     def extract(self, context, path):
         """

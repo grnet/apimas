@@ -5,11 +5,12 @@ from django.db.models.query import QuerySet
 from apimas import documents as doc, utils
 from apimas.errors import (AccessDeniedError, ConflictError, InvalidInput,
                            InvalidSpec)
-from apimas.components import BaseProcessor
+from apimas.components import BaseProcessor, ProcessorConstruction
 from apimas.tabmatch import Tabmatch
 from apimas.django import utils as django_utils
 from apimas.serializers import Date, DateTime, Integer, Float, Boolean, List
 from apimas.constructors import Dummy, Object
+import docular
 
 
 REF = '.ref'
@@ -17,7 +18,37 @@ STRUCT = '.struct='
 ARRAY_OF = '.array of='
 
 
-class InstanceToDict(BaseProcessor):
+def no_constructor(instance):
+    pass
+
+
+def copy_fields_constructor(instance):
+    docular.doc_spec_set(instance,
+                         dict(docular.doc_spec_iter(instance['fields'])))
+
+def construct_field(instance, loc):
+    source = docular.doc_spec_get(instance.get('source', {}),
+                                  default=loc[-1])
+    v = {'source': source}
+    docular.doc_spec_set(instance, v)
+
+
+def construct_collection(instance, loc, context):
+    docular.construct_last(context)
+    source = docular.doc_spec_get(instance.get('source', {}),
+                                  default=loc[-1])
+    fields = dict(docular.doc_spec_iter_values(instance['fields']))
+    v = {'source': source, 'fields': fields}
+    docular.doc_spec_set(instance, v)
+
+
+INSTANCETODICT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
+    {'.field.*': construct_field,
+     '.field.collection.django': construct_collection},
+    default=no_constructor)
+
+
+class InstanceToDictProcessor(BaseProcessor):
     name = 'apimas.django.processors.InstanceToDict'
 
     READ_KEYS = {
@@ -30,52 +61,54 @@ class InstanceToDict(BaseProcessor):
         'response/content',
     )
 
-    def _extract_many(self, instance, field_name):
-        """
-        Extracts the value of a many to many or one to many django model
-        relation.
-        """
-        try:
-            return getattr(instance, field_name).all()
-        except AttributeError:
-            return getattr(instance, field_name + '_set').all()
+    def __init__(self, spec):
+        self.spec = spec  ### tentative
 
-    def _extract_rel_id(self, instance, field_name):
-        """
-        Extracts the id of a one to one or many to one django model
-        relation.
-        """
-        try:
-            return getattr(instance, field_name + '_id')
-        except AttributeError:
-            return getattr(instance, field_name)
+    # def _extract_many(self, instance, field_name):
+    #     """
+    #     Extracts the value of a many to many or one to many django model
+    #     relation.
+    #     """
+    #     try:
+    #         return getattr(instance, field_name).all()
+    #     except AttributeError:
+    #         return getattr(instance, field_name + '_set').all()
 
-    def _extract_rel(self, orm_model, instance, field, field_spec):
-        """
-        Helper function to get the python native format of a django
-        related field.
-        """
-        many = field.many_to_many or field.one_to_many
-        source = doc.doc_get(
-            field_spec, ('.meta', 'source')) or field.name
-        if many:
-            value = self._extract_many(instance, source)
-            if REF in field_spec[ARRAY_OF]:
-                return [getattr(v, 'pk') for v in value]
-            return [
-                self.to_dict(
-                    field.related_model, v,
-                    field_spec[ARRAY_OF][STRUCT]
-                ) for v in value
-            ]
-        if not hasattr(instance, field.name):
-            return None
-        if REF in field_spec:
-            return self._extract_rel_id(instance, field.name)
-        return self.to_dict(field.related_model, getattr(instance, source),
-                            field_spec['.struct='])
+    # def _extract_rel_id(self, instance, field_name):
+    #     """
+    #     Extracts the id of a one to one or many to one django model
+    #     relation.
+    #     """
+    #     try:
+    #         return getattr(instance, field_name + '_id')
+    #     except AttributeError:
+    #         return getattr(instance, field_name)
 
-    def to_dict(self, orm_model, instance, spec=None):
+    # def _extract_rel(self, orm_model, instance, field, field_spec):
+    #     """
+    #     Helper function to get the python native format of a django
+    #     related field.
+    #     """
+    #     many = field.many_to_many or field.one_to_many
+    #     source = docular.doc_spec_get(field_spec['source']) or field.name
+    #     if many:
+    #         value = self._extract_many(instance, source)
+    #         if REF in field_spec[ARRAY_OF]:
+    #             return [getattr(v, 'pk') for v in value]
+    #         return [
+    #             self.to_dict(
+    #                 field.related_model, v,
+    #                 field_spec[ARRAY_OF][STRUCT]
+    #             ) for v in value
+    #         ]
+    #     if not hasattr(instance, field.name):
+    #         return None
+    #     if REF in field_spec:
+    #         return self._extract_rel_id(instance, field.name)
+    #     return self.to_dict(field.related_model, getattr(instance, source),
+    #                         field_spec['.struct='])
+
+    def to_dict(self, orm_model, instance, spec):
         """
         Constructs a given model instance a python dict.
 
@@ -92,25 +125,31 @@ class InstanceToDict(BaseProcessor):
         """
         if instance is None:
             return None
-        spec_properties = spec or self.spec.get('*')
+
         data = {}
-        for k, v in spec_properties.iteritems():
-            # Ignore predicates.
-            if k.startswith('.'):
-                continue
-            source = doc.doc_get(v, ('.meta', 'source')) or k
-            try:
-                field = orm_model._meta.get_field(source)
-                if field.related_model is None:
-                    value = getattr(instance, field.name)
-                else:
-                    value = self._extract_rel(orm_model, instance, field,
-                                              v)
-            except FieldDoesNotExist:
-                # If instance does not have any field with that name, then
-                # check if there is any property-like.
-                value = getattr(instance, source)
-            data[source] = value
+        for k, v in spec.iteritems():
+            source = v['source'] if v else k
+            fields = v.get('fields') if v else None
+            value = getattr(instance, source)
+            if fields:
+                subvalues = value.all()
+                value = [self.to_dict(orm_model, subvalue, spec=fields)
+                         for subvalue in subvalues]
+
+            # try:
+            #     field = orm_model._meta.get_field(source)
+            #     print k, field.related_model
+            #     if field.related_model is None:
+            #         value = getattr(instance, field.name)
+            #     else:
+            #         value = self._extract_rel(orm_model, instance, field,
+            #                                   v)
+            # except FieldDoesNotExist:
+            #     # If instance does not have any field with that name, then
+            #     # check if there is any property-like.
+            #     value = getattr(instance, source)
+            #     print "GOT VALUE", value, "from source", source
+            data[k] = value
         return data
 
     def process(self, collection, url, action, context):
@@ -132,12 +171,17 @@ class InstanceToDict(BaseProcessor):
             msg = 'A model instance or a queryset is expected. {!r} found.'
             raise InvalidInput(msg.format(type(instance)))
         model = processor_data['model']
+        spec = self.spec['fields']
         if isinstance(instance, Model):
             instance = None if instance is None else self.to_dict(
-                model, instance)
+                model, instance, spec)
         else:
-            instance = [self.to_dict(model, inst) for inst in instance]
+            instance = [self.to_dict(model, inst, spec) for inst in instance]
         self.write((instance,), context)
+
+
+InstanceToDict = ProcessorConstruction(
+    INSTANCETODICT_CONSTRUCTORS, InstanceToDictProcessor)
 
 
 def _get_filter_spec(params):
@@ -508,7 +552,18 @@ def _get_allowed_fields(matches, action, data):
     return _strip_fields(allowed_keys)
 
 
-class Permissions(BaseProcessor):
+def get_rules_constructor(instance, loc, top_spec):
+    value = docular.doc_spec_get(
+        docular.doc_inherit2(top_spec, loc, ('.meta', 'get_rules')))
+    docular.doc_spec_set(instance, value)
+
+
+PERMISSIONS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
+    {'.field.collection.django': get_rules_constructor},
+    default=no_constructor)
+
+
+class PermissionsProcessor(BaseProcessor):
     """
     This processor handles the permissions in a django application.
 
@@ -569,8 +624,7 @@ class Permissions(BaseProcessor):
     _OBJECT_CHECK_PREFIX = 'check_resource_state_'
     _COLLECTION_CHECK_PREFIX = 'check_collection_state_'
 
-    def __init__(self, collection, collection_spec, get_rules=None, **meta):
-        super(Permissions, self).__init__(collection, collection_spec, **meta)
+    def __init__(self, get_rules):
         if get_rules is not None:
             self.get_rules = utils.import_object(get_rules)
         else:
@@ -716,3 +770,7 @@ class Permissions(BaseProcessor):
         allowed_fields = _get_allowed_fields(
             matches, action, context_data['content'])
         self.write((allowed_fields,), context)
+
+
+Permissions = ProcessorConstruction(
+    PERMISSIONS_CONSTRUCTORS, PermissionsProcessor)

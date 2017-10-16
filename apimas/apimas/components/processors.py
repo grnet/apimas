@@ -1,10 +1,11 @@
 from copy import deepcopy
 from collections import Iterable, Mapping
 from apimas import documents as doc, serializers as srs, utils, auth
-from apimas.components import BaseProcessor
+from apimas.components import BaseProcessor, ProcessorConstruction
 from apimas.errors import UnauthorizedError, InvalidSpec, ValidationError
 from apimas.constructors import Flag, Object, Dummy
 from apimas.validators import CerberusValidator
+import docular
 
 
 def _post_hook(context, instance):
@@ -19,6 +20,124 @@ def _post_hook(context, instance):
     return (instance, source)
 
 
+def serializer_obj(cls):
+    def constructor(context, instance, loc):
+        docular.construct_last(context)
+        predicate = context['predicate']
+
+        kwargs = dict(docular.doc_spec_iter_values(instance))
+
+        pred_instance = instance[predicate]
+        pred_kwargs = dict(docular.doc_spec_iter_values(pred_instance)) \
+                      if pred_instance else {}
+        kwargs.update(pred_kwargs)
+        serializer = cls(**kwargs)
+        value = {'serializer': serializer, 'map_to': loc[-1]}
+        docular.doc_spec_set(instance, value)
+    return constructor
+
+
+def cerberus_flag(flag):
+    def constructor(instance):
+        value = docular.doc_spec_get(instance, default={})
+        value[flag] = True
+        docular.doc_spec_set(instance, value)
+    return constructor
+
+
+def no_constructor(instance):
+    pass
+
+
+def construct_string(instance, loc):
+    if '=' not in instance:
+        #print "No string value at", loc
+        pass
+    else:
+        instance['='] = str(instance['='])
+
+
+def struct_constructor(context, instance, loc):
+    docular.construct_last(context)
+    predicate = context['predicate']
+
+    kwargs = dict(docular.doc_spec_iter(instance))
+
+    pred_instance = instance[predicate]
+    pred_kwargs = dict(docular.doc_spec_iter_values(pred_instance)) \
+                  if pred_instance else {}
+    kwargs.update(pred_kwargs)
+    v = dict(docular.doc_spec_iter_values(instance['fields']))
+    serializer = srs.Struct(v, **kwargs)
+    value = {'serializer': serializer, 'map_to': loc[-1]}
+    docular.doc_spec_set(instance, value)
+
+
+SERIALIZATION_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
+    '.field.collection.django': struct_constructor,
+    '.field.*': no_constructor,
+    '.field.string': serializer_obj(srs.String),
+    '.field.serial': serializer_obj(srs.Serial),
+    '.field.identity': serializer_obj(srs.Identity),
+    '.flag.*': no_constructor,
+    '.flag.readonly': cerberus_flag('readonly'),
+    '.meta': no_constructor,
+    '.string': construct_string,
+}, default=no_constructor)
+
+    # _CONSTRUCTORS = {
+    #     'ref':        Object(srs.Ref, kwargs_spec=True, kwargs_instance=True,
+    #                          last=True, post_hook=_post_hook),
+    #     'serial':     Object(srs.Serial, kwargs_spec=True,
+    #                          kwargs_instance=True, last=True,
+    #                          post_hook=_post_hook),
+    #     'integer':    Object(srs.Integer, kwargs_spec=True,
+    #                          kwargs_instance=True, last=True,
+    #                          post_hook=_post_hook),
+    #     'float':      Object(srs.Float, kwargs_spec=True, kwargs_instance=True,
+    #                          last=True, post_hook=_post_hook),
+    #     'string':     Object(srs.String, kwargs_spec=True,
+    #                          kwargs_instance=True, last=True,
+    #                          post_hook=_post_hook),
+    #     'uuid':       Object(srs.UUID, kwargs_instance=True, last=True,
+    #                          post_hook=_post_hook),
+    #     'text':       Object(srs.String, kwargs_spec=True,
+    #                          kwargs_instance=True, last=True,
+    #                          post_hook=_post_hook),
+    #     'choices':    Object(srs.Choices, kwargs_spec=True,
+    #                          kwargs_instance=True, last=True,
+    #                          post_hook=_post_hook),
+    #     'email':      Object(srs.Email, kwargs_spec=True,
+    #                          kwargs_instance=True, last=True,
+    #                          post_hook=_post_hook),
+    #     'boolean':    Object(srs.Boolean, kwargs_spec=True,
+    #                          kwargs_instance=True, last=True,
+    #                          post_hook=_post_hook),
+    #     'datetime':   Object(srs.DateTime, kwargs_spec=True,
+    #                          kwargs_instance=True, last=True,
+    #                          kwargs_spec_mapping={'format': 'date_format'},
+    #                          post_hook=_post_hook),
+    #     'date':       Object(srs.Date, kwargs_spec=True, kwargs_instance=True,
+    #                          kwargs_spec_mapping={'format': 'date_format'},
+    #                          last=True, post_hook=_post_hook),
+    #     'file':       Object(srs.File, kwargs_spec=True, kwargs_instance=True,
+    #                          last=True, post_hook=_post_hook),
+    #     'identity':   Object(srs.Identity, kwargs_spec=True,
+    #                          kwargs_instance=True, last=True,
+    #                          post_hook=_post_hook),
+    #     'struct':     Object(srs.Struct, args_spec=True,
+    #                          args_spec_name='schema', kwargs_instance=True,
+    #                          last=True, post_hook=_post_hook),
+    #     'array of':   Object(srs.List, args_spec=True,
+    #                          args_spec_name='serializer', kwargs_instance=True,
+    #                          last=True, post_hook=_post_hook),
+    #     'readonly':   Flag('readonly'),
+    #     'writeonly':  Flag('writeonly'),
+    #     'nullable':   Flag('nullable'),
+    #     'default':    Dummy(),
+    # }
+
+
 class BaseSerialization(BaseProcessor):
     """
     Base processor used for serialization purposes.
@@ -26,135 +145,64 @@ class BaseSerialization(BaseProcessor):
     It uses the Serializer classes provided by apimas and reads from
     specification to construct them accordingly.
     """
+    def __init__(self, serializer_dict):
+        self.serializer_dict = serializer_dict
 
-    CONSTRUCTORS = {
-        'ref':        Object(srs.Ref, kwargs_spec=True, kwargs_instance=True,
-                             last=True, post_hook=_post_hook),
-        'serial':     Object(srs.Serial, kwargs_spec=True,
-                             kwargs_instance=True, last=True,
-                             post_hook=_post_hook),
-        'integer':    Object(srs.Integer, kwargs_spec=True,
-                             kwargs_instance=True, last=True,
-                             post_hook=_post_hook),
-        'float':      Object(srs.Float, kwargs_spec=True, kwargs_instance=True,
-                             last=True, post_hook=_post_hook),
-        'string':     Object(srs.String, kwargs_spec=True,
-                             kwargs_instance=True, last=True,
-                             post_hook=_post_hook),
-        'uuid':       Object(srs.UUID, kwargs_instance=True, last=True,
-                             post_hook=_post_hook),
-        'text':       Object(srs.String, kwargs_spec=True,
-                             kwargs_instance=True, last=True,
-                             post_hook=_post_hook),
-        'choices':    Object(srs.Choices, kwargs_spec=True,
-                             kwargs_instance=True, last=True,
-                             post_hook=_post_hook),
-        'email':      Object(srs.Email, kwargs_spec=True,
-                             kwargs_instance=True, last=True,
-                             post_hook=_post_hook),
-        'boolean':    Object(srs.Boolean, kwargs_spec=True,
-                             kwargs_instance=True, last=True,
-                             post_hook=_post_hook),
-        'datetime':   Object(srs.DateTime, kwargs_spec=True,
-                             kwargs_instance=True, last=True,
-                             kwargs_spec_mapping={'format': 'date_format'},
-                             post_hook=_post_hook),
-        'date':       Object(srs.Date, kwargs_spec=True, kwargs_instance=True,
-                             kwargs_spec_mapping={'format': 'date_format'},
-                             last=True, post_hook=_post_hook),
-        'file':       Object(srs.File, kwargs_spec=True, kwargs_instance=True,
-                             last=True, post_hook=_post_hook),
-        'identity':   Object(srs.Identity, kwargs_spec=True,
-                             kwargs_instance=True, last=True,
-                             post_hook=_post_hook),
-        'struct':     Object(srs.Struct, args_spec=True,
-                             args_spec_name='schema', kwargs_instance=True,
-                             last=True, post_hook=_post_hook),
-        'array of':   Object(srs.List, args_spec=True,
-                             args_spec_name='serializer', kwargs_instance=True,
-                             last=True, post_hook=_post_hook),
-        'readonly':   Flag('readonly'),
-        'writeonly':  Flag('writeonly'),
-        'nullable':   Flag('nullable'),
-        'default':    Dummy(),
-    }
+    # def _update_nested_serializers(self, allowed_fields, serializer_info):
+    #     """
+    #     Helper function to update and filter nested serializers in case of
+    #     structural fields.
+    #     """
+    #     serializer, map_to = serializer_info
+    #     if isinstance(serializer, srs.List):
+    #         serializer = serializer.serializer
+    #     assert isinstance(serializer, srs.Struct), (
+    #         'Unexpected Error: You declared field {!r} in your permission'
+    #         ' rules as a structural one, but the field is not a compound one.')
+    #     allowed_serializers = self._get_serializers(
+    #         allowed_fields, serializers=serializer.schema)
+    #     serializer.schema = allowed_serializers
+    #     return {'serializer': serializer, 'map_to': map_to}
 
-    def __init__(self, collection, spec, **meta):
-        super(BaseSerialization, self).__init__(collection, spec, **meta)
-        self.spec = self.spec.get('*')
-        if self.spec is None:
-            msg = 'Processor {!r}: Node \'*\' of given spec is empty'
-            raise InvalidSpec(msg.format(self.name))
+    # def _get_serializers(self, allowed_fields, serializers=None):
+    #     """
+    #     This method gets a subset of constructed serializers.
 
-        self.root_url = self.meta.get('root_url')
-        self.serializers = self._construct()
+    #     Actually, this method gets only serializers which are responsible for
+    #     handling the allowed fields defined in the context of request.
+    #     """
+    #     serializers = serializers or self.serializers
+    #     if allowed_fields is doc.ANY:
+    #         return serializers
+    #     allowed_fields = utils.paths_to_dict(allowed_fields)
+    #     allowed_serializers = {}
+    #     for k, v in allowed_fields.iteritems():
+    #         serializer_info = serializers.get(k)
+    #         assert serializer_info is not None, (
+    #             'Unexpected error: Not any serializer found for field {!r}.'
+    #             ' Perhaps, there is a typo in permission rules or'
+    #             ' specification.'.format(k))
+    #         if not v:
+    #             # We reach at the end of hierarchy so we add serializer to our
+    #             # list
+    #             allowed_serializers[k] = serializer_info
+    #             continue
 
-    def _construct(self):
-        spec = deepcopy(self.spec)
-        ref_paths = doc.doc_search(spec, '.ref')
-        for ref_path in ref_paths:
-            ref_spec = doc.doc_get(spec, ref_path)
-            ref_spec.update({'root_url': self.root_url})
-        instance = doc.doc_construct(
-            {}, spec, constructors=self.CONSTRUCTORS,
-            allow_constructor_input=False, autoconstruct='default',
-            construct_spec=True)
-        return instance
-
-    def _update_nested_serializers(self, allowed_fields, serializer_info):
-        """
-        Helper function to update and filter nested serializers in case of
-        structural fields.
-        """
-        serializer, map_to = serializer_info
-        if isinstance(serializer, srs.List):
-            serializer = serializer.serializer
-        assert isinstance(serializer, srs.Struct), (
-            'Unexpected Error: You declared field {!r} in your permission'
-            ' rules as a structural one, but the field is not a compound one.')
-        allowed_serializers = self._get_serializers(
-            allowed_fields, serializers=serializer.schema)
-        serializer.schema = allowed_serializers
-        return (serializer, map_to)
-
-    def _get_serializers(self, allowed_fields, serializers=None):
-        """
-        This method gets a subset of constructed serializers.
-
-        Actually, this method gets only serializers which are responsible for
-        handling the allowed fields defined in the context of request.
-        """
-        serializers = serializers or self.serializers
-        if allowed_fields is doc.ANY:
-            return serializers
-        allowed_fields = utils.paths_to_dict(allowed_fields)
-        allowed_serializers = {}
-        for k, v in allowed_fields.iteritems():
-            serializer_info = serializers.get(k)
-            assert serializer_info is not None, (
-                'Unexpected error: Not any serializer found for field {!r}.'
-                ' Perhaps, there is a typo in permission rules or'
-                ' specification.'.format(k))
-            if not v:
-                # We reach at the end of hierarchy so we add serializer to our
-                # list
-                allowed_serializers[k] = serializer_info
-                continue
-
-            # At this point, we presume that we have nested serializers,
-            # i.e. `.struct`, or an array of structs.
-            allowed_serializers[k] = self._update_nested_serializers(
-                v.keys(), serializer_info)
-        return allowed_serializers
+    #         # At this point, we presume that we have nested serializers,
+    #         # i.e. `.struct`, or an array of structs.
+    #         allowed_serializers[k] = self._update_nested_serializers(
+    #             v.keys(), serializer_info)
+    #     return allowed_serializers
 
     def get_serializer(self, data, allowed_fields):
-        if allowed_fields is not None:
-            serializers = self._get_serializers(allowed_fields)
-        else:
-            serializers = self.serializers
+        # if allowed_fields is not None:
+        #     serializers = self._get_serializers(allowed_fields)
+        # else:
+
+        serializer = self.serializer_dict['serializer']
         if isinstance(data, Iterable) and not isinstance(data, Mapping):
-            return srs.List(srs.Struct(serializers))
-        return srs.Struct(serializers)
+            return srs.List(serializer)
+        return serializer
 
     def perform_serialization(self, context_data):
         raise NotImplementedError(
@@ -171,7 +219,7 @@ class BaseSerialization(BaseProcessor):
             self.write(output, context)
 
 
-class DeSerialization(BaseSerialization):
+class DeSerializationProcessor(BaseSerialization):
     """
     Processor responsible for the deserialization of data.
     """
@@ -179,6 +227,7 @@ class DeSerialization(BaseSerialization):
 
     READ_KEYS = {
         'data': 'request/content',
+        'meta': 'request/meta',
         'allowed_fields': 'store/permissions/allowed_fields',
     }
 
@@ -192,10 +241,15 @@ class DeSerialization(BaseSerialization):
             return None
         allowed_fields = context_data['allowed_fields']
         serializer = self.get_serializer(data, allowed_fields)
-        return {'data': serializer.deserialize(data)}
+        meta = context_data['meta']
+        return {'data': serializer.deserialize(data, meta)}
 
 
-class Serialization(BaseSerialization):
+DeSerialization = ProcessorConstruction(
+    SERIALIZATION_CONSTRUCTORS, DeSerializationProcessor)
+
+
+class SerializationProcessor(BaseSerialization):
     """
     Processor responsible for the serialization of data.
     """
@@ -203,6 +257,7 @@ class Serialization(BaseSerialization):
 
     READ_KEYS = {
         'data': 'response/content',
+        'meta': 'request/meta',
         'allowed_fields': 'store/permissions/allowed_fields',
     }
 
@@ -216,81 +271,96 @@ class Serialization(BaseSerialization):
             return None
         allowed_fields = context_data['allowed_fields']
         serializer = self.get_serializer(data, allowed_fields)
-        return {'data': serializer.serialize(data)}
+        meta = context_data['meta']
+        return {'data': serializer.serialize(data, meta)}
 
 
-class CerberusValidation(BaseProcessor):
+Serialization = ProcessorConstruction(
+    SERIALIZATION_CONSTRUCTORS, SerializationProcessor)
+
+
+def cerberus_type(cerb_type):
+    def constructor(instance, context):
+        value = docular.doc_spec_get(instance, default={})
+        value['type'] = cerb_type
+        predicate = context['predicate']
+        ### should update only with valid cerberus attributes
+        # value.update(docular.doc_spec_iter_values(instance[predicate]))
+        docular.doc_spec_set(instance, value)
+    return constructor
+
+
+def copy_fields_constructor(instance):
+    v = dict(docular.doc_spec_iter_values(instance['fields']))
+    value = docular.doc_spec_get(instance, default={})
+    value['type'] = 'list'
+    value['schema'] = {'type': 'dict', 'schema': v}
+    docular.doc_spec_set(instance, value)
+
+
+CERBERUS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
+    '.field.collection.django': copy_fields_constructor,
+    '.field.*': no_constructor,
+    '.field.identity': cerberus_type('string'),
+    '.field.string': cerberus_type('string'),
+    '.field.serial': cerberus_type('integer'),
+    '.flag.*': no_constructor,
+    '.flag.readonly': cerberus_flag('readonly'),
+    '.meta': no_constructor,
+    '.string': construct_string,
+}, default=no_constructor)
+
+    # constructors = {
+    #     'ref':        cerberus_type('string'),
+    #     'integer':    cerberus_type('integer'),
+    #     'float':      cerberus_type('float'),
+    #     'string':     Object(dict, kwargs_instance=True,
+    #                          pre_hook=lambda x: {'type': 'string'}),
+    #     'text':       Object(dict, kwargs_instance=True,
+    #                          pre_hook=lambda x: {'type': 'string'}),
+    #     'choices':    Object(dict, kwargs_instance=True,
+    #                          pre_hook=lambda x: {'type': 'choices'}),
+    #     'email':      Object(dict, kwargs_instance=True,
+    #                          pre_hook=lambda x: {'type': 'email'}),
+    #     'boolean':    Object(dict, kwargs_instance=True,
+    #                          pre_hook=lambda x: {'type': 'boolean'}),
+    #     'datetime':   Object(dict, kwargs_instance=True,
+    #                          pre_hook=lambda x: {'type': 'datetime'}),
+    #     'date':       Object(dict, kwargs_instance=True, kwargs_spec=True,
+    #                          pre_hook=lambda x: {'type': 'date'}),
+    #     'datetime':   Object(dict, kwargs_instance=True, kwargs_spec=True,
+    #                          pre_hook=lambda x: {'type': 'datetime'}),
+    #     'file':       Object(dict, kwargs_instance=True, kwargs_spec=True),
+    #     'struct':     Object(dict, kwargs_instance=True, args_spec=True,
+    #                          args_spec_name='schema',
+    #                          pre_hook=lambda x: {'type': 'dict'}),
+    #     'array of':   Object(dict, kwargs_instance=True, args_spec=True,
+    #                          args_spec_name='schema',
+    #                          pre_hook=lambda x: {'type': 'list'}),
+    #     'readonly':   Flag('readonly'),
+    #     'required':   Flag('required'),
+    #     'nullable':   Flag('nullable'),
+    #     'default':    Dummy(),
+    # }
+
+
+class CerberusValidationProcessor(BaseProcessor):
     """
     Processor for validating request data using Cerberus
     tool (http://docs.python-cerberus.org/en/stable/).
     """
     name = 'apimas.components.processors.CerberusValidation'
 
-    constructors = {
-        'ref':        Object(dict, kwargs_instance=True,
-                             pre_hook=lambda x: {'type': 'string'}),
-        'integer':    Object(dict, kwargs_instance=True,
-                             pre_hook=lambda x: {'type': 'integer'}),
-        'float':      Object(dict, kwargs_instance=True,
-                             pre_hook=lambda x: {'type': 'float'}),
-        'string':     Object(dict, kwargs_instance=True,
-                             pre_hook=lambda x: {'type': 'string'}),
-        'text':       Object(dict, kwargs_instance=True,
-                             pre_hook=lambda x: {'type': 'string'}),
-        'choices':    Object(dict, kwargs_instance=True,
-                             pre_hook=lambda x: {'type': 'choices'}),
-        'email':      Object(dict, kwargs_instance=True,
-                             pre_hook=lambda x: {'type': 'email'}),
-        'boolean':    Object(dict, kwargs_instance=True,
-                             pre_hook=lambda x: {'type': 'boolean'}),
-        'datetime':   Object(dict, kwargs_instance=True,
-                             pre_hook=lambda x: {'type': 'datetime'}),
-        'date':       Object(dict, kwargs_instance=True, kwargs_spec=True,
-                             pre_hook=lambda x: {'type': 'date'}),
-        'file':       Object(dict, kwargs_instance=True, kwargs_spec=True),
-        'struct':     Object(dict, kwargs_instance=True, args_spec=True,
-                             args_spec_name='schema',
-                             pre_hook=lambda x: {'type': 'dict'}),
-        'array of':   Object(dict, kwargs_instance=True, args_spec=True,
-                             args_spec_name='schema',
-                             pre_hook=lambda x: {'type': 'list'}),
-        'readonly':   Flag('readonly'),
-        'required':   Flag('required'),
-        'nullable':   Flag('nullable'),
-        'default':    Dummy(),
-    }
+    READ_KEYS = DeSerializationProcessor.WRITE_KEYS
 
-    READ_KEYS = DeSerialization.WRITE_KEYS
-
-    def __init__(self, collection, spec, **meta):
-        super(CerberusValidation, self).__init__(collection, spec, **meta)
-
-        # Attach constructor for '.validator' predicate.
-        self.constructors.update({'validator': self._validator_constructor})
-        self.spec = self.spec.get('*')
-        if self.spec is None:
-            msg = 'Processor {!r}: Node \'*\' of given spec is empty'
+    def __init__(self, schema):
+        if not schema:
+            msg = 'Processor {!r}: schema is empty'
             raise InvalidSpec(msg.format(self.name))
-        schema = self._construct()
-
-        # Remove validators from the field schema in order to attach them
-        # one level above.
-        global_validators = schema.pop('validator', [])
 
         self.validation_schema = {
-            'data': {
-                'type': 'dict',
-                'schema': schema,
-                'validator': global_validators
-            }
+            'data': schema['schema'],
         }
-
-    def _construct(self):
-        instance = doc.doc_construct(
-            {}, self.spec, constructors=self.constructors,
-            allow_constructor_input=False, autoconstruct='default',
-            construct_spec=True)
-        return instance
 
     def _validator_constructor(self, context):
         """
@@ -349,6 +419,10 @@ class CerberusValidation(BaseProcessor):
             raise ValidationError(data_errors)
 
 
+CerberusValidation = ProcessorConstruction(
+    CERBERUS_CONSTRUCTORS, CerberusValidationProcessor)
+
+
 def _get_verifier(verifier_type):
     def func(context):
         meta = context.top_spec.get('.meta', {})
@@ -391,8 +465,8 @@ class Authentication(BaseProcessor):
         'default':   Dummy()
     }
 
-    def __init__(self, collection, spec, **meta):
-        super(Authentication, self).__init__(collection, spec)
+    def __init__(self, collection, spec, predicates, **meta):
+        super(Authentication, self).__init__(collection, spec, predicates)
         self.spec.update({'.meta': meta})
         if spec.get('.protected=') is not None:
             # Construct an authentication backend only if `.protected=` is

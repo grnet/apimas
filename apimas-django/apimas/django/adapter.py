@@ -4,7 +4,8 @@ from urlparse import urljoin
 from django.conf.urls import url
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from apimas import documents as doc, utils
+# from apimas import documents as doc, utils
+from apimas import utils
 from apimas.tabmatch import Tabmatch
 from apimas.errors import (InvalidInput, ConflictError, AdapterError,
                            InvalidSpec)
@@ -12,6 +13,12 @@ from apimas.adapters.actions import ApimasAction
 from apimas.django.wrapper import DjangoWrapper
 from apimas.django.testing import TestCase
 from apimas.components.processors import Authentication
+from apimas import documents as doc
+from apimas.django.predicates import PREDICATES
+from apimas.django.collect_construction import collect_processors
+import docular
+import docular.constructors
+import pprint
 
 
 def _path_to_pattern_set(pattern):
@@ -38,6 +45,290 @@ def _path_to_pattern_set(pattern):
     return pattern_set
 
 
+def _get_action_params(action_params):
+    method = docular.doc_spec_get(action_params.get('method'))
+    on_collection = docular.doc_spec_get(action_params.get('on_collection'))
+    action_url = docular.doc_spec_get(action_params.get('url'))
+    handler = docular.doc_spec_get(action_params.get('handler'))
+
+    pre = action_params.get('pre', {})
+    post = action_params.get('post', {})
+    # Initialize pre processors and post processors with spec.
+    pre_keys = sorted(key for key in pre.keys()
+                      if key[:1] not in ("*", ".", "="))
+    pre_proc = [docular.doc_spec_get(pre.get(key)) for key in pre_keys]
+    post_keys = sorted(key for key in post.keys()
+                      if key[:1] not in ("*", ".", "="))
+    post_proc = [docular.doc_spec_get(post.get(key)) for key in post_keys]
+    return (method, on_collection, action_url, handler, pre_proc, post_proc)
+
+
+def get_orm_context(context):
+    model = docular.doc_spec_get(context.get('model'))
+    if model:
+        return {
+            'orm_type': 'django',
+            'orm_model': utils.import_object(model)
+        }
+    return {}
+
+
+# def action_constructor(instance, loc, context):
+#     action_name = loc[-1]
+#     collection_path = "/".join(loc)
+#     collection_spec = docular.doc_get(top_spec, loc[:-3])
+#     action_params = instance
+
+#     docular.doc_spec_set(instance, mk_action(...))
+
+
+def collection_django_constructor(instance, context, loc):
+    print "On collection_django_constructor loc:", loc
+    docular.doc_spec_set(instance,
+                         mk_collection_views(instance, context))
+
+
+def get_subcollection_views(collection_spec):
+    views = {}
+    for key, value in docular.doc_spec_iter_values(
+            collection_spec['fields']):
+        if value is not None:
+            views.update(value)
+    return views
+
+
+def mk_collection_views(collection_spec, context):
+    actions = docular.doc_get(collection_spec, ("actions",))
+    if not actions:
+        print "NO ACTIONS", pprint_spec(collection_spec)
+
+    views = get_subcollection_views(collection_spec)
+
+    for key, action_spec in docular.doc_spec_iter(actions):
+        urlpattern, method, view = mk_action_view(
+            key, action_spec, collection_spec, context)
+        docular.doc_set(views, (urlpattern, method), view)
+    return views
+
+
+def named_pattern(name):
+    return '(?P<%s>[^/.]+)' % name
+
+
+def join_urls(*args):
+    """
+    Join arguments into a url.
+
+    >>> join_urls("http://www.test.org", "path")
+    'http://www.test.org/path'
+    >>> join_urls("http://www.test.org/", "path")
+    'http://www.test.org/path'
+    >>> join_urls("http://www.test.org", "/path")
+    'http://www.test.org/path'
+    >>> join_urls("http://www.test.org/", "/path")
+    'http://www.test.org/path'
+    >>> join_urls("http://www.test.org/", "/path/")
+    'http://www.test.org/path/'
+    >>> join_urls("http://www.test.org/a/b", "c/d")
+    'http://www.test.org/a/b/c/d'
+    >>> join_urls("http://www.test.org/a/b/", "c/d")
+    'http://www.test.org/a/b/c/d'
+    >>> join_urls("http://www.test.org/a/b", "/c/d")
+    'http://www.test.org/a/b/c/d'
+    >>> join_urls("http://www.test.org/a/b/", "/c/d")
+    'http://www.test.org/a/b/c/d'
+    >>> join_urls("http://www.test.org/a/b/", "/c/d/", "/e/f/")
+    'http://www.test.org/a/b/c/d/e/f/'
+    >>> join_urls("/path1", "/path")
+    '/path1/path'
+    >>> join_urls("path1", "/path")
+    'path1/path'
+    >>> join_urls("path1/")
+    'path1/'
+    >>> join_urls("path1/", "path2", "path3")
+    'path1/path2/path3'
+    >>> join_urls("", "path2", "path3")
+    'path2/path3'
+    >>> join_urls("", "", "")
+    ''
+    """
+    args = filter(bool, args)
+
+    if len(args) == 0:
+        return ''
+
+    if len(args) == 1:
+        return args[0]
+
+    return "/".join([args[0].rstrip("/")] +
+                    [a.strip("/") for a in args[1:-1]] +
+                    [args[-1].lstrip("/")])
+
+
+def _construct_url(path, action_url, on_collection):
+    # Add a trailing slash to the path.
+    pattern = named_pattern('pk') if not on_collection else ''
+    path = join_urls(path, pattern)
+    if action_url != '/':
+        url_pattern = r'^' + join_urls(path, action_url)
+    else:
+        url_pattern = r'^' + path
+    url_pattern = url_pattern.rstrip('/') + '/$'
+    return url_pattern
+
+
+def construct_processors(processors, spec):
+    artifacts = {}
+    for processor in processors:
+        print 'Constructing:', processor
+        proc = utils.import_object(processor)
+        newspec = copy.deepcopy(spec)
+        docular.doc_spec_construct(newspec, PREDICATES, proc.constructors)
+        artifacts[processor] = (newspec, proc.processor)
+    return artifacts
+
+
+def make_processor(processor, collection_loc, artifacts):
+    proc_spec, cls = artifacts[processor]
+    subspec = docular.doc_get(proc_spec, collection_loc)
+    value = docular.doc_spec_get(subspec)
+    return cls(value)
+
+
+def mk_url_prefix(loc):
+    endpoint_prefix = loc[0]
+    segments = []
+    collections = loc[1:]
+    for i, name in enumerate(reversed(collections)):
+        position, is_fields = divmod(i, 2)
+        if not is_fields:
+            segments.append(name)
+        else:
+            assert name == 'fields'
+            name = 'id' + str(position)
+            segments.append(named_pattern(name))
+    segments.append(endpoint_prefix)
+    return '/'.join(reversed(segments))
+
+
+def mk_action_view(
+        action_name, action_params, collection_spec, context):
+    method, on_collection, action_url, handler, pre_proc, post_proc = (
+        _get_action_params(action_params))
+
+    loc = context['loc']
+    if method is None:
+        msg = 'URL not found for action {!r}'.format(action_name)
+        raise InvalidSpec(msg, loc=loc)
+    if action_url is None:
+        msg = 'HTTP method not found for action {!r}'.format(action_name)
+        raise InvalidSpec(msg, loc=loc)
+    if handler is None:
+        msg = 'Handler not found for action {!r}'.format(action_name)
+        raise InvalidSpec(msg, loc=loc)
+
+    print "ACTION", action_name
+    collection_path = mk_url_prefix(loc)
+    urlpattern = _construct_url(collection_path, action_url, on_collection)
+    method = method.upper()
+
+    top_spec = context['top_spec']
+    artifacts = docular.doc_spec_get(docular.doc_get(top_spec, ('.meta', 'artifacts')))
+    pre_proc = [make_processor(proc, loc, artifacts) for proc in pre_proc]
+    post_proc = [make_processor(proc, loc, artifacts) for proc in post_proc]
+    handler = make_processor(handler, loc, artifacts)
+
+    orm_context = get_orm_context(collection_spec)
+    apimas_action = ApimasAction(
+        collection_path, action_url, action_name, handler,
+        request_proc=pre_proc, response_proc=post_proc, **orm_context)
+    return urlpattern, method, apimas_action
+
+
+def endpoint_constructor(instance):
+    print "On endpoint_constructor"
+    views = {name:
+             mk_django_urls(docular.doc_spec_get(collection_spec))
+             for name, collection_spec in docular.doc_spec_iter(instance)}
+    docular.doc_spec_set(instance, views)
+
+
+def mk_django_urls(action_urls):
+    urls = []
+    for urlpattern, method_actions in action_urls.iteritems():
+        django_view = DjangoWrapper(method_actions,
+                                    meta={'root_url': 'http://127.0.0.1:8000/'})
+        methods = method_actions.keys()
+        http_methods = require_http_methods(methods)
+        django_view = csrf_exempt(http_methods(django_view))
+        urls.append(url(urlpattern, django_view))
+    return urls
+
+
+def apimas_app_constructor(instance):
+    print "On apimas_constructor"
+    urlpatterns = []
+    for endpoint, endpoint_patterns in docular.doc_spec_iter(instance):
+        endpoint_patterns = docular.doc_spec_get(endpoint_patterns)
+        for collection, collection_patterns in endpoint_patterns.iteritems():
+            urlpatterns.extend(collection_patterns)
+    print "URLPATTERNS:"
+    for urlpattern in urlpatterns:
+        print urlpattern
+    docular.doc_spec_set(instance, urlpatterns)
+
+
+def no_constructor(instance):
+    pass
+
+
+def construct_string(instance, loc):
+    if '=' not in instance:
+        #print "No string value at", loc
+        pass
+    else:
+        instance['='] = str(instance['='])
+
+
+def construct_boolean(instance, loc):
+    v = instance.get('=')
+    if v is None:
+        #print "no boolean in %s" % str(loc)
+        pass
+    else:
+        instance['='] = bool(v)
+
+
+_CONSTRUCTORS = {
+    '.apimas_app': apimas_app_constructor,
+    '.boolean': construct_boolean,
+    '.field.collection.django': collection_django_constructor,
+    '.endpoint': endpoint_constructor,
+    '.string': construct_string,
+}
+
+REGISTERED_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
+    _CONSTRUCTORS, default=no_constructor)
+
+
+def load_apimas_config(config):
+    apimas_app_spec = PREDICATES['.apimas_app']
+    return docular.doc_spec_config(apimas_app_spec, config, PREDICATES)
+
+
+def construct_views(spec):
+    processors = collect_processors(spec)
+    print "FOUND PROCESSORS:", processors
+    artifacts = construct_processors(processors, spec)
+    spec['.meta']['artifacts'] = {'=': artifacts}
+    docular.doc_spec_construct(spec, PREDICATES, REGISTERED_CONSTRUCTORS)
+    return docular.doc_spec_get(spec)
+
+
+def pprint_spec(spec):
+    pprint.pprint(docular.doc_strip_spec(spec))
+
+
 class DjangoAdapter(object):
     """
     Adapter responsible for constructing a REST API using Django framework
@@ -62,123 +353,29 @@ class DjangoAdapter(object):
         >>> adapter.construct(SPEC) # Construct urlpatterns given a spec.
         >>> urlpatterns = adapter.get_urlpatterns()
     """
-    AUTOMATED_ACTIONS = {
-        'create': {
-            'method': 'POST',
-            'url': '/',
-            'handler': 'apimas.django.handlers.CreateHandler',
-            'pre': [
-                'apimas.components.processors.Authentication',
-                'apimas.django.processors.UserRetrieval',
-                'apimas.django.processors.Permissions',
-                'apimas.components.processors.DeSerialization',
-                'apimas.components.processors.CerberusValidation',
-            ],
-            'post': [
-                'apimas.django.processors.InstanceToDict',
-                'apimas.components.processors.Serialization'
-            ]
-        },
-        'list': {
-            'method': 'GET',
-            'url': '/',
-            'pre': [
-                'apimas.components.processors.Authentication',
-                'apimas.django.processors.UserRetrieval',
-                'apimas.django.processors.Permissions',
-            ],
-            'handler': 'apimas.django.handlers.ListHandler',
-            'post': [
-                'apimas.django.processors.Filtering',
-                'apimas.django.processors.InstanceToDict',
-                'apimas.components.processors.Serialization'
-            ]
-        },
-        'retrieve': {
-            'method': 'GET',
-            'url': '/',
-            'pre': [
-                'apimas.components.processors.Authentication',
-                'apimas.django.processors.UserRetrieval',
-                'apimas.django.processors.ObjectRetrieval',
-                'apimas.django.processors.Permissions',
-            ],
-            'handler': 'apimas.django.handlers.RetrieveHandler',
-            'post': [
-                'apimas.django.processors.InstanceToDict',
-                'apimas.components.processors.Serialization'
-            ]
-        },
-        'update': {
-            'method': 'PUT',
-            'url': '/',
-            'pre': [
-                'apimas.components.processors.Authentication',
-                'apimas.django.processors.UserRetrieval',
-                'apimas.django.processors.ObjectRetrieval',
-                'apimas.django.processors.Permissions',
-                'apimas.components.processors.DeSerialization',
-                'apimas.components.processors.CerberusValidation',
-            ],
-            'handler': 'apimas.django.handlers.UpdateHandler',
-            'post': [
-                'apimas.django.processors.InstanceToDict',
-                'apimas.components.processors.Serialization',
-            ]
 
-        },
-        'partial_update': {
-            'method': 'PATCH',
-            'url': '/',
-            'pre': [
-                'apimas.components.processors.Authentication',
-                'apimas.django.processors.UserRetrieval',
-                'apimas.django.processors.ObjectRetrieval',
-                'apimas.django.processors.Permissions',
-                'apimas.components.processors.Serialization',
-            ],
-            'handler': 'apimas.django.handlers.UpdateHandler',
-            'post': [
-                'apimas.django.processors.InstanceToDict',
-                'apimas.components.processors.Serialization',
-            ]
-
-        },
-        'delete': {
-            'method': 'DELETE',
-            'url': '/',
-            'pre': [
-                'apimas.components.processors.Authentication',
-                'apimas.django.processors.UserRetrieval',
-                'apimas.django.processors.ObjectRetrieval',
-                'apimas.django.processors.Permissions',
-            ],
-            'handler': 'apimas.django.handlers.DeleteHandler',
-        },
-    }
-
-    def __init__(self, test_mode=False):
-        self.spec = None
+    def __init__(self, config, test_mode=False):
+        self.spec = docular.doc_spec_config(apimas_spec, config, PREDICATES)
         self.views = {}
         self.models = {}
         self.urls = defaultdict(list)
         self._test_methods = {}
-        self._constructors = {
-            'endpoint': self._endpoint,
-            'create': self._automated_action('create'),
-            'list': self._automated_action('list'),
-            'retrieve': self._automated_action('retrieve'),
-            'update': self._automated_action('update'),
-            'delete': self._automated_action('delete'),
-            'actions': self._actions,
-            'auth':   self._auth,
-            'basic': Authentication.CONSTRUCTORS['basic'],
-            'token':   Authentication.CONSTRUCTORS['token'],
-        }
+        # self._constructors = {
+        #     'endpoint': self._endpoint,
+        #     'create': self._automated_action('create'),
+        #     'list': self._automated_action('list'),
+        #     'retrieve': self._automated_action('retrieve'),
+        #     'update': self._automated_action('update'),
+        #     'delete': self._automated_action('delete'),
+        #     'actions': self._actions,
+        #     'auth':   self._auth,
+        #     'basic': Authentication.CONSTRUCTORS['basic'],
+        #     'token':   Authentication.CONSTRUCTORS['token'],
+        # }
         self._action_urls = defaultdict(dict)
         self._auth_urls = []
 
-    def construct(self, spec):
+    def construct(self):
         """
         Constructs a REST API based on specification given as parameter.
         Implementation is built using django framework.
@@ -192,11 +389,7 @@ class DjangoAdapter(object):
             spec (dict): Specification from which urls and views are
                 constructed.
         """
-        self.spec = copy.deepcopy(spec)
-        doc.doc_construct(
-            {}, spec, constructors=self._constructors,
-            allow_constructor_input=False, autoconstruct=True,
-            construct_spec=True)
+        docular.doc_spec_construct(self.spec, PREDICATES, CONSTRUCTORS)
 
     def get_urlpatterns(self):
         """

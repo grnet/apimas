@@ -282,6 +282,7 @@ class Constructor(object):
         if self.post_hook:
             # Post hook gets the newly created instance and the context.
             instance = self.post_hook(context, instance)
+        context['instance']['='] = instance
         return instance
 
 
@@ -390,8 +391,8 @@ class Object(Constructor):
         return kwargs
 
     def construct(self, context, **meta):
-        instance = context.instance
-        spec = context.spec
+        instance = context['instance']
+        spec = instance[context['predicate']]
         args = self._build_as_args(instance, spec)
         kwargs = self._build_as_kwargs(instance, spec)
         conflict_keys = []
@@ -431,7 +432,8 @@ class Flag(Constructor):
         super(Flag, self).__init__(*args, **kwargs)
 
     def construct(self, context, **meta):
-        if self.flagname in context.instance:
+        instance = context['instance']
+        if self.flagname in instance:
             msg = 'Key {!r} already exists in the instance'
             raise ConflictError(msg.format(self.flagname))
         doc = {self.flagname: True}

@@ -1,7 +1,7 @@
 import warnings
 from functools import wraps
 from apimas.errors import InvalidInput
-from apimas.documents import DeferConstructor
+from docular import DeferConstructor
 
 
 def _check_type(constructors):
@@ -22,14 +22,14 @@ def conditional(constructors):
         @wraps(func)
         def wrapper(*args, **kwargs):
             context = kwargs.get('context')
-            missing_cons = set(constructors).difference(context.cons_siblings)
+            missing_cons = set(constructors).difference(context['local_predicates'])
             if missing_cons:
                 msg = ('Constructor ({!r}) will not run because it is '
                        'dependent on missing constructors ({!r})')
                 warnings.warn(
-                    msg.format(', '.join(context.loc), ', '.join(missing_cons)),
+                    msg.format(', '.join(context['loc']), ', '.join(missing_cons)),
                     UserWarning)
-                return context.instance
+                return context['instance']
             return func(*args, **kwargs)
         return wrapper
     return decorator
@@ -46,15 +46,15 @@ def after(constructors, ignore_missing=True):
         @wraps(func)
         def wrapper(*args, **kwargs):
             context = kwargs.get('context')
-            constructed = context.constructed
-            all_constructors = context.cons_siblings
+            constructed = context['constructed']
+            all_constructors = context['local_predicates']
             cons_set = set(constructors)
             missing_cons = cons_set.difference(all_constructors)
             if missing_cons and not ignore_missing:
                 msg = ('Constructor ({!r}) cannot run because it is'
                        ' dependent on missing constructors ({!r})')
                 raise InvalidInput(
-                    msg.format(', '.join(context.loc),
+                    msg.format(', '.join(context['loc']),
                         ', '.join(missing_cons)))
             if not all(c in constructed
                        for c in cons_set.intersection(all_constructors)):
@@ -72,8 +72,8 @@ def last(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         context = kwargs.get('context')
-        all_constructors = context.cons_siblings
-        constructed = context.constructed
+        all_constructors = context['local_predicates']
+        constructed = context['constructed']
         if len(constructed) < len(all_constructors) - 1:
             raise DeferConstructor
         return func(*args, **kwargs)

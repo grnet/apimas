@@ -4,13 +4,63 @@ from apimas import utils
 from apimas.django import utils as django_utils
 from apimas.errors import (AccessDeniedError, NotFound, InvalidInput,
                            ValidationError, UnauthorizedError)
-from apimas.components import BaseHandler
-from apimas.components.processors import DeSerialization
+from apimas.components import BaseHandler, ProcessorConstruction
+from apimas.components.processors import DeSerializationProcessor
+import docular
 
 
 REF = '.ref'
 STRUCT = '.struct='
 ARRAY_OF = '.array of='
+
+
+def no_constructor(instance):
+    pass
+
+
+def copy_constructor(instance):
+    docular.doc_spec_set(instance,
+                         dict(docular.doc_spec_iter(instance)))
+
+
+def get_bounds(loc, top_spec):
+    bounds = []
+    working_loc = loc
+    while len(working_loc) >= 2:
+        bound = docular.doc_spec_get(
+            docular.doc_get(top_spec, working_loc + ('bound',)))
+        if bound is None:
+            break
+        bounds.append(bound)
+        working_loc = working_loc[:-2]
+    return bounds
+
+
+def collection_constructor(instance, loc, top_spec):
+    model = docular.doc_spec_get(instance['model'])
+    source = docular.doc_spec_get(instance.get('source', {}))
+    bounds = get_bounds(loc, top_spec)
+    subcollections = {}
+    for field, field_value in docular.doc_spec_iter_values(instance['fields']):
+        if field_value:
+            subcollections[field] = field_value
+    value = {
+        'model': utils.import_object(model),
+        'source': source,
+        'bounds': bounds,
+        'subcollections': subcollections,
+    }
+    docular.doc_spec_set(instance, value)
+
+
+DJANGEBASEHANDLER_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
+    {'.field.collection.django': collection_constructor},
+    default=no_constructor)
+
+
+def _django_base_construction(action):
+    return ProcessorConstruction(
+        DJANGEBASEHANDLER_CONSTRUCTORS, action)
 
 
 class DjangoBaseHandler(BaseHandler):
@@ -66,13 +116,19 @@ class DjangoBaseHandler(BaseHandler):
 
     READ_KEYS = {
         'model': 'store/orm_model',
-        'pk': 'request/meta/pk',
+        'kwargs': 'request/meta/kwargs',
+        'pk': 'request/meta/kwargs/pk',
     }
-    READ_KEYS.update(DeSerialization.WRITE_KEYS)
+    READ_KEYS.update(DeSerializationProcessor.WRITE_KEYS)
 
     REQUIRED_KEYS = {
         'model',
     }
+
+    def __init__(self, spec):
+        self.spec = spec
+        # self.model = value['model']
+        # self.bounds = value['bounds']
 
     def _parse_ref(self, orm_model, data):
         """
@@ -88,7 +144,7 @@ class DjangoBaseHandler(BaseHandler):
         """
         ref_keys = []
         many_ref_keys = []
-        spec_properties = self.spec.get('*')
+        spec_properties = self.fields_spec
         for k, v in spec_properties.iteritems():
             if REF in v:
                 ref_keys.append(k)
@@ -193,6 +249,8 @@ class DjangoBaseHandler(BaseHandler):
             Exception: 500,
         }
         type_ex = type(ex)
+        import traceback
+        print traceback.format_exc()
         if type_ex not in exceptions:
             status = 500
         else:
@@ -260,7 +318,7 @@ class DjangoBaseHandler(BaseHandler):
         return self.adapt_instance(output, context_data, context)
 
 
-class CreateHandler(DjangoBaseHandler):
+class CreateHandlerProcessor(DjangoBaseHandler):
     name = 'apimas.django.handlers.CreateHandler'
 
     STATUS_CODE = 201
@@ -270,19 +328,47 @@ class CreateHandler(DjangoBaseHandler):
         'data',
     }
 
+    def do_create(self, key, spec, data):
+        model = spec['model']
+        bounds = spec['bounds']
+        if bounds:
+            print "BOUNDS", bounds
+            assert key
+            bound = bounds[0]
+            data[bound + '_id'] = key
+        return model.objects.create(**data)
+
+    def create_with(self, key, spec, data):
+        recs = []
+        subcollections = spec['subcollections']
+        for subkey in data.keys():
+            if subkey in subcollections:
+                values = data.pop(subkey)
+                recs.extend((subcollections[subkey], value)
+                            for value in values)
+        instance = self.do_create(key, spec, data)
+        for rec in recs:
+            self.create_with(instance.id, *rec)
+        return instance
+
     def execute(self, collection, url, action, context_data):
         """ Creates a new django model instance. """
-        model = context_data['model']
+
+        print 'data', context_data
         data = context_data['data']
-        data, many = self._parse_ref(model, data)
-        instance = model.objects.create(**data)
-        if many:
-            for k, v in many.iteritems():
-                getattr(instance, k).add(*v)
+        kwargs = context_data['kwargs']
+        key = kwargs.get('id0')
+        instance = self.create_with(key, self.spec, data)
+        # if many:
+        #     for k, v in many.iteritems():
+        #         getattr(instance, k).add(*v)
         return instance
 
 
-class ListHandler(DjangoBaseHandler):
+CreateHandler = _django_base_construction(CreateHandlerProcessor)
+
+
+class ListHandlerProcessor(DjangoBaseHandler):
     name = 'apimas.django.handlers.ListHandler'
 
     STATUS_CODE = 200
@@ -296,11 +382,28 @@ class ListHandler(DjangoBaseHandler):
         Gets all django model instances based on the orm model extracted
         from request context.
         """
-        model = context_data['model']
-        return model.objects.all()
+        model = self.spec['model']
+        bounds = self.spec['bounds']
+        kwargs = context_data['kwargs']
+        flts = {}
+        prev = ''
+        for i, bound in enumerate(bounds):
+            prefix = (prev + '__') if prev else ''
+            ref = prefix + bound
+            flts[ref + '_id'] = kwargs['id' + str(i)]
+            prev = ref
+        objects = model.objects
+        for key, value in self.spec['subcollections'].iteritems():
+            source = value['source']
+            if source:
+                objects = objects.prefetch_related(source)
+        return objects.filter(**flts)
 
 
-class RetrieveHandler(DjangoBaseHandler):
+ListHandler = _django_base_construction(ListHandlerProcessor)
+
+
+class RetrieveHandlerProcessor(DjangoBaseHandler):
     name = 'apimas.django.handlers.RetrieveHandler'
 
     STATUS_CODE = 200
@@ -319,12 +422,15 @@ class RetrieveHandler(DjangoBaseHandler):
         Gets a single model instance which based on the orm model and
         resource ID extracted from request context.
         """
-        model = context_data['model']
         pk = context_data['pk']
+        model = self.spec['model']
         return self.get_resource(model, pk, context_data)
 
 
-class UpdateHandler(CreateHandler):
+RetrieveHandler = _django_base_construction(RetrieveHandlerProcessor)
+
+
+class UpdateHandlerProcessor(CreateHandlerProcessor):
     name = 'apimas.django.handlers.UpdateHandler'
 
     STATUS_CODE = 200
@@ -361,7 +467,10 @@ class UpdateHandler(CreateHandler):
         return instance
 
 
-class DeleteHandler(RetrieveHandler):
+UpdateHandler = _django_base_construction(UpdateHandlerProcessor)
+
+
+class DeleteHandlerProcessor(RetrieveHandlerProcessor):
     name = 'apimas.django.handlers.DeleteHandler'
 
     STATUS_CODE = 204
@@ -381,6 +490,9 @@ class DeleteHandler(RetrieveHandler):
             collection, url, action, context_data)
         instance.delete()
         return None
+
+
+DeleteHandler = _django_base_construction(DeleteHandlerProcessor)
 
 
 class TokenAuthHandler(BaseHandler):
