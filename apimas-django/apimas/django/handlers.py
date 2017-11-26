@@ -368,6 +368,15 @@ class CreateHandlerProcessor(DjangoBaseHandler):
 CreateHandler = _django_base_construction(CreateHandlerProcessor)
 
 
+def prefetch_objects(model, subcollections):
+    objects = model.objects
+    for key, value in subcollections.iteritems():
+        source = value['source']
+        if source:
+            objects = objects.prefetch_related(source)
+    return objects
+
+
 class ListHandlerProcessor(DjangoBaseHandler):
     name = 'apimas.django.handlers.ListHandler'
 
@@ -392,11 +401,8 @@ class ListHandlerProcessor(DjangoBaseHandler):
             ref = prefix + bound
             flts[ref + '_id'] = kwargs['id' + str(i)]
             prev = ref
-        objects = model.objects
-        for key, value in self.spec['subcollections'].iteritems():
-            source = value['source']
-            if source:
-                objects = objects.prefetch_related(source)
+
+        objects = prefetch_objects(model, self.spec['subcollections'])
         return objects.filter(**flts)
 
 
@@ -424,7 +430,8 @@ class RetrieveHandlerProcessor(DjangoBaseHandler):
         """
         pk = context_data['pk']
         model = self.spec['model']
-        return self.get_resource(model, pk, context_data)
+        objects = prefetch_objects(model, self.spec['subcollections'])
+        return objects.get(pk=pk)
 
 
 RetrieveHandler = _django_base_construction(RetrieveHandlerProcessor)

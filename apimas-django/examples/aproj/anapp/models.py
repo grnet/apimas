@@ -7,6 +7,7 @@ class Group(models.Model):
 
 class User(models.Model):
     username = models.TextField()
+    age = models.IntegerField()
     group = models.ForeignKey(Group)
 
 
