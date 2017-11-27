@@ -10,12 +10,12 @@ from apimas.tabmatch import Tabmatch
 from apimas.errors import (InvalidInput, ConflictError, AdapterError,
                            InvalidSpec)
 from apimas.adapters.actions import ApimasAction
-from apimas.django.wrapper import DjangoWrapper
-from apimas.django.testing import TestCase
+from apimas_django.wrapper import DjangoWrapper
+from apimas_django.testing import TestCase
 from apimas.components.processors import Authentication
 from apimas import documents as doc
-from apimas.django.predicates import PREDICATES
-from apimas.django.collect_construction import collect_processors
+from apimas_django.predicates import PREDICATES
+from apimas_django.collect_construction import collect_processors
 import docular
 import docular.constructors
 import pprint
@@ -348,7 +348,7 @@ class DjangoAdapter(object):
     Example:
         The following snippet can be used in your `urls.py` file.
 
-        >>> from apimas.django.adapter import DjangoAdapter
+        >>> from apimas_django.adapter import DjangoAdapter
         >>> adapter = DjangoAdapter()
         >>> adapter.construct(SPEC) # Construct urlpatterns given a spec.
         >>> urlpatterns = adapter.get_urlpatterns()
@@ -431,7 +431,7 @@ class DjangoAdapter(object):
         """
         Gets the test case class for testing the API made by the adapter.
 
-        This method generates an `apimas.django.testing.TestCase` subclass.
+        This method generates an `apimas_django.testing.TestCase` subclass.
         It expects a dictionary of patterns which specifies which tests should
         be run. Each pattern is a string with the following format:
 
@@ -464,7 +464,7 @@ class DjangoAdapter(object):
                            response)`
 
         Note that if there is hook not specified in the execution spec, then
-        the default code as specified by the `apimas.django.testing.TestCase`
+        the default code as specified by the `apimas_django.testing.TestCase`
         is executed.
 
         Args:
@@ -473,12 +473,12 @@ class DjangoAdapter(object):
             **kwargs: Additional content for generated class.
 
         Returns:
-            A Test Case class inheriting from `apimas.django.testing.TestCase`
+            A Test Case class inheriting from `apimas_django.testing.TestCase`
             and used to test implementation constructed by adapter.
 
         Examples:
             The following snippet can be included in your `tests.py` file.
-            >>> from apimas.django.adapter import DjangoAdapter
+            >>> from apimas_django.adapter import DjangoAdapter
             >>> adapter = DjangoAdapter()
             >>> adapter.construct(SPEC)
             >>> # This tests all actions for all collections under endpoint

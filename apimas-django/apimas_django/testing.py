@@ -8,9 +8,9 @@ from django.test.client import MULTIPART_CONTENT, RequestFactory, Client
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from apimas import documents as doc
 from apimas.errors import InvalidInput
-from apimas.django import model_utils as mutils
+from apimas_django import model_utils as mutils
 from apimas.utils import utils
-from apimas.django.generators import DjangoRequestGenerator
+from apimas_django.generators import DjangoRequestGenerator
 
 REF = '.ref'
 STRUCT = '.struct='
@@ -63,7 +63,7 @@ def get_url(context, instances):
     a collection.
 
     Args:
-        context (apimas.django.testing.TestingContext): Context
+        context (apimas_django.testing.TestingContext): Context
         instances (dict): A dictionary of lists which contains all created
             model instances per collection.
 
@@ -90,7 +90,7 @@ def get_content_and_type(context, instances):
     Creates random data and specifies content type accordingly.
 
     Args:
-        context (apimas.django.testing.TestingContext): Context
+        context (apimas_django.testing.TestingContext): Context
         instances (dict): A dictionary of lists which contains all created
             model instances per collection.
     """
@@ -150,7 +150,7 @@ def setUp_default(context):
     are created only.
 
     Args:
-        context (apimas.django.testing.TestingContext): Context
+        context (apimas_django.testing.TestingContext): Context
 
     Returns:
         dict: A dictonary of lists which contains the created model instances
@@ -180,7 +180,7 @@ def prepare_request_default(context, instances):
     This method constructs randomly both the url and the arguments.
 
     Args:
-        context (apimas.django.testing.TestingContext): Context
+        context (apimas_django.testing.TestingContext): Context
         instances (dict): A dictionary of lists which contains all created
             model instances per collection.
 
@@ -206,7 +206,7 @@ def validate_response_default(test_obj, context, instances, response):
 
     Args:
         test_obj: Instance of TestCase class.
-        context (apimas.django.testing.TestingContext): Context
+        context (apimas_django.testing.TestingContext): Context
         instances (dict): A dictionary of lists which contains all created
             model instances per collection.
         response: Response of django test client.

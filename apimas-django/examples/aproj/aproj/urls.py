@@ -15,7 +15,7 @@ Including another URLconf
 from django.conf.urls import include, url
 from django.contrib import admin
 
-from apimas.django import adapter
+from apimas_django import adapter
 from aproj.spec import CONFIG
 
 spec = adapter.load_apimas_config(CONFIG)

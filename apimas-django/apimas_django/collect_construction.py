@@ -1,6 +1,6 @@
 import copy
 import docular
-from apimas.django.predicates import PREDICATES
+from apimas_django.predicates import PREDICATES
 
 
 def no_constructor(instance):

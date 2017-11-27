@@ -7,7 +7,7 @@ from apimas.errors import (AccessDeniedError, ConflictError, InvalidInput,
                            InvalidSpec)
 from apimas.components import BaseProcessor, ProcessorConstruction
 from apimas.tabmatch import Tabmatch
-from apimas.django import utils as django_utils
+from apimas_django import utils as django_utils
 from apimas.serializers import Date, DateTime, Integer, Float, Boolean, List
 from apimas.constructors import Dummy, Object
 import docular
@@ -49,7 +49,7 @@ INSTANCETODICT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
 
 
 class InstanceToDictProcessor(BaseProcessor):
-    name = 'apimas.django.processors.InstanceToDict'
+    name = 'apimas_django.processors.InstanceToDict'
 
     READ_KEYS = {
         'instance': 'response/content',
@@ -346,7 +346,7 @@ class Filtering(BaseProcessor):
     A django processor responsible for the filtering of a response, based
     on a query string.
     """
-    name = 'apimas.django.processors.Filtering'
+    name = 'apimas_django.processors.Filtering'
 
     READ_KEYS = {
         'params': 'request/meta/params',
@@ -600,7 +600,7 @@ class PermissionsProcessor(BaseProcessor):
     ...     def check_resource_state_<state name>(cls, instance, row):
     ...         # your code. Return True or False.
     """
-    name = 'apimas.django.processors.Permissions'
+    name = 'apimas_django.processors.Permissions'
 
     READ_KEYS = {
         'user': 'store/auth/user',

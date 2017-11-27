@@ -78,16 +78,16 @@ action_template_django_create_spec = {
         'method': 'POST',
         'on_collection': True,
         'url': '/',
-        'handler': 'apimas.django.handlers.CreateHandler',
+        'handler': 'apimas_django.handlers.CreateHandler',
         'pre': {
 #            '1': 'apimas.components.processors.Authentication',
-#            '2': 'apimas.django.processors.UserRetrieval',
-            '3': 'apimas.django.processors.Permissions',
+#            '2': 'apimas_django.processors.UserRetrieval',
+            '3': 'apimas_django.processors.Permissions',
             '4': 'apimas.components.processors.DeSerialization',
             '5': 'apimas.components.processors.CerberusValidation',
         },
         'post': {
-            '1': 'apimas.django.processors.InstanceToDict',
+            '1': 'apimas_django.processors.InstanceToDict',
             '2': 'apimas.components.processors.Serialization'
         },
     },
@@ -104,13 +104,13 @@ action_template_django_list_spec = {
         'url': '/',
         'pre': {
 #            '1': 'apimas.components.processors.Authentication',
-#            '2': 'apimas.django.processors.UserRetrieval',
-            '3': 'apimas.django.processors.Permissions',
+#            '2': 'apimas_django.processors.UserRetrieval',
+            '3': 'apimas_django.processors.Permissions',
         },
-        'handler': 'apimas.django.handlers.ListHandler',
+        'handler': 'apimas_django.handlers.ListHandler',
         'post': {
-#            '1': 'apimas.django.processors.Filtering',
-            '2': 'apimas.django.processors.InstanceToDict',
+#            '1': 'apimas_django.processors.Filtering',
+            '2': 'apimas_django.processors.InstanceToDict',
             '3': 'apimas.components.processors.Serialization',
         }
     },
@@ -127,13 +127,13 @@ action_template_django_retrieve_spec = {
         'url': '/',
         'pre': {
 #            '1': 'apimas.components.processors.Authentication',
-#            '2': 'apimas.django.processors.UserRetrieval',
-#            '3': 'apimas.django.processors.ObjectRetrieval',
-            '4': 'apimas.django.processors.Permissions',
+#            '2': 'apimas_django.processors.UserRetrieval',
+#            '3': 'apimas_django.processors.ObjectRetrieval',
+            '4': 'apimas_django.processors.Permissions',
         },
-        'handler': 'apimas.django.handlers.RetrieveHandler',
+        'handler': 'apimas_django.handlers.RetrieveHandler',
         'post': {
-            '1': 'apimas.django.processors.InstanceToDict',
+            '1': 'apimas_django.processors.InstanceToDict',
             '2': 'apimas.components.processors.Serialization',
         }
     },
@@ -150,15 +150,15 @@ register_predicate('.action-template.django.retrieve',
 #             'url': '/',
 #             'pre': [
 #                 'apimas.components.processors.Authentication',
-#                 'apimas.django.processors.UserRetrieval',
-#                 'apimas.django.processors.ObjectRetrieval',
-#                 'apimas.django.processors.Permissions',
+#                 'apimas_django.processors.UserRetrieval',
+#                 'apimas_django.processors.ObjectRetrieval',
+#                 'apimas_django.processors.Permissions',
 #                 'apimas.components.processors.DeSerialization',
 #                 'apimas.components.processors.CerberusValidation',
 #             ],
-#             'handler': 'apimas.django.handlers.UpdateHandler',
+#             'handler': 'apimas_django.handlers.UpdateHandler',
 #             'post': [
-#                 'apimas.django.processors.InstanceToDict',
+#                 'apimas_django.processors.InstanceToDict',
 #                 'apimas.components.processors.Serialization',
 #             ]
 
@@ -171,14 +171,14 @@ register_predicate('.action-template.django.retrieve',
 #             'url': '/',
 #             'pre': [
 #                 'apimas.components.processors.Authentication',
-#                 'apimas.django.processors.UserRetrieval',
-#                 'apimas.django.processors.ObjectRetrieval',
-#                 'apimas.django.processors.Permissions',
+#                 'apimas_django.processors.UserRetrieval',
+#                 'apimas_django.processors.ObjectRetrieval',
+#                 'apimas_django.processors.Permissions',
 #                 'apimas.components.processors.Serialization',
 #             ],
-#             'handler': 'apimas.django.handlers.UpdateHandler',
+#             'handler': 'apimas_django.handlers.UpdateHandler',
 #             'post': [
-#                 'apimas.django.processors.InstanceToDict',
+#                 'apimas_django.processors.InstanceToDict',
 #                 'apimas.components.processors.Serialization',
 #             ]
 
@@ -191,11 +191,11 @@ register_predicate('.action-template.django.retrieve',
 #             'url': '/',
 #             'pre': [
 #                 'apimas.components.processors.Authentication',
-#                 'apimas.django.processors.UserRetrieval',
-#                 'apimas.django.processors.ObjectRetrieval',
-#                 'apimas.django.processors.Permissions',
+#                 'apimas_django.processors.UserRetrieval',
+#                 'apimas_django.processors.ObjectRetrieval',
+#                 'apimas_django.processors.Permissions',
 #             ],
-#             'handler': 'apimas.django.handlers.DeleteHandler',
+#             'handler': 'apimas_django.handlers.DeleteHandler',
 #         },
 #     }
 # }

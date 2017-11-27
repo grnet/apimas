@@ -1,7 +1,7 @@
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from apimas import utils
-from apimas.django import utils as django_utils
+from apimas_django import utils as django_utils
 from apimas.errors import (AccessDeniedError, NotFound, InvalidInput,
                            ValidationError, UnauthorizedError)
 from apimas.components import BaseHandler, ProcessorConstruction
@@ -102,7 +102,7 @@ class DjangoBaseHandler(BaseHandler):
         specified by the request and the corresponding model instance.
 
         >>> from apimas.errors import InvalidInput
-        >>> from apimas.django.handlers import BaseHandler
+        >>> from apimas_django.handlers import BaseHandler
         >>> class MyHandler(BaseHandler):
         ...     name = 'myapp.mymodule.MyHandler'
         ...     def execute(self, collection, url, action, context_data):
@@ -112,7 +112,7 @@ class DjangoBaseHandler(BaseHandler):
         ...            raise InvalidInput('Handler operates on resources.')
         ...        return model.objects.get(pk=pk)
     """
-    name = 'apimas.django.handlers.DjangoBaseHandler'
+    name = 'apimas_django.handlers.DjangoBaseHandler'
 
     READ_KEYS = {
         'model': 'store/orm_model',
@@ -319,7 +319,7 @@ class DjangoBaseHandler(BaseHandler):
 
 
 class CreateHandlerProcessor(DjangoBaseHandler):
-    name = 'apimas.django.handlers.CreateHandler'
+    name = 'apimas_django.handlers.CreateHandler'
 
     STATUS_CODE = 201
     CONTENT_TYPE = 'application/json'
@@ -378,7 +378,7 @@ def prefetch_objects(model, subcollections):
 
 
 class ListHandlerProcessor(DjangoBaseHandler):
-    name = 'apimas.django.handlers.ListHandler'
+    name = 'apimas_django.handlers.ListHandler'
 
     STATUS_CODE = 200
     CONTENT_TYPE = 'application/json'
@@ -410,7 +410,7 @@ ListHandler = _django_base_construction(ListHandlerProcessor)
 
 
 class RetrieveHandlerProcessor(DjangoBaseHandler):
-    name = 'apimas.django.handlers.RetrieveHandler'
+    name = 'apimas_django.handlers.RetrieveHandler'
 
     STATUS_CODE = 200
     READ_KEYS = {
@@ -438,7 +438,7 @@ RetrieveHandler = _django_base_construction(RetrieveHandlerProcessor)
 
 
 class UpdateHandlerProcessor(CreateHandlerProcessor):
-    name = 'apimas.django.handlers.UpdateHandler'
+    name = 'apimas_django.handlers.UpdateHandler'
 
     STATUS_CODE = 200
     READ_KEYS = {
@@ -478,7 +478,7 @@ UpdateHandler = _django_base_construction(UpdateHandlerProcessor)
 
 
 class DeleteHandlerProcessor(RetrieveHandlerProcessor):
-    name = 'apimas.django.handlers.DeleteHandler'
+    name = 'apimas_django.handlers.DeleteHandler'
 
     STATUS_CODE = 204
     READ_KEYS = {

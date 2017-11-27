@@ -1,6 +1,6 @@
 from django.conf import settings
-from apimas.django.generators import SpecGenerator
-from apimas.django.adapter import DjangoAdapter
+from apimas_django.generators import SpecGenerator
+from apimas_django.adapter import DjangoAdapter
 
 
 TEST_MODELS = [

@@ -1,6 +1,6 @@
 from django.db import models as dmodels
 from apimas.utils import generators as gen
-from apimas.django.generators import generate_file
+from apimas_django.generators import generate_file
 
 # Dictionary of generators per model field.
 FIELD_TYPE_MAPPING = {

@@ -37,8 +37,7 @@ def setup_package(description='', excluded=None, **kwargs):
     setup(**kwargs)
 
 
-EXTRA_KWARGS = {
-    'namespace_packages': ['apimas'],
-}
+EXTRA_KWARGS = {}
+
 setup_package(description='APIMAS support for django applications',
               excluded=['examples', 'tests'], **EXTRA_KWARGS)

@@ -102,7 +102,7 @@ class SpecGenerator(object):
 
     Example:
         >>> from django.db import models
-        >>> from apimas.django.generators import SpecGenerator
+        >>> from apimas_django.generators import SpecGenerator
         >>> class MyModel(models.Model):
         ...     foo = models.CharField(max_length=255)
         ...     bar = models.IntegerField()
