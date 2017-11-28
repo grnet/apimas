@@ -37,9 +37,6 @@ class ApimasAction(object):
         self.response_proc = response_proc or []
         self.orm_model = orm_model
         self.orm_type = orm_type
-        self.context = {
-            'store': self._create_context()
-        }
         self._error_context = None
 
     def _create_context(self):
@@ -64,8 +61,11 @@ class ApimasAction(object):
     @handle_exception
     def process_request(self, request):
         # Args for the request processors and handler.
-        self.context['request'] = request
-        args = (self.collection, self.url, self.action, self.context)
+        context = {
+            'store': self._create_context()
+        }
+        context['request'] = request
+        args = (self.collection, self.url, self.action, context)
         self._iter_processors(self.request_proc, *args)
         try:
             response_kwargs = self.handler.process(*args)
@@ -75,18 +75,19 @@ class ApimasAction(object):
                 *self._error_context[:-1])
         assert response_kwargs is not None, (
             'handler returned a `None` object')
-        return response_kwargs
+        context['response'] = response_kwargs
+        return context
 
     @handle_exception
-    def process_response(self, response):
-        self.context['response'] = response
+    def process_response(self, context):
+        response = context['response']
         if self._error_context:
             # Error was already handled.
             # Reset error context back to `None`.
             self._error_context = None
             return response
         # Args for the response processors.
-        args = (self.collection, self.url, self.action, self.context)
+        args = (self.collection, self.url, self.action, context)
         self._iter_processors(self.response_proc, clear_err=True, *args)
         return response
 

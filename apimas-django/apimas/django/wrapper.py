@@ -159,8 +159,8 @@ class DjangoWrapper(object):
 
     def execute_action(self, action, request, **kwargs):
         apimas_request = self._get_apimas_request(request, **kwargs)
-        apimas_response = action.process_request(apimas_request)
-        apimas_response = action.process_response(apimas_response)
+        action_context = action.process_request(apimas_request)
+        apimas_response = action.process_response(action_context)
         django_response = self.create_native_response(apimas_response)
         return django_response
 
