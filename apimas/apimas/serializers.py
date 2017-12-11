@@ -188,8 +188,11 @@ class Number(BaseSerializer):
         number_type = getattr(self, 'NUMBER_TYPE', None)
         if number_type is None:
             raise GenericFault('`NUMBER_TYPE` needs to be set')
+        if self.nullable and value is None:
+            return value
         if isnumeric(value):
             return number_type(value)
+
         raise ValidationError('Field is not numeric.')
 
     def get_repr_value(self, value, meta):

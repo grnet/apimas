@@ -17,6 +17,7 @@ register_predicate('.handler', handler_spec)
 
 register_base_predicate('.flag.*')
 register_base_predicate('.flag.readonly')
+register_base_predicate('.flag.nullable')
 
 register_base_predicate('.fields')
 
@@ -29,6 +30,7 @@ register_predicate('.field.*', field_spec)
 
 register_base_predicate('.field.string')
 register_base_predicate('.field.serial')
+register_base_predicate('.field.integer')
 
 field_identity_spec = {'.field.identity': {'to': {'.string': {}}}}
 register_predicate('.field.identity', field_identity_spec)

@@ -25,7 +25,8 @@ def serializer_obj(cls):
         docular.construct_last(context)
         predicate = context['predicate']
 
-        kwargs = dict(docular.doc_spec_iter_values(instance))
+        # kwargs = dict(docular.doc_spec_iter_values(instance))
+        kwargs = docular.doc_spec_get(instance) or {}
 
         pred_instance = instance[predicate]
         pred_kwargs = dict(docular.doc_spec_iter_values(pred_instance)) \
@@ -38,7 +39,7 @@ def serializer_obj(cls):
 
 
 def cerberus_flag(flag):
-    def constructor(instance):
+    def constructor(instance, loc):
         value = docular.doc_spec_get(instance, default={})
         value[flag] = True
         docular.doc_spec_set(instance, value)
@@ -82,6 +83,7 @@ SERIALIZATION_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.field.integer': serializer_obj(srs.Integer),
     '.flag.*': no_constructor,
     '.flag.readonly': cerberus_flag('readonly'),
+    '.flag.nullable': cerberus_flag('nullable'),
     '.meta': no_constructor,
     '.string': construct_string,
 }, default=no_constructor)
@@ -308,6 +310,7 @@ CERBERUS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.field.integer': cerberus_type('integer'),
     '.flag.*': no_constructor,
     '.flag.readonly': cerberus_flag('readonly'),
+    '.flag.nullable': cerberus_flag('nullable'),
     '.meta': no_constructor,
     '.string': construct_string,
 }, default=no_constructor)
