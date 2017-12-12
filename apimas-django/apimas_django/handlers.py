@@ -354,7 +354,6 @@ class CreateHandlerProcessor(DjangoBaseHandler):
     def execute(self, collection, url, action, context_data):
         """ Creates a new django model instance. """
 
-        print 'data', context_data
         data = context_data['data']
         kwargs = context_data['kwargs']
         key = kwargs.get('id0')

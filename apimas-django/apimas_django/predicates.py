@@ -18,6 +18,8 @@ register_predicate('.handler', handler_spec)
 register_base_predicate('.flag.*')
 register_base_predicate('.flag.readonly')
 register_base_predicate('.flag.nullable')
+register_base_predicate('.flag.filterable')
+
 
 register_base_predicate('.fields')
 
@@ -111,7 +113,7 @@ action_template_django_list_spec = {
         },
         'handler': 'apimas_django.handlers.ListHandler',
         'post': {
-#            '1': 'apimas_django.processors.Filtering',
+            '1': 'apimas_django.processors.Filtering',
             '2': 'apimas_django.processors.InstanceToDict',
             '3': 'apimas.components.processors.Serialization',
         }

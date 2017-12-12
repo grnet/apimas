@@ -130,7 +130,9 @@ class InstanceToDictProcessor(BaseProcessor):
         for k, v in spec.iteritems():
             source = v['source'] if v else k
             fields = v.get('fields') if v else None
-            value = getattr(instance, source)
+            value = instance
+            for elem in source.split('.'):
+                value = getattr(value, elem)
             if fields:
                 subvalues = value.all()
                 value = [self.to_dict(orm_model, subvalue, spec=fields)
@@ -220,7 +222,7 @@ class Filter(object):
             return serializer_cls(**self.serializer_kwargs)
         return None
 
-    def to_native(self, value, operator):
+    def to_native(self, value, operator, meta):
         """
         Converts value of query parameter into a native represenation, using
         an appropriate serializer.
@@ -230,10 +232,10 @@ class Filter(object):
         """
         serializer = self._get_serializer(operator)
         if serializer:
-            return serializer.deserialize(value)
+            return serializer.deserialize(value, meta)
         return value
 
-    def filter(self, operator, queryset, value):
+    def filter(self, operator, queryset, value, meta):
         """
         Filter a given queryset based on a specific lookup operator, and a
         value.
@@ -241,14 +243,14 @@ class Filter(object):
         operators = getattr(self, 'OPERATORS', [])
         if operator and operator not in operators:
             return queryset
-        value = self.to_native(value, operator)
+        value = self.to_native(value, operator, meta)
         kwargs = {
             self.source + ('__' + operator if operator else ''): value
         }
         return queryset.filter(**kwargs)
 
-    def __call__(self, operator, queryset, value):
-        return self.filter(operator, queryset, value)
+    def __call__(self, operator, queryset, value, meta):
+        return self.filter(operator, queryset, value, meta)
 
 
 class BooleanFilter(Filter):
@@ -341,7 +343,41 @@ def _construct_meta(context):
     return {'source': source}
 
 
-class Filtering(BaseProcessor):
+def filter_obj(cls):
+    def constructor(context, instance, loc):
+        docular.construct_last(context)
+        source = docular.doc_spec_get(instance.get('source', {}),
+                                  default=loc[-1])
+        source = source.replace('.', '__')
+        value = docular.doc_spec_get(instance) or {}
+        filterclass = cls(source=source) if value.get('filterable') else None
+        docular.doc_spec_set(instance, filterclass)
+    return constructor
+
+
+def flag_constructor(flag):
+    def constructor(instance, loc):
+        value = docular.doc_spec_get(instance, default={})
+        value[flag] = True
+        docular.doc_spec_set(instance, value)
+    return constructor
+
+
+def collect_constructor(context, instance, loc):
+    v = dict(docular.doc_spec_iter_values(instance['fields']))
+    docular.doc_spec_set(instance, v)
+
+
+FILTERING_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
+    '.field.collection.django': collect_constructor,
+    '.field.string': filter_obj(StringFilter),
+    '.field.integer': filter_obj(IntegerFilter),
+    '.flag.filterable': flag_constructor('filterable'),
+}, default=no_constructor)
+
+
+
+class FilteringProcessor(BaseProcessor):
     """
     A django processor responsible for the filtering of a response, based
     on a query string.
@@ -350,6 +386,7 @@ class Filtering(BaseProcessor):
 
     READ_KEYS = {
         'params': 'request/meta/params',
+        'meta': 'request/meta',
         'queryset': 'response/content',
     }
 
@@ -357,58 +394,45 @@ class Filtering(BaseProcessor):
         'response/content',
     )
 
-    CONSTRUCTORS = {
-        'ref':        Object(Filter, pre_hook=_construct_meta,
-                             conditionals=['.filterable']),
-        'serial':     Object(Filter, pre_hook=_construct_meta,
-                             conditionals=['.filterable']),
-        'integer':    Object(IntegerFilter, pre_hook=_construct_meta,
-                             conditionals=['.filterable']),
-        'float':      Object(FloatFilter, pre_hook=_construct_meta,
-                             conditionals=['.filterable']),
-        'string':     Object(StringFilter, pre_hook=_construct_meta,
-                             conditionals=['.filterable']),
-        'text':       Object(StringFilter, pre_hook=_construct_meta,
-                             conditionals=['.filterable']),
-        'choices':    Object(StringFilter, pre_hook=_construct_meta,
-                             conditionals=['.filterable']),
-        'email':      Object(StringFilter, pre_hook=_construct_meta,
-                             conditionals=['.filterable']),
-        'boolean':    Object(BooleanFilter, pre_hook=_construct_meta,
-                             conditionals=['.filterable']),
-        'datetime':   Object(
-                         DateTimeFilter,
-                         kwargs_spec_mapping={'format': 'date_format'},
-                         kwargs_spec=True, pre_hook=_construct_meta,
-                         conditionals=['.filterable']),
-        'date':       Object(
-                         DateFilter,
-                         kwargs_spec_mapping={'format': 'date_format'},
-                         kwargs_spec=True, pre_hook=_construct_meta,
-                         conditionals=['.filterable']),
-        'struct':     Object(
-                         StructFilter, args_spec=True,
-                         args_spec_name='filters',
-                         pre_hook=_construct_meta,
-                         conditionals=['.filterable']),
-        'default':    Dummy()
-    }
+    # CONSTRUCTORS = {
+    #     'ref':        Object(Filter, pre_hook=_construct_meta,
+    #                          conditionals=['.filterable']),
+    #     'serial':     Object(Filter, pre_hook=_construct_meta,
+    #                          conditionals=['.filterable']),
+    #     'integer':    Object(IntegerFilter, pre_hook=_construct_meta,
+    #                          conditionals=['.filterable']),
+    #     'float':      Object(FloatFilter, pre_hook=_construct_meta,
+    #                          conditionals=['.filterable']),
+    #     'string':     Object(StringFilter, pre_hook=_construct_meta,
+    #                          conditionals=['.filterable']),
+    #     'text':       Object(StringFilter, pre_hook=_construct_meta,
+    #                          conditionals=['.filterable']),
+    #     'choices':    Object(StringFilter, pre_hook=_construct_meta,
+    #                          conditionals=['.filterable']),
+    #     'email':      Object(StringFilter, pre_hook=_construct_meta,
+    #                          conditionals=['.filterable']),
+    #     'boolean':    Object(BooleanFilter, pre_hook=_construct_meta,
+    #                          conditionals=['.filterable']),
+    #     'datetime':   Object(
+    #                      DateTimeFilter,
+    #                      kwargs_spec_mapping={'format': 'date_format'},
+    #                      kwargs_spec=True, pre_hook=_construct_meta,
+    #                      conditionals=['.filterable']),
+    #     'date':       Object(
+    #                      DateFilter,
+    #                      kwargs_spec_mapping={'format': 'date_format'},
+    #                      kwargs_spec=True, pre_hook=_construct_meta,
+    #                      conditionals=['.filterable']),
+    #     'struct':     Object(
+    #                      StructFilter, args_spec=True,
+    #                      args_spec_name='filters',
+    #                      pre_hook=_construct_meta,
+    #                      conditionals=['.filterable']),
+    #     'default':    Dummy()
+    # }
 
-    def __init__(self, collection, spec, **meta):
-        super(Filtering, self).__init__(collection, spec, **meta)
-        field_spec = self.spec.get('*')
-        if not field_spec:
-            msg = 'Processor {!r}: Node \'*\' of given spec is empty'
-            raise InvalidSpec(msg.format(self.name))
-        self.spec = field_spec
-        self.filters = self._construct()
-
-    def _construct(self):
-        instance = doc.doc_construct(
-            {}, self.spec, constructors=self.CONSTRUCTORS,
-            allow_constructor_input=False, autoconstruct='default',
-            construct_spec=True)
-        return instance
+    def __init__(self, filters):
+        self.filters = filters
 
     def process(self, collection, url, action, context):
         """
@@ -420,6 +444,7 @@ class Filtering(BaseProcessor):
         """
         processor_data = self.read(context)
         params = processor_data['params']
+        meta = processor_data['meta']
         queryset = processor_data['queryset']
         if not queryset or not params:
             return
@@ -428,17 +453,14 @@ class Filtering(BaseProcessor):
             raise InvalidInput(msg.format(type(queryset)))
         filter_spec = _get_filter_spec(params)
         for field_name, (operator, value) in filter_spec.iteritems():
-            field_spec = self.spec.get(field_name)
-            # If a given query parameter is not included in the spec, we just
-            # ignore it.
-            if not field_spec:
-                continue
-
             filter_obj = self.filters.get(field_name)
             if filter_obj:
-                queryset = filter_obj(operator, queryset, value)
+                queryset = filter_obj(operator, queryset, value, meta)
 
         self.write((queryset,), context)
+
+
+Filtering = ProcessorConstruction(FILTERING_CONSTRUCTORS, FilteringProcessor)
 
 
 class UserRetrieval(BaseProcessor):
