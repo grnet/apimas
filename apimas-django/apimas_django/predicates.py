@@ -144,6 +144,31 @@ action_template_django_retrieve_spec = {
 register_predicate('.action-template.django.retrieve',
                    action_template_django_retrieve_spec)
 
+action_template_django_partial_update_spec = {
+    '.action-template.django.partial_update': {
+        '.action-template.django.partial_update': {},
+        'partial_update': {
+            'method': 'PATCH',
+            'on_collection': False,
+            'url': '/',
+            'pre': {
+#                'apimas.components.processors.Authentication',
+#                'apimas_django.processors.UserRetrieval',
+#                'apimas_django.processors.ObjectRetrieval',
+                '4': 'apimas_django.processors.Permissions',
+                '5': 'apimas.components.processors.DeSerialization',
+                '6': 'apimas.components.processors.CerberusValidation',
+            },
+            'handler': 'apimas_django.handlers.UpdateHandler',
+            'post': {
+                '1': 'apimas_django.processors.InstanceToDict',
+                '2': 'apimas.components.processors.Serialization',
+            },
+        },
+    },
+}
+
+
 # PREDICATES =  {
 #     '.action-template.django.update': {
 #         '.action-template.django.update': {},
@@ -157,26 +182,6 @@ register_predicate('.action-template.django.retrieve',
 #                 'apimas_django.processors.Permissions',
 #                 'apimas.components.processors.DeSerialization',
 #                 'apimas.components.processors.CerberusValidation',
-#             ],
-#             'handler': 'apimas_django.handlers.UpdateHandler',
-#             'post': [
-#                 'apimas_django.processors.InstanceToDict',
-#                 'apimas.components.processors.Serialization',
-#             ]
-
-#         },
-#     },
-#     '.action-template.django.partial_update': {
-#         '.action-template.django.partial_update': {},
-#         'partial_update': {
-#             'method': 'PATCH',
-#             'url': '/',
-#             'pre': [
-#                 'apimas.components.processors.Authentication',
-#                 'apimas_django.processors.UserRetrieval',
-#                 'apimas_django.processors.ObjectRetrieval',
-#                 'apimas_django.processors.Permissions',
-#                 'apimas.components.processors.Serialization',
 #             ],
 #             'handler': 'apimas_django.handlers.UpdateHandler',
 #             'post': [
