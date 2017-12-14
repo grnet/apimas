@@ -499,7 +499,6 @@ class Struct(BaseSerializer):
         deserialized_data = {}
         for k, v in value.iteritems():
             field_schema = self.schema.get(k, {})
-            print 'FIELD_SCHEMA', field_schema
             serializer = field_schema.get('serializer')
             map_to = field_schema.get('map_to')
             if serializer is None:
