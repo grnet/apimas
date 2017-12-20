@@ -461,15 +461,15 @@ class UpdateHandlerProcessor(CreateHandlerProcessor):
         """
         Updates an existing model instance based on the data of request.
         """
-        model = context_data['model']
+        model = self.spec['model']
         pk = context_data['pk']
         data = context_data['data']
-        instance = self.get_resource(model, pk, context_data)
-        data, many = self._parse_ref(model, data)
+        instance = model.objects.get(pk=pk)
+#        data, many = self._parse_ref(model, data)
         instance = self._update_obj(instance, data)
-        if many:
-            for k, v in many.iteritems():
-                getattr(instance, k).add(*v)
+        # if many:
+        #     for k, v in many.iteritems():
+        #         getattr(instance, k).add(*v)
         return instance
 
 
