@@ -132,6 +132,8 @@ class InstanceToDictProcessor(BaseProcessor):
             fields = v.get('fields') if v else None
             value = instance
             for elem in source.split('.'):
+                if value is None:
+                    break
                 value = getattr(value, elem)
             if fields:
                 subvalues = value.all()
