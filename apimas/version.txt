@@ -1,1 +1,1 @@
-apimas 0.4.dev2
+apimas 0.4.dev3
