@@ -105,6 +105,16 @@ class DjangoRestAdapter(NaiveAdapter):
                 'map': 'max_length',
             }
         },
+        '.decimal': {
+            'max_digits': {
+                'default': None,
+                'map': 'max_digits',
+            },
+            'decimal_places': {
+                'default': None,
+                'map': 'decimal_places',
+            }
+        },
         '.choices': {
             'allowed': {
                 'default': [],
@@ -150,6 +160,7 @@ class DjangoRestAdapter(NaiveAdapter):
         'integer': serializers.IntegerField,
         'biginteger': serializers.IntegerField,
         'float': serializers.FloatField,
+        'decimal': serializers.DecimalField,
         'string': serializers.CharField,
         'text': serializers.CharField,
         'choices': serializers.ChoiceField,
@@ -169,6 +180,7 @@ class DjangoRestAdapter(NaiveAdapter):
         'integer': models.IntegerField,
         'biginteger': models.BigIntegerField,
         'float': models.FloatField,
+        'decimal': models.DecimalField,
         'string': models.CharField,
         'text': models.TextField,
         'choices': models.CharField,
