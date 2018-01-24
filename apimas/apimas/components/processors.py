@@ -247,8 +247,6 @@ class CerberusValidation(BaseProcessor):
                              pre_hook=lambda x: {'type': 'datetime'}),
         'date':       Object(dict, kwargs_instance=True, kwargs_spec=True,
                              pre_hook=lambda x: {'type': 'date'}),
-        'datetime':   Object(dict, kwargs_instance=True, kwargs_spec=True,
-                             pre_hook=lambda x: {'type': 'datetime'}),
         'file':       Object(dict, kwargs_instance=True, kwargs_spec=True),
         'struct':     Object(dict, kwargs_instance=True, args_spec=True,
                              args_spec_name='schema',
