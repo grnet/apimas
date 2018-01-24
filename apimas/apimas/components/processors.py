@@ -309,7 +309,8 @@ class CerberusValidation(BaseProcessor):
         where `loc` is the location of the node being validated at spec and
         `value` is the runtime value of it based on the request data.
 
-        If validation failed, methods should raise `apimas.errors.ValidationError`.
+        If validation failed, methods should raise
+        `apimas.errors.ValidationError`.
         """
         field_location = self.collection + ('*',) + context.loc[:-1]
         while field_location[-1].startswith('.'):
