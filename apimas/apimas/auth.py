@@ -3,9 +3,7 @@ from apimas.errors import UnauthorizedError
 
 
 class AuthenticationMethod(object):
-    """
-    Base class which represents an authentication method.
-    """
+    """ Base class which represents an authentication method. """
 
     def authenticate(self, headers):
         """
@@ -36,8 +34,9 @@ class BasicAuthentication(AuthenticationMethod):
     credentials match based on a callable provided by user.
 
     Args:
-        verifier: (callable) A function which takes two arguments i.e.
-        (username and password) and decides if these credentials match or not.
+        verifier: (callable) A function which takes an argument that represents
+        the provided authentication credentials and decides if these
+        credentials are valid or not.
         This function must return a dict of identity information.
     """
 
@@ -47,19 +46,21 @@ class BasicAuthentication(AuthenticationMethod):
         self.verifier = verifier
 
     def authenticate(self, headers):
-        username, password = self.extract_from_headers(headers)
-        user = self.verifier(username, password)
+        credentials = self.extract_from_headers(headers)
+        user = self.verifier(credentials)
         if user is None:
-            raise UnauthorizedError('Given credentials does not match')
+            raise UnauthorizedError('Invalid credentials')
         return user
 
     def extract_from_headers(self, headers):
         authorization = headers.get('HTTP_AUTHORIZATION')
         if authorization is None:
             raise UnauthorizedError('Missing credentials')
+
         _, match, credentials = authorization.partition('Basic ')
         if not match:
             raise UnauthorizedError('Invalid credentials')
+
         try:
             username, match, password = base64.b64decode(
                 credentials).partition(':')
@@ -67,29 +68,21 @@ class BasicAuthentication(AuthenticationMethod):
             raise UnauthorizedError('Invalid credentials')
         if not match:
             raise UnauthorizedError('Invalid credentials')
-        return username, password
+
+        return (username, password)
 
 
-class TokenAuthentication(AuthenticationMethod):
+class TokenAuthentication(BasicAuthentication):
     """ Token Based Authentication """
 
     AUTH_HEADERS = 'Bearer'
-
-    def __init__(self, verifier):
-        self.verifier = verifier
-
-    def authenticate(self, headers):
-        token = self.extract_from_headers(headers)
-        user = self.verifier(token)
-        if user is None:
-            raise UnauthorizedError('Given credentials does not match')
-        return user
 
     def extract_from_headers(self, headers):
         authorization = headers.get('HTTP_AUTHORIZATION')
         if authorization is None:
             raise UnauthorizedError('Missing token')
-        _, match, token = authorization.partition('Bearer ')
+        _, match, token = authorization.partition(
+                '{} '.format(self.AUTH_HEADERS))
         if not match:
             raise UnauthorizedError('Invalid token given')
         return token
