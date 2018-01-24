@@ -88,6 +88,12 @@ class TokenAuthentication(BasicAuthentication):
         return token
 
 
+class DjoserAuthentication(TokenAuthentication):
+    """ Djoser Based Authentication """
+
+    AUTH_HEADERS = 'Token'
+
+
 class ClientBasicAuthentication(object):
     AUTH_HEADERS = 'Basic'
 

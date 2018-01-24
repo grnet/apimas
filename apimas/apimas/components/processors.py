@@ -385,6 +385,8 @@ class Authentication(BaseProcessor):
                             pre_hook=_get_verifier('token_verifier')),
         'basic':     Object(auth.BasicAuthentication, kwargs_spec=True,
                             pre_hook=_get_verifier('basic_verifier')),
+        'djoser':    Object(auth.DjoserAuthentication, kwargs_spec=True,
+                            pre_hook=_get_verifier('djoser_verifier')),
         'protected': protected,
         'default':   Dummy()
     }
