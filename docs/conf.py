@@ -57,7 +57,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'APIMAS'
-copyright = u'2016-2017, GRNET'
+copyright = u'2016-2018, GRNET'
 author = u'GRNET'
 
 # The version info for the project you're documenting, acts as replacement for
