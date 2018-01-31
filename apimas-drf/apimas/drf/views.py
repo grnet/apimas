@@ -43,7 +43,9 @@ def generate_view(name, serializer, model, permissions=None,
     :return: A `ViewSet` class.
     """
     permission_classes = map(utils.LOAD_CLASS, permission_classes)
-    apimas_perm_cls = gen_apimas_permission_cls(model, permissions)
+    apimas_perm_cls_conf = kwargs.get('apimas_permission_class', 'apimas.drf.permissions.ApimasPermissions')
+    apimas_perm_cls_base = utils.LOAD_CLASS(apimas_perm_cls_conf)
+    apimas_perm_cls = gen_apimas_permission_cls(model, permissions, apimas_perm_cls_base)
     permission_classes += [apimas_perm_cls] if apimas_perm_cls else []
     standard_content = {
         'serializer_class': serializer,
@@ -73,13 +75,13 @@ def get_filtering_options(filter_fields, ordering_fields, search_fields):
     return searchable_fields, filter_backends
 
 
-def gen_apimas_permission_cls(model, permissions):
+def gen_apimas_permission_cls(model, permissions, cls=ApimasPermissions):
     """
     Generate an `ApimasPermission` classes that conforms to the permission
     rules specified on the `APIMAS` specfication (if given).
     """
     permissions = permissions or []
-    return ApimasPermissions(permissions, model)
+    return cls(permissions, model)
 
 
 def get_filter_backends(searchable_fields):
