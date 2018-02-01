@@ -41,3 +41,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 [0.3]: https://github.com/grnet/apimas/tree/0.3
 [0.3.1]: https://github.com/grnet/apimas/tree/0.3.1
+[0.3.2]: https://github.com/grnet/apimas/tree/0.3.2
