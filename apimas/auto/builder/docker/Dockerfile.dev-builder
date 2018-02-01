@@ -1,27 +1,6 @@
 FROM dev-builder-base
 
-COPY jessie_backports.list /etc/apt/sources.list.d/jessie_backports.list
-
-COPY nodesource.gpg /tmp/nodesource.gpg
-
-RUN apt-key add /tmp/nodesource.gpg
-
-COPY nodesource.list /etc/apt/sources.list.d/nodesource.list
-
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y \
-        net-tools \
-        bind9-host \
-        vim \
-        openssh-client \
-        git \
-        python \
-        python-all \
-        python-setuptools \
-        debhelper \
-        virtualenv \
-        nodejs
+RUN apt-get update && apt-get upgrade -y
 
 COPY home/ /root/
 

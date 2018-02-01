@@ -3,62 +3,60 @@
 set -e
 
 help () {
-    echo "Usage: ${0} [-hr] [-b environment]"
-    echo 'Build a debian package from a python project.'
+    echo "Usage: ${0} [-hr] <commit>"
+    echo 'Build a debian package from a git project.'
     echo ''
     echo 'Options:'
     echo ''
     echo ' -h --help:'
     echo '      Print this help and exit.'
     echo ''
+    echo ' -d --debian-dist <debian_dist>:'
+    echo '      Set the debian dist (e.g. jessie, stretch)'
+    echo ''
     echo ' -r --release <tag>:'
-    echo '      Build a package for release.'
-    echo '      Do not append git versions to package name.'
-    echo '      Instead, append .<tag>'
+    echo '      Append the given <tag> to the package version.'
+    echo '      The default tag is computed from the current tag/branch and commit.'
     echo ''
-    echo ' -b --build <environment>:'
-    echo '      Execute "./build.sh <environment>" to allow building other binary'
-    echo '      artifacts (such as UI static files) before calling setup.py to create'
-    echo '      a source distribution.'
+    echo ' -o --output-dir <output_dir>:'
+    echo '      Copy debian packages into the given directory.'
     echo ''
-    echo 'This script should be run in the git repository of the project, in the'
-    echo 'same directory as 'setup.py'. The following files must be present:'
+    echo 'This script should be run in the git repository of the project.'
+    echo 'The following files must be present:'
     echo ''
     echo ' - version.txt'
-    echo '      Contains two entries separated by space:'
-    echo '      1. The python package name given to setup(package=xxx).'
-    echo '         If --release is not given an "extra version" derived from the'
-    echo '         current tag/branch and commit hash is appended to the debian package'
-    echo '         name. This makes two development versions always conflict each other.'
-    echo '      2. The distribution version given to setup(version=vvv).'
-    echo '         A "compatible version" is derived from the distribution version'
-    echo '         by truncating it to only include major.minor segments. The'
-    echo '         compatible version is used in debian/control Provides: package-vvv.'
-    echo ''
-    echo ' - debian_dependencies.txt'
-    echo '      Contains a single line with debian packages and optionally versions as'
-    echo '      should be specified in the Depends: package field.'
-    echo ''
-    echo ' - setup.py'
-    echo '      Contains the distutils/setuptools setup() function.'
+    echo '      Contains three entries separated by space:'
+    echo '      1. The name of the software.'
+    echo '      2. The distribution version of the software.'
+    echo '      3. The "compatible version" to be used in '
+    echo '         debian/control Provides: package-vvv.'
     echo ''
 }
 
 set -e
 
+build_dir=build
 release=
-build_env=
+debian_dist='jessie'
+git_commit=
+output_dir=
 
 while [ -n "$1" ]; do
     if [ -z "$1" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
         help
         exit 1
     elif [ "$1" = "-r" ] || [ "$1" = "--release" ]; then
-        release="$2"
         shift
-    elif [ "$1" = "-b" ] || [ "$1" = "--build" ]; then
-        build_env="$2"
+        release="$1"
+    elif [ "$1" = "-d" ] || [ "$1" = "--debian-dist" ]; then
         shift
+        debian_dist="$1"
+    elif [ "$1" = "-o" ] || [ "$2" = "--output-dir" ]; then
+        shift
+        output_dir="$1"
+    elif [ -z "${git_commit}" ]; then
+        shift
+        git_commit="$1"
     else
         echo "Unknown option: '$1'. Try '-h'"
         echo ""
@@ -67,10 +65,29 @@ while [ -n "$1" ]; do
     shift
 done
 
+if [ -z "${git_commit}" ]; then
+    git_commit="HEAD"
+fi
+
+case "${debian_dist}" in
+    wheezy)
+        debian_dist_tag="deb7"
+        ;;
+    jessie)
+        debian_dist_tag="deb8"
+        ;;
+    stretch)
+        debian_dist_tag="deb9"
+        ;;
+    *)
+        debian_dist_tag="${debian_dist}"
+        ;;
+esac
+
 project=
 version=
+compatible_version=
 extra_version=
-git_commit=
 git_tag=
 
 project_version=$(cat version.txt)
@@ -79,6 +96,8 @@ for t in ${project_version}; do
         project="$t"
     elif [ -z "${version}" ]; then
         version="$t"
+    elif [ -z "${compatible_version}" ]; then
+        compatible_version="$t"
     fi
 done
 
@@ -87,51 +106,47 @@ if [ -z "${project}" ] || [ -z "${version}" ]; then
     exit 2
 fi
 
-compatible_version="$(echo ${version} | sed -e 's/\([^.]*[.][^.]*\).*$/\1/g')"
-
-git_commit="$(git rev-parse --verify --short HEAD)"
-git_commit="$(echo ${git_commit} | tr 'A-Z' 'a-z')"
+git_commit_ref="$(git rev-parse --verify --short ${git_commit})"
+git_commit_ref="$(echo ${git_commit_ref} | tr 'A-Z' 'a-z')"
 
 if [ -z "${release}" ]; then
-    git_tag="$(basename $(git describe --all --exact-match --abbrev=0 HEAD))"
-    git_tag="$(echo ${git_tag} | tr 'A-Z' 'a-z')"
-    extra_version="~dev+${git_tag}+${git_commit}"
+    git_description="$(git describe --all --exact-match --abbrev=0 ${git_commit} || true)"
+    if [ -n "${git_description}" ]; then
+        git_tag="+$(basename ${git_description})"
+        git_tag="$(echo ${git_tag} | tr 'A-Z' 'a-z')"
+    fi
+    extra_version="~dev${git_tag}+${git_commit_ref}"
 else
-    extra_version="+${release}+${git_commit}"
+    extra_version="+${release}+${git_commit_ref}"
 fi
 
-export project version extra_version git_commit git_tag
-if [ -n "${build_env}" ] && [ -e ./build.sh ]; then
-    ./build.sh "${build_env}"
+full_version="${version}${extra_version}"
+export project version extra_version full_version git_commit_ref git_tag
+
+orig_name="${project}_${full_version}"
+orig_archive="${orig_name}.orig.tar.gz"
+
+rm -rf "${build_dir}"
+mkdir "${build_dir}"
+git archive --format=tar.gz "${git_commit}" \
+    --prefix="${orig_name}/" \
+    > "${build_dir}/${orig_archive}"
+
+tar zxvkf "${build_dir}/${orig_archive}" -C "${build_dir}"
+
+echo "entering ${build_dir}/${orig_name}/"
+cd "${build_dir}/${orig_name}"
+
+export DIST="${debian_dist}"
+export DEBFULLNAME="GRNET Development Team"
+export DEBEMAIL="team@dev.grnet.gr"
+
+dch --distribution "${debian_dist}" --force-distribution \
+	-v "${full_version}-${debian_dist_tag}" "New upstream"
+
+debuild -b -us -uc
+cd - > /dev/null
+
+if [ -n "${output_dir}" ]; then
+    rsync -a ${build_dir}/ "${output_dir}" --exclude "${orig_name}"
 fi
-
-venv="build-venv"
-rm -rf "${project}".egg-info dist deb_dist "${venv}"
-
-# add system site packages because we need to fulfill potentially
-# unreleased requirements (e.g. apimas itself)
-virtualenv --system-site-packages "${venv}"
-. "${venv}"/bin/activate
-
-pip_cache=".pip_cache"
-mkdir -p "${pip_cache}" || true
-
-"${venv}"/bin/pip install --upgrade pip
-#"${venv}"/bin/pip install -r requirements.txt
-"${venv}"/bin/pip install -r requirements_build.txt
-
-debian_deps="$(cat debian_dependencies.txt)"
-stdeb_cfg="mkdeb-stdeb.cfg"
-echo "[DEFAULT]" > "${stdeb_cfg}"
-echo "Package: python-${project}" >> "${stdeb_cfg}"
-echo "Provides: python-${project}-${compatible_version}" >> "${stdeb_cfg}"
-echo "Forced-Upstream-Version: ${version}${extra_version}" >> "${stdeb_cfg}"
-echo "Depends: ${debian_deps}" >> "${stdeb_cfg}"
-
-python setup.py --command-packages=stdeb.command \
-                sdist_dsc \
-                --extra-cfg-file="${stdeb_cfg}" \
-                bdist_deb
-
-deb_archive=$(find deb_dist -name '*.deb' | tail -1)
-echo "${deb_archive}"
