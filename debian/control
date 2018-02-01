@@ -20,7 +20,7 @@ Description: API Modelling and Serving
 
 Package: python-apimas-drf
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}, python-django (>=1.8), python-django (<< 1.9), python-djangorestframework (>= 3.3), python-djangorestframework (<< 3.4), django-filter (>= 0.12)
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}, python-django (>=1.8), python-django (<< 1.9), python-djangorestframework (>= 3.3), python-djangorestframework (<< 3.4), django-filter (>= 0.12), django-filter (<< 0.13)
 Description: API Modelling and Serving
  apimas provides an intuitive way to build scalable REST APIs and serving your
  application. The goal of apimas is to provide a flexible way for building,
