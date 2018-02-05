@@ -11,7 +11,7 @@ spec_list = [
     {'.flag.nullable': {}},
     {'.flag.filterable': {}},
 
-    {'.fields': {}},
+    {'.resource': {}},
 
     {
         '.field.*': {},
@@ -41,7 +41,8 @@ spec_list = [
                 'post': {"*": {".handler": {}}},
             }
         },
-        'fields': {'*': {".field.*": {}}},
+        'fields': {'.resource': {},
+                   '*': {".field.*": {}}},
         '*': {},
     },
 
@@ -65,16 +66,16 @@ spec_list = [
         '.action-template.django.create': {},
         'create': {
             'method': 'POST',
-            'on_collection': True,
+            'on_collection': False,
             'url': '/',
-            'handler': 'apimas_django.handlers.CreateHandler',
             'pre': {
     #            '1': 'apimas.components.processors.Authentication',
     #            '2': 'apimas_django.processors.UserRetrieval',
-                '3': 'apimas_django.processors.Permissions',
+#                '3': 'apimas_django.processors.Permissions',
                 '4': 'apimas.components.processors.DeSerialization',
                 '5': 'apimas.components.processors.CerberusValidation',
             },
+            'handler': 'apimas_django.handlers.CreateHandler',
             'post': {
                 '1': 'apimas_django.processors.InstanceToDict',
                 '2': 'apimas.components.processors.Serialization'
@@ -91,7 +92,7 @@ spec_list = [
             'pre': {
     #            '1': 'apimas.components.processors.Authentication',
     #            '2': 'apimas_django.processors.UserRetrieval',
-                '3': 'apimas_django.processors.Permissions',
+#                '3': 'apimas_django.processors.Permissions',
             },
             'handler': 'apimas_django.handlers.ListHandler',
             'post': {
@@ -107,12 +108,12 @@ spec_list = [
         'retrieve': {
             'method': 'GET',
             'on_collection': False,
-            'url': '/',
+            'url': '/*/',
             'pre': {
     #            '1': 'apimas.components.processors.Authentication',
     #            '2': 'apimas_django.processors.UserRetrieval',
     #            '3': 'apimas_django.processors.ObjectRetrieval',
-                '4': 'apimas_django.processors.Permissions',
+#                '4': 'apimas_django.processors.Permissions',
             },
             'handler': 'apimas_django.handlers.RetrieveHandler',
             'post': {
@@ -127,12 +128,12 @@ spec_list = [
         'partial_update': {
             'method': 'PATCH',
             'on_collection': False,
-            'url': '/',
+            'url': '/*/',
             'pre': {
     #                'apimas.components.processors.Authentication',
     #                'apimas_django.processors.UserRetrieval',
     #                'apimas_django.processors.ObjectRetrieval',
-                '4': 'apimas_django.processors.Permissions',
+#                '4': 'apimas_django.processors.Permissions',
                 '5': 'apimas.components.processors.DeSerialization',
                 '6': 'apimas.components.processors.CerberusValidation',
             },

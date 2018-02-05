@@ -68,14 +68,22 @@ def struct_constructor(context, instance, loc):
     pred_kwargs = dict(docular.doc_spec_iter_values(pred_instance)) \
                   if pred_instance else {}
     kwargs.update(pred_kwargs)
-    v = dict(docular.doc_spec_iter_values(instance['fields']))
+    v = dict(docular.doc_spec_iter_values(instance))
     serializer = srs.Struct(v, **kwargs)
+    value = {'serializer': serializer}
+    docular.doc_spec_set(instance, value)
+
+
+def list_constructor(context, instance, loc):
+    v = docular.doc_spec_get(instance['fields'])
+    serializer = srs.List(v['serializer'])
     value = {'serializer': serializer, 'map_to': loc[-1]}
     docular.doc_spec_set(instance, value)
 
 
 SERIALIZATION_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
-    '.field.collection.django': struct_constructor,
+    '.resource': struct_constructor,
+    '.field.collection.django': list_constructor,
     '.field.*': no_constructor,
     '.field.string': serializer_obj(srs.String),
     '.field.serial': serializer_obj(srs.Serial),
@@ -148,8 +156,9 @@ class BaseSerialization(BaseProcessor):
     It uses the Serializer classes provided by apimas and reads from
     specification to construct them accordingly.
     """
-    def __init__(self, serializer_dict):
-        self.serializer_dict = serializer_dict
+    def __init__(self, serializers_spec, on_collection):
+        spec = serializers_spec if on_collection else serializers_spec['fields']
+        self.serializer_dict = docular.doc_spec_get(spec)
 
     # def _update_nested_serializers(self, allowed_fields, serializer_info):
     #     """
@@ -203,8 +212,6 @@ class BaseSerialization(BaseProcessor):
         # else:
 
         serializer = self.serializer_dict['serializer']
-        if isinstance(data, Iterable) and not isinstance(data, Mapping):
-            return srs.List(serializer)
         return serializer
 
     def perform_serialization(self, context_data):
@@ -293,16 +300,25 @@ def cerberus_type(cerb_type):
     return constructor
 
 
-def copy_fields_constructor(instance):
-    v = dict(docular.doc_spec_iter_values(instance['fields']))
+def cerberus_resource_constructor(instance):
+    v = dict(docular.doc_spec_iter_values(instance))
+    value = docular.doc_spec_get(instance, default={})
+    value['type'] = 'dict'
+    value['schema'] = v
+    docular.doc_spec_set(instance, value)
+
+
+def cerberus_collection_constructor(instance):
+    v = docular.doc_spec_get(instance['fields'])
     value = docular.doc_spec_get(instance, default={})
     value['type'] = 'list'
-    value['schema'] = {'type': 'dict', 'schema': v}
+    value['schema'] = v
     docular.doc_spec_set(instance, value)
 
 
 CERBERUS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
-    '.field.collection.django': copy_fields_constructor,
+    '.resource': cerberus_resource_constructor,
+    '.field.collection.django': cerberus_collection_constructor,
     '.field.*': no_constructor,
     '.field.identity': cerberus_type('string'),
     '.field.string': cerberus_type('string'),
@@ -358,14 +374,10 @@ class CerberusValidationProcessor(BaseProcessor):
 
     READ_KEYS = DeSerializationProcessor.WRITE_KEYS
 
-    def __init__(self, schema):
-        if not schema:
-            msg = 'Processor {!r}: schema is empty'
-            raise InvalidSpec(msg.format(self.name))
-
-        self.validation_schema = {
-            'data': schema['schema'],
-        }
+    def __init__(self, schema_spec, on_collection):
+        spec = schema_spec if on_collection else schema_spec['fields']
+        schema = docular.doc_spec_get(spec)
+        self.validation_schema = {'data': schema}
 
     def _validator_constructor(self, context):
         """

@@ -125,8 +125,8 @@ class DjangoBaseHandler(BaseHandler):
         'model',
     }
 
-    def __init__(self, spec):
-        self.spec = spec
+    def __init__(self, django_spec, on_collection):
+        self.spec = docular.doc_spec_get(django_spec)
         # self.model = value['model']
         # self.bounds = value['bounds']
 

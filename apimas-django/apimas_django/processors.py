@@ -33,18 +33,25 @@ def construct_field(instance, loc):
     docular.doc_spec_set(instance, v)
 
 
+def construct_resource(instance):
+    v = dict(docular.doc_spec_iter_values(instance))
+    docular.doc_spec_set(instance, v)
+
+
 def construct_collection(instance, loc, context):
     docular.construct_last(context)
     source = docular.doc_spec_get(instance.get('source', {}),
                                   default=loc[-1])
-    fields = dict(docular.doc_spec_iter_values(instance['fields']))
+    fields = docular.doc_spec_get(instance['fields'])
     v = {'source': source, 'fields': fields}
     docular.doc_spec_set(instance, v)
 
 
 INSTANCETODICT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
     {'.field.*': construct_field,
-     '.field.collection.django': construct_collection},
+     '.resource': construct_resource,
+     '.field.collection.django': construct_collection,
+    },
     default=no_constructor)
 
 
@@ -61,8 +68,11 @@ class InstanceToDictProcessor(BaseProcessor):
         'response/content',
     )
 
-    def __init__(self, spec):
-        self.spec = spec  ### tentative
+    def __init__(self, collection_spec, on_collection):
+        self.collection_spec = collection_spec  ### tentative
+        self.on_collection = on_collection
+        subspec = collection_spec if on_collection else collection_spec['fields']
+        self.spec = docular.doc_spec_get(subspec)
 
     # def _extract_many(self, instance, field_name):
     #     """
@@ -175,11 +185,12 @@ class InstanceToDictProcessor(BaseProcessor):
             msg = 'A model instance or a queryset is expected. {!r} found.'
             raise InvalidInput(msg.format(type(instance)))
         model = processor_data['model']
-        spec = self.spec['fields']
-        if isinstance(instance, Model):
+        if not self.on_collection:
+            spec = self.spec
             instance = None if instance is None else self.to_dict(
                 model, instance, spec)
         else:
+            spec = self.spec['fields']
             instance = [self.to_dict(model, inst, spec) for inst in instance]
         self.write((instance,), context)
 
@@ -433,8 +444,8 @@ class FilteringProcessor(BaseProcessor):
     #     'default':    Dummy()
     # }
 
-    def __init__(self, filters):
-        self.filters = filters
+    def __init__(self, filters_spec, on_collection):
+        self.filters = docular.doc_spec_get(filters_spec)
 
     def process(self, collection, url, action, context):
         """

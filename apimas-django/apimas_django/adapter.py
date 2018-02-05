@@ -165,8 +165,13 @@ def join_urls(*args):
                     [args[-1].lstrip("/")])
 
 
-def _construct_url(path, action_url, on_collection):
-    # Add a trailing slash to the path.
+def _construct_url(path, action_url):
+    unpacked_action_url = action_url.replace('*', named_pattern('pk'))
+    url = join_urls(path, unpacked_action_url).rstrip('/') + '/'
+    url_pattern = r'^' + url + '$'
+    return url_pattern
+
+
     pattern = named_pattern('pk') if not on_collection else ''
     path = join_urls(path, pattern)
     if action_url != '/':
@@ -188,11 +193,10 @@ def construct_processors(processors, spec):
     return artifacts
 
 
-def make_processor(processor, collection_loc, artifacts):
+def make_processor(processor, collection_loc, on_collection, artifacts):
     proc_spec, cls = artifacts[processor]
     subspec = docular.doc_get(proc_spec, collection_loc)
-    value = docular.doc_spec_get(subspec)
-    return cls(value)
+    return cls(subspec, on_collection)
 
 
 def mk_url_prefix(loc):
@@ -229,14 +233,14 @@ def mk_action_view(
 
     print "ACTION", action_name
     collection_path = mk_url_prefix(loc)
-    urlpattern = _construct_url(collection_path, action_url, on_collection)
+    urlpattern = _construct_url(collection_path, action_url)
     method = method.upper()
 
     top_spec = context['top_spec']
     artifacts = docular.doc_spec_get(docular.doc_get(top_spec, ('.meta', 'artifacts')))
-    pre_proc = [make_processor(proc, loc, artifacts) for proc in pre_proc]
-    post_proc = [make_processor(proc, loc, artifacts) for proc in post_proc]
-    handler = make_processor(handler, loc, artifacts)
+    pre_proc = [make_processor(proc, loc, on_collection, artifacts) for proc in pre_proc]
+    post_proc = [make_processor(proc, loc, on_collection, artifacts) for proc in post_proc]
+    handler = make_processor(handler, loc, on_collection, artifacts)
 
     orm_context = get_orm_context(collection_spec)
     apimas_action = ApimasAction(
