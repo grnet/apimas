@@ -1,43 +1,39 @@
 from functools import wraps
 from apimas import utils
-from apimas.errors import InvalidInput
+from apimas.errors import (AccessDeniedError, NotFound, InvalidInput,
+                           ValidationError, UnauthorizedError)
+from apimas.documents import doc_get
+from apimas.utils import normalize_path
 
 
-def handle_exception(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        self = args[0]
-        try:
-            return func(*args, **kwargs)
-        except:
-            if self._error_context is not None:
-                clear_err = self._error_context[-1]
-                response_kwargs = self.handler.handle_error(
-                    *self._error_context[:-1])
-                assert response_kwargs is not None, (
-                    'Error handler returned a `NoneType` response'
-                )
-                if clear_err:
-                    self._error_context = None
-                return response_kwargs
-            # An unexpectedly error occurred.
-            raise
-    return wrapper
+EXC_CODES = {
+    ValidationError: 400,
+    UnauthorizedError: 401,
+    AccessDeniedError: 403,
+    NotFound: 404,
+}
+
+
+def extract(context, path):
+    path = normalize_path(path)
+    return doc_get(context, path)
 
 
 class ApimasAction(object):
-    def __init__(self, collection, url, action, handler, request_proc=None,
-                 response_proc=None, orm_model=None, orm_type=None):
+    def __init__(self, collection, url, action_name, status_code, content_type,
+                 handler, request_proc=None, response_proc=None,
+                 orm_model=None, orm_type=None):
         assert bool(orm_model) == bool(orm_type)
         self.collection = collection
-        self.action = action
+        self.action_name = action_name
         self.url = url
+        self.status_code = status_code
+        self.content_type = content_type
         self.handler = handler
         self.request_proc = request_proc or []
         self.response_proc = response_proc or []
         self.orm_model = orm_model
         self.orm_type = orm_type
-        self._error_context = None
 
     def _create_context(self):
         return {
@@ -45,52 +41,58 @@ class ApimasAction(object):
             'orm_type': self.orm_type,
         }
 
-    def _iter_processors(self, processors, *processor_args, **kwargs):
-        clear_err = kwargs.get('clear_err', False)
-        for processor in processors:
-            try:
-                processor.process(*processor_args)
-            except Exception as e:
-                self._error_context = (processor.name, processor_args, e,
-                                       clear_err)
-                raise
-
     def get_post_processors(self):
         return self.response_proc
 
-    @handle_exception
-    def process_request(self, request):
-        self._error_context = None
-        # Args for the request processors and handler.
+    def handle_error(self, func, context):
+        try:
+            return func(context)
+        except Exception as exc:
+            exc_type = type(exc)
+            status = EXC_CODES.get(exc_type, 500)
+            if status == 500:
+                import traceback
+                print traceback.format_exc()
+
+            headers = extract(context, 'response/meta/headers') or {}
+            details = getattr(exc, 'kwargs', {}).get('details')
+            content = details if details else {'details': exc.message}
+            return {
+                'content': content,
+                'meta': {
+                    'content_type': self.content_type,
+                    'status_code': status,
+                    'headers': headers,
+                }
+            }
+
+    def process(self, request):
         context = {
             'store': self._create_context()
         }
         context['request'] = request
-        args = (self.collection, self.url, self.action, context)
-        self._iter_processors(self.request_proc, *args)
-        try:
-            response_kwargs = self.handler.process(*args)
-        except Exception as e:
-            self._error_context = (self.handler.name, args, e, False)
-            response_kwargs = self.handler.handle_error(
-                *self._error_context[:-1])
-        assert response_kwargs is not None, (
-            'handler returned a `None` object')
-        context['response'] = response_kwargs
-        return context
+        return self.handle_error(self.process_context, context)
 
-    @handle_exception
-    def process_response(self, context):
-        response = context['response']
-        if self._error_context:
-            # Error was already handled.
-            # Reset error context back to `None`.
-            self._error_context = None
-            return response
-        # Args for the response processors.
-        args = (self.collection, self.url, self.action, context)
-        self._iter_processors(self.response_proc, clear_err=True, *args)
-        return response
+    def process_context(self, context):
+        args = (self.collection, self.url, self.action_name, context)
+
+        for processor in self.request_proc:
+            processor.process(*args)
+
+        response_content = self.handler.process(*args)
+        response = {
+            'content': response_content,
+            'meta': {
+                'content_type': self.content_type,
+                'status_code': self.status_code,
+            },
+        }
+        context['response'] = response
+
+        for processor in self.response_proc:
+            processor.process(*args)
+
+        return context['response']
 
 
 def extract_from_action(action_spec):

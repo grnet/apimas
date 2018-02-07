@@ -2,8 +2,6 @@ from django.db.models import Model
 from django.db.models.query import QuerySet
 from apimas import utils
 from apimas_django import utils as django_utils
-from apimas.errors import (AccessDeniedError, NotFound, InvalidInput,
-                           ValidationError, UnauthorizedError)
 from apimas.components import BaseHandler, ProcessorConstruction
 from apimas.components.processors import DeSerializationProcessor
 import docular
@@ -244,85 +242,6 @@ class DjangoBaseHandler(BaseHandler):
         """
         raise NotImplementedError('execute() must be implemented')
 
-    def handle_error(self, component, cmp_args, ex):
-        """
-        Handles any error occcured in handler or processors.
-
-        Args:
-            component (str): Identifier of handler/processor in which error
-                occured.
-            cmp_args (tuple): Args with which handler/processors was called
-                 by apimas.
-            ex: Error instance raised by handler of processors.
-
-        Returns:
-            dict: Dictionary of response content along with HTTP args in order
-                response can be constructed properly later (namely HTTP status
-                code and and HTTP content type).
-        """
-        exceptions = {
-            ValidationError: 400,
-            UnauthorizedError: 401,
-            AccessDeniedError: 403,
-            NotFound: 404,
-            Exception: 500,
-        }
-        type_ex = type(ex)
-        import traceback
-        print traceback.format_exc()
-        if type_ex not in exceptions:
-            status = 500
-        else:
-            status = exceptions[type_ex]
-        context = cmp_args[-1]
-        # Check if any processor has provided response headers.
-        headers = self.extract(context, 'response/meta/headers') or {}
-        details = getattr(ex, 'kwargs', {}).get('details')
-        content = (
-            details
-            if details
-            else {'details': ex.message}
-        )
-        return {
-            'content': content,
-            'meta': {
-                'content_type': 'application/json',
-                'status_code': status,
-                'headers': headers,
-            }
-        }
-
-    def adapt_instance(self, resource, context_data, context):
-        """
-        Gets a model instance or a QuerySet, converts it into a native format
-        and returns it as a part of handler's response.
-
-        Args:
-            resource: Model instance or QuerySet derived from the actual
-                interaction of the handler with django models.
-            context_data (dict): Dict with handler-specific keys, read from
-                context.
-            context (dict): Request context.
-
-        Returns:
-            dict: Handler's response, which includes the python native format
-                of the model instance along with HTTP args in order response
-                can be constructed properly later (namely HTTP status code and
-                HTTP content type).
-        """
-        if resource and (not isinstance(resource, Model) and not
-                       isinstance(resource, QuerySet)):
-            msg = 'A model instance or a queryset is expected. {!r} found.'
-            raise InvalidInput(msg.format(str(type(resource))))
-
-        return {
-            'content': resource,
-            'meta': {
-                'content_type': self.CONTENT_TYPE,
-                'status_code': self.STATUS_CODE,
-            }
-        }
-
     def process(self, collection, url, action, context):
         """
         Django adapter includes three stages:
@@ -333,8 +252,7 @@ class DjangoBaseHandler(BaseHandler):
               of the output of previous step.
         """
         context_data = self.read_context(context)
-        output = self.execute(collection, url, action, context_data)
-        return self.adapt_instance(output, context_data, context)
+        return self.execute(collection, url, action, context_data)
 
 
 class CreateHandlerProcessor(DjangoBaseHandler):

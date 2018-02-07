@@ -41,6 +41,8 @@ spec_list = [
                 ".action": {},
                 'on_collection': {'.boolean': {}},
                 'method': {'.string': {}},
+                'status_code': {'.integer': {}},
+                'content_type': {'.string': {}},
                 'url': {'.string': {}},
                 'handler': {".handler": {}},
                 'pre': {"*": {".handler": {}}},
@@ -72,6 +74,8 @@ spec_list = [
         '.action-template.django.create': {},
         'create': {
             'method': 'POST',
+            'status_code': 201,
+            'content_type': 'application/json',
             'on_collection': False,
             'url': '/',
             'pre': {
@@ -93,6 +97,8 @@ spec_list = [
         '.action-template.django.list': {},
         'list': {
             'method': 'GET',
+            'status_code': 200,
+            'content_type': 'application/json',
             'on_collection': True,
             'url': '/',
             'pre': {
@@ -113,6 +119,8 @@ spec_list = [
         '.action-template.django.retrieve': {},
         'retrieve': {
             'method': 'GET',
+            'status_code': 200,
+            'content_type': 'application/json',
             'on_collection': False,
             'url': '/*/',
             'pre': {
@@ -133,6 +141,8 @@ spec_list = [
         '.action-template.django.partial_update': {},
         'partial_update': {
             'method': 'PATCH',
+            'status_code': 200,
+            'content_type': 'application/json',
             'on_collection': False,
             'url': '/*/',
             'pre': {
