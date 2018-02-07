@@ -38,12 +38,20 @@ def construct_resource(instance):
     docular.doc_spec_set(instance, v)
 
 
+def construct_struct(instance, loc):
+    source = docular.doc_spec_get(instance.get('source', {}),
+                                  default=loc[-1])
+    fields = docular.doc_spec_get(instance['fields'])
+    v = {'source': source, 'fields': fields, 'type': 'struct'}
+    docular.doc_spec_set(instance, v)
+
+
 def construct_collection(instance, loc, context):
     docular.construct_last(context)
     source = docular.doc_spec_get(instance.get('source', {}),
                                   default=loc[-1])
     fields = docular.doc_spec_get(instance['fields'])
-    v = {'source': source, 'fields': fields}
+    v = {'source': source, 'fields': fields, 'type': 'collection'}
     docular.doc_spec_set(instance, v)
 
 
@@ -140,15 +148,20 @@ class InstanceToDictProcessor(BaseProcessor):
         for k, v in spec.iteritems():
             source = v['source'] if v else k
             fields = v.get('fields') if v else None
+            fields_type = v.get('type') if v else None
             value = instance
             for elem in source.split('.'):
                 if value is None:
                     break
                 value = getattr(value, elem)
+
             if fields:
-                subvalues = value.all()
-                value = [self.to_dict(orm_model, subvalue, spec=fields)
-                         for subvalue in subvalues]
+                if fields_type == 'collection':
+                    subvalues = value.all()
+                    value = [self.to_dict(orm_model, subvalue, spec=fields)
+                             for subvalue in subvalues]
+                elif fields_type == 'struct':
+                    value = self.to_dict(orm_model, value, spec=fields)
 
             # try:
             #     field = orm_model._meta.get_field(source)

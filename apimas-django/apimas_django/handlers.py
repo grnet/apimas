@@ -36,25 +36,44 @@ def get_bounds(loc, top_spec):
     return bounds
 
 
+def struct_constructor(instance, loc):
+    source = docular.doc_spec_get(instance.get('source', {})) or loc[-1]
+    value = {
+        'type': 'struct',
+        'source': source,
+    }
+    docular.doc_spec_set(instance, value)
+
+
 def collection_constructor(instance, loc, top_spec):
     model = docular.doc_spec_get(instance['model'])
     source = docular.doc_spec_get(instance.get('source', {}))
     bounds = get_bounds(loc, top_spec)
     subcollections = {}
+    substructs = {}
     for field, field_value in docular.doc_spec_iter_values(instance['fields']):
         if field_value:
-            subcollections[field] = field_value
+            field_type = field_value['type']
+            if field_type == 'collection':
+                subcollections[field] = field_value
+            else:
+                substructs[field] = field_value
     value = {
+        'type': 'collection',
         'model': utils.import_object(model),
         'source': source,
         'bounds': bounds,
         'subcollections': subcollections,
+        'substructs': substructs,
     }
     docular.doc_spec_set(instance, value)
 
 
 DJANGEBASEHANDLER_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
-    {'.field.collection.django': collection_constructor},
+    {
+        '.field.struct': struct_constructor,
+        '.field.collection.django': collection_constructor,
+    },
     default=no_constructor)
 
 
@@ -346,6 +365,16 @@ class CreateHandlerProcessor(DjangoBaseHandler):
                 values = data.pop(subkey)
                 recs.extend((subcollections[subkey], value)
                             for value in values)
+        substructs = spec['substructs']
+        for subkey in data.keys():
+            if subkey in substructs:
+                struct_data = data.pop(subkey)
+                model = spec['model']
+                field = model._meta.get_field(subkey)
+                struct_instance = field.related_model.objects.create(
+                    **struct_data)
+                data[subkey] = struct_instance
+
         instance = self.do_create(key, spec, data)
         for rec in recs:
             self.create_with(instance.id, *rec)
@@ -367,8 +396,15 @@ class CreateHandlerProcessor(DjangoBaseHandler):
 CreateHandler = _django_base_construction(CreateHandlerProcessor)
 
 
-def prefetch_objects(model, subcollections):
-    objects = model.objects
+def select_related(objects, substructs):
+    for key, value in substructs.iteritems():
+        source = value['source']
+        if source:
+            objects = objects.select_related(source)
+    return objects
+
+
+def prefetch_related(objects, subcollections):
     for key, value in subcollections.iteritems():
         source = value['source']
         if source:
@@ -401,7 +437,9 @@ class ListHandlerProcessor(DjangoBaseHandler):
             flts[ref + '_id'] = kwargs['id' + str(i)]
             prev = ref
 
-        objects = prefetch_objects(model, self.spec['subcollections'])
+        objects = model.objects
+        objects = prefetch_related(objects, self.spec['subcollections'])
+        objects = select_related(objects, self.spec['substructs'])
         return objects.filter(**flts)
 
 
@@ -429,7 +467,9 @@ class RetrieveHandlerProcessor(DjangoBaseHandler):
         """
         pk = context_data['pk']
         model = self.spec['model']
-        objects = prefetch_objects(model, self.spec['subcollections'])
+        objects = model.objects
+        objects = prefetch_related(objects, self.spec['subcollections'])
+        objects = select_related(objects, self.spec['substructs'])
         return objects.get(pk=pk)
 
 

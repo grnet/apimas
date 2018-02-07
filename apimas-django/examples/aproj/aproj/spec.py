@@ -31,6 +31,15 @@ CONFIG = {
                     'fields': {
                         'id': {'.field.serial': {}},
                         'username': {'.field.string': {}},
+                        "name_variants": {
+                            ".field.struct": {},
+                            "source": "name_variants",
+                            "fields": {
+                                ".resource": {},
+                                "en": {".field.string": {}},
+                                "el": {".field.string": {}},
+                            },
+                        },
                         'age': {'.field.integer': {}},
                 #         'emails': {
                 #             '.field.collection.django': {},

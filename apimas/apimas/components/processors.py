@@ -58,7 +58,7 @@ def construct_string(instance, loc):
         instance['='] = str(instance['='])
 
 
-def struct_constructor(context, instance, loc):
+def resource_constructor(context, instance, loc):
     docular.construct_last(context)
     predicate = context['predicate']
 
@@ -81,10 +81,18 @@ def list_constructor(context, instance, loc):
     docular.doc_spec_set(instance, value)
 
 
+def field_struct_constructor(context, instance, loc):
+    v = docular.doc_spec_get(instance['fields'])
+    serializer = v['serializer']
+    value = {'serializer': serializer, 'map_to': loc[-1]}
+    return docular.doc_spec_set(instance, value)
+
+
 SERIALIZATION_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
-    '.resource': struct_constructor,
+    '.resource': resource_constructor,
     '.field.collection.django': list_constructor,
     '.field.*': no_constructor,
+    '.field.struct': field_struct_constructor,
     '.field.string': serializer_obj(srs.String),
     '.field.serial': serializer_obj(srs.Serial),
     '.field.identity': serializer_obj(srs.Identity),
@@ -308,6 +316,11 @@ def cerberus_resource_constructor(instance):
     docular.doc_spec_set(instance, value)
 
 
+def propagate_resource_constructor(instance):
+    v = docular.doc_spec_get(instance['fields'])
+    docular.doc_spec_set(instance, v)
+
+
 def cerberus_collection_constructor(instance):
     v = docular.doc_spec_get(instance['fields'])
     value = docular.doc_spec_get(instance, default={})
@@ -323,6 +336,7 @@ CERBERUS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.field.identity': cerberus_type('string'),
     '.field.string': cerberus_type('string'),
     '.field.serial': cerberus_type('integer'),
+    '.field.struct': propagate_resource_constructor,
     '.field.integer': cerberus_type('integer'),
     '.flag.*': no_constructor,
     '.flag.readonly': cerberus_flag('readonly'),

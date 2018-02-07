@@ -28,6 +28,12 @@ spec_list = [
     {'.meta': {}},
 
     {
+        '.field.struct': {},
+        'fields': {'.resource': {},
+                   '*': {'.field.*': {}}},
+    },
+
+    {
         '.field.collection.*': {},
         'actions': {
             '.action-template.*': {},

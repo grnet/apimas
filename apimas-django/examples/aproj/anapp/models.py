@@ -5,10 +5,16 @@ class Group(models.Model):
     name = models.TextField()
 
 
+class Variants(models.Model):
+    en = models.TextField()
+    el = models.TextField()
+
+
 class User(models.Model):
     username = models.TextField()
     age = models.IntegerField()
     group = models.ForeignKey(Group)
+    name_variants = models.ForeignKey(Variants)
 
 
 class Email(models.Model):
