@@ -1,5 +1,6 @@
 from collections import namedtuple
-from apimas.documents import doc_set, doc_match_levels
+from docular import doc_set
+from apimas.documents import doc_match_levels
 
 
 class Tabmatch(object):

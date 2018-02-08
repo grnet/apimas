@@ -1,7 +1,7 @@
 from copy import deepcopy
 from collections import namedtuple
 from apimas.errors import InvalidInput
-from apimas.documents import doc_set, doc_get
+from docular import doc_set, doc_get
 from apimas.utils import normalize_path
 
 

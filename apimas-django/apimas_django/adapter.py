@@ -13,7 +13,6 @@ from apimas.adapters.actions import ApimasAction
 from apimas_django.wrapper import DjangoWrapper
 from apimas_django.testing import TestCase
 from apimas.components.processors import Authentication
-from apimas import documents as doc
 from apimas_django.predicates import PREDICATES
 from apimas_django.collect_construction import collect_processors
 import docular
@@ -21,28 +20,28 @@ import docular.constructors
 import pprint
 
 
-def _path_to_pattern_set(pattern):
-    """
-    Converts a pattern from string format to a pattern set.
+# def _path_to_pattern_set(pattern):
+#     """
+#     Converts a pattern from string format to a pattern set.
 
-    Args:
-        pattern (str): A pattern in a string format, e.g. `api/foo/bar`.
+#     Args:
+#         pattern (str): A pattern in a string format, e.g. `api/foo/bar`.
 
-    Returns:
-        A pattern set, e.g. [set(['api']), set(['foo']), set(['bar'])
-    """
-    pattern = pattern.split('/')
-    pattern_len = len(pattern)
-    if pattern_len != 3:
-        msg = 'A pattern with 3 columns is expected. {!s} found'
-        raise InvalidInput(msg.format('/'.join(pattern)))
-    pattern_set = []
-    for segment in pattern:
-        parsed_segment = doc.parse_pattern(segment)
-        pattern_doc = {parsed_segment: {}}
-        pattern_set.extend(
-            doc.doc_to_level_patterns(pattern_doc)[:-1])
-    return pattern_set
+#     Returns:
+#         A pattern set, e.g. [set(['api']), set(['foo']), set(['bar'])
+#     """
+#     pattern = pattern.split('/')
+#     pattern_len = len(pattern)
+#     if pattern_len != 3:
+#         msg = 'A pattern with 3 columns is expected. {!s} found'
+#         raise InvalidInput(msg.format('/'.join(pattern)))
+#     pattern_set = []
+#     for segment in pattern:
+#         parsed_segment = doc.parse_pattern(segment)
+#         pattern_doc = {parsed_segment: {}}
+#         pattern_set.extend(
+#             doc.doc_to_level_patterns(pattern_doc)[:-1])
+#     return pattern_set
 
 
 def _get_action_params(action_params):

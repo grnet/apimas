@@ -1,9 +1,8 @@
 from copy import deepcopy
 from collections import Iterable, Mapping
-from apimas import documents as doc, serializers as srs, utils, auth
+from apimas import serializers as srs, utils, auth
 from apimas.components import BaseProcessor, ProcessorConstruction
 from apimas.errors import UnauthorizedError, InvalidSpec, ValidationError
-from apimas.constructors import Flag, Object, Dummy
 from apimas.validators import CerberusValidator
 import docular
 
@@ -486,14 +485,14 @@ class Authentication(BaseProcessor):
     )
 
     CONSTRUCTORS = {
-        'token':     Object(auth.TokenAuthentication, kwargs_spec=True,
-                            pre_hook=_get_verifier('token_verifier')),
-        'basic':     Object(auth.BasicAuthentication, kwargs_spec=True,
-                            pre_hook=_get_verifier('basic_verifier')),
-        'djoser':    Object(auth.DjoserAuthentication, kwargs_spec=True,
-                            pre_hook=_get_verifier('djoser_verifier')),
-        'protected': protected,
-        'default':   Dummy()
+        # 'token':     Object(auth.TokenAuthentication, kwargs_spec=True,
+        #                     pre_hook=_get_verifier('token_verifier')),
+        # 'basic':     Object(auth.BasicAuthentication, kwargs_spec=True,
+        #                     pre_hook=_get_verifier('basic_verifier')),
+        # 'djoser':    Object(auth.DjoserAuthentication, kwargs_spec=True,
+        #                     pre_hook=_get_verifier('djoser_verifier')),
+        # 'protected': protected,
+        # 'default':   Dummy()
     }
 
     def __init__(self, collection, spec, predicates, **meta):
@@ -546,10 +545,10 @@ class ClientAuthentication(Authentication):
     )
 
     CONSTRUCTORS = {
-        'token':     Object(auth.ClientTokenAuthentication, kwargs_spec=True),
-        'basic':     Object(auth.ClientBasicAuthentication, kwargs_spec=True),
-        'protected': protected,
-        'default':   Dummy()
+        # 'token':     Object(auth.ClientTokenAuthentication, kwargs_spec=True),
+        # 'basic':     Object(auth.ClientBasicAuthentication, kwargs_spec=True),
+        # 'protected': protected,
+        # 'default':   Dummy()
     }
 
     def process(self, collection, url, action, context):

@@ -9,7 +9,6 @@ from apimas.components import BaseProcessor, ProcessorConstruction
 from apimas.tabmatch import Tabmatch
 from apimas_django import utils as django_utils
 from apimas.serializers import Date, DateTime, Integer, Float, Boolean, List
-from apimas.constructors import Dummy, Object
 import docular
 
 
@@ -358,15 +357,15 @@ class StructFilter(Filter):
         return filter_obj(operator, queryset, value)
 
 
-def _construct_meta(context):
-    node = doc.doc_get(context.top_spec, context.loc[:-1])
-    meta = node.get('.meta', {})
-    source = meta.get('source', context.parent_name)
+# def _construct_meta(context):
+#     node = docu.doc_get(context.top_spec, context.loc[:-1])
+#     meta = node.get('.meta', {})
+#     source = meta.get('source', context.parent_name)
 
-    if 'source' in context.spec:
-        msg = 'Key {!r} has already been set. ({!s})'
-        raise ConflictError(msg.format('source', ','.join(context.loc)))
-    return {'source': source}
+#     if 'source' in context.spec:
+#         msg = 'Key {!r} has already been set. ({!s})'
+#         raise ConflictError(msg.format('source', ','.join(context.loc)))
+#     return {'source': source}
 
 
 def filter_obj(cls):
@@ -570,7 +569,7 @@ def _strip_fields(fields):
             fields,
             cmp=lambda x, y: cmp(len(y.split('/')), len(x.split('/')))):
         stripped_fields.update(_to_dict(path.split('/'), {}))
-    return doc.doc_to_ns(stripped_fields).keys()
+    return docular.doc_to_ns(stripped_fields).keys()
 
 
 def _get_allowed_fields(matches, action, data):

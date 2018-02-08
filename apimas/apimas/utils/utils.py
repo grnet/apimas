@@ -1,6 +1,6 @@
 import importlib
 from urlparse import urljoin as urlparse_urljoin
-from apimas import documents as doc
+import docular as doc
 
 
 def import_object(obj_path):

@@ -6,7 +6,7 @@ from urlparse import urljoin
 from django.test import TestCase as DjangoTestCase
 from django.test.client import MULTIPART_CONTENT, RequestFactory, Client
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from apimas import documents as doc
+import docular as doc
 from apimas.errors import InvalidInput
 from apimas_django import model_utils as mutils
 from apimas.utils import utils

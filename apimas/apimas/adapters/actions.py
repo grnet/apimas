@@ -2,7 +2,7 @@ from functools import wraps
 from apimas import utils
 from apimas.errors import (AccessDeniedError, NotFound, InvalidInput,
                            ValidationError, UnauthorizedError)
-from apimas.documents import doc_get
+from docular import doc_get
 from apimas.utils import normalize_path
 
 

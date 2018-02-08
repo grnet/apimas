@@ -1,7 +1,7 @@
 import random
 from django.db import models
 from django.core.files.uploadedfile import SimpleUploadedFile
-from apimas import documents as doc
+import docular as doc
 from apimas.errors import InvalidInput
 from apimas.decorators import after
 from apimas.utils import generators as gen, import_object, urljoin

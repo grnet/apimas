@@ -1,6 +1,6 @@
 import mock
 import unittest
-from apimas import documents as doc
+import docular as doc
 from apimas.errors import InvalidSpec
 from apimas.adapters.cookbooks import NaiveAdapter
 from apimas.testing.helpers import (

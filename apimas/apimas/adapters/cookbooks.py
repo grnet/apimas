@@ -1,6 +1,6 @@
 from copy import deepcopy
 from functools import wraps
-from apimas import documents as doc
+import docular as doc
 from apimas.errors import InvalidSpec
 from apimas.adapters import Adapter
 
