@@ -65,16 +65,6 @@ def _get_action_params(action_params):
             handler, pre_proc, post_proc)
 
 
-def get_orm_context(context):
-    model = docular.doc_spec_get(context.get('model'))
-    if model:
-        return {
-            'orm_type': 'django',
-            'orm_model': utils.import_object(model)
-        }
-    return {}
-
-
 # def action_constructor(instance, loc, context):
 #     action_name = loc[-1]
 #     collection_path = "/".join(loc)
@@ -244,10 +234,9 @@ def mk_action_view(
     post_proc = [make_processor(proc, loc, on_collection, artifacts) for proc in post_proc]
     handler = make_processor(handler, loc, on_collection, artifacts)
 
-    orm_context = get_orm_context(collection_spec)
     apimas_action = ApimasAction(
         collection_path, action_url, action_name, status_code, content_type,
-        handler, request_proc=pre_proc, response_proc=post_proc, **orm_context)
+        handler, request_proc=pre_proc, response_proc=post_proc)
     return urlpattern, method, apimas_action
 
 

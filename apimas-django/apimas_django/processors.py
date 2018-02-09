@@ -67,7 +67,6 @@ class InstanceToDictProcessor(BaseProcessor):
 
     READ_KEYS = {
         'instance': 'response/content',
-        'model': 'store/orm_model',
         'allowed_fields': 'store/permissions/allowed_fields',
     }
 
@@ -125,7 +124,7 @@ class InstanceToDictProcessor(BaseProcessor):
     #     return self.to_dict(field.related_model, getattr(instance, source),
     #                         field_spec['.struct='])
 
-    def to_dict(self, orm_model, instance, spec):
+    def to_dict(self, instance, spec):
         """
         Constructs a given model instance a python dict.
 
@@ -157,10 +156,10 @@ class InstanceToDictProcessor(BaseProcessor):
             if fields:
                 if fields_type == 'collection':
                     subvalues = value.all()
-                    value = [self.to_dict(orm_model, subvalue, spec=fields)
+                    value = [self.to_dict( subvalue, spec=fields)
                              for subvalue in subvalues]
                 elif fields_type == 'struct':
-                    value = self.to_dict(orm_model, value, spec=fields)
+                    value = self.to_dict(value, spec=fields)
 
             # try:
             #     field = orm_model._meta.get_field(source)
@@ -196,14 +195,13 @@ class InstanceToDictProcessor(BaseProcessor):
                        isinstance(instance, QuerySet)):
             msg = 'A model instance or a queryset is expected. {!r} found.'
             raise InvalidInput(msg.format(type(instance)))
-        model = processor_data['model']
         if not self.on_collection:
             spec = self.spec
             instance = None if instance is None else self.to_dict(
-                model, instance, spec)
+                instance, spec)
         else:
             spec = self.spec['fields']
-            instance = [self.to_dict(model, inst, spec) for inst in instance]
+            instance = [self.to_dict(inst, spec) for inst in instance]
         self.write((instance,), context)
 
 

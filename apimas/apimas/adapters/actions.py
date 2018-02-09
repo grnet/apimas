@@ -21,9 +21,7 @@ def extract(context, path):
 
 class ApimasAction(object):
     def __init__(self, collection, url, action_name, status_code, content_type,
-                 handler, request_proc=None, response_proc=None,
-                 orm_model=None, orm_type=None):
-        assert bool(orm_model) == bool(orm_type)
+                 handler, request_proc=None, response_proc=None):
         self.collection = collection
         self.action_name = action_name
         self.url = url
@@ -32,14 +30,6 @@ class ApimasAction(object):
         self.handler = handler
         self.request_proc = request_proc or []
         self.response_proc = response_proc or []
-        self.orm_model = orm_model
-        self.orm_type = orm_type
-
-    def _create_context(self):
-        return {
-            'orm_model': self.orm_model,
-            'orm_type': self.orm_type,
-        }
 
     def get_post_processors(self):
         return self.response_proc
@@ -68,7 +58,7 @@ class ApimasAction(object):
 
     def process(self, request):
         context = {
-            'store': self._create_context()
+            'store': {},
         }
         context['request'] = request
         return self.handle_error(self.process_context, context)

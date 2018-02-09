@@ -132,14 +132,12 @@ class DjangoBaseHandler(BaseHandler):
     name = 'apimas_django.handlers.DjangoBaseHandler'
 
     READ_KEYS = {
-        'model': 'store/orm_model',
         'kwargs': 'request/meta/kwargs',
         'pk': 'request/meta/kwargs/pk',
     }
     READ_KEYS.update(DeSerializationProcessor.WRITE_KEYS)
 
     REQUIRED_KEYS = {
-        'model',
     }
 
     def __init__(self, django_spec, on_collection):
@@ -261,7 +259,6 @@ class CreateHandlerProcessor(DjangoBaseHandler):
     STATUS_CODE = 201
     CONTENT_TYPE = 'application/json'
     REQUIRED_KEYS = {
-        'model',
         'data',
     }
 
@@ -336,7 +333,6 @@ class ListHandlerProcessor(DjangoBaseHandler):
     STATUS_CODE = 200
     CONTENT_TYPE = 'application/json'
     REQUIRED_KEYS = {
-        'model',
     }
 
     def execute(self, collection, url, action, context_data):
@@ -374,7 +370,6 @@ class RetrieveHandlerProcessor(DjangoBaseHandler):
     READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     CONTENT_TYPE = 'application/json'
     REQUIRED_KEYS = {
-        'model',
         'pk',
     }
 
@@ -404,7 +399,6 @@ class UpdateHandlerProcessor(CreateHandlerProcessor):
     READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     CONTENT_TYPE = 'application/json'
     REQUIRED_KEYS = {
-        'model',
         'pk',
         'data',
     }
@@ -444,7 +438,6 @@ class DeleteHandlerProcessor(RetrieveHandlerProcessor):
     READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     CONTENT_TYPE = None
     REQUIRED_KEYS = {
-        'model',
         'pk',
     }
 
