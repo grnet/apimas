@@ -256,8 +256,6 @@ class DjangoBaseHandler(BaseHandler):
 class CreateHandlerProcessor(DjangoBaseHandler):
     name = 'apimas_django.handlers.CreateHandler'
 
-    STATUS_CODE = 201
-    CONTENT_TYPE = 'application/json'
     REQUIRED_KEYS = {
         'data',
     }
@@ -330,8 +328,6 @@ def prefetch_related(objects, subcollections):
 class ListHandlerProcessor(DjangoBaseHandler):
     name = 'apimas_django.handlers.ListHandler'
 
-    STATUS_CODE = 200
-    CONTENT_TYPE = 'application/json'
     REQUIRED_KEYS = {
     }
 
@@ -363,12 +359,10 @@ ListHandler = _django_base_construction(ListHandlerProcessor)
 class RetrieveHandlerProcessor(DjangoBaseHandler):
     name = 'apimas_django.handlers.RetrieveHandler'
 
-    STATUS_CODE = 200
     READ_KEYS = {
         'instance': 'store/instance',
     }
     READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
-    CONTENT_TYPE = 'application/json'
     REQUIRED_KEYS = {
         'pk',
     }
@@ -392,12 +386,10 @@ RetrieveHandler = _django_base_construction(RetrieveHandlerProcessor)
 class UpdateHandlerProcessor(CreateHandlerProcessor):
     name = 'apimas_django.handlers.UpdateHandler'
 
-    STATUS_CODE = 200
     READ_KEYS = {
         'instance': 'store/instance',
     }
     READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
-    CONTENT_TYPE = 'application/json'
     REQUIRED_KEYS = {
         'pk',
         'data',
