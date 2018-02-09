@@ -262,8 +262,7 @@ def endpoint_constructor(instance):
 def mk_django_urls(action_urls):
     urls = []
     for urlpattern, method_actions in action_urls.iteritems():
-        django_view = DjangoWrapper(method_actions,
-                                    meta={'root_url': 'http://127.0.0.1:8000/'})
+        django_view = DjangoWrapper(method_actions, {})
         methods = method_actions.keys()
         http_methods = require_http_methods(methods)
         django_view = csrf_exempt(http_methods(django_view))
@@ -317,9 +316,13 @@ REGISTERED_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
     _CONSTRUCTORS, default=no_constructor)
 
 
-def load_apimas_config(config):
+def configure_apimas_app(app_config):
     apimas_app_spec = PREDICATES['.apimas_app']
-    return docular.doc_spec_config(apimas_app_spec, config, PREDICATES)
+    return configure_spec(apimas_app_spec, app_config)
+
+
+def configure_spec(spec, config):
+    return docular.doc_spec_config(spec, config, PREDICATES)
 
 
 def construct_views(spec):

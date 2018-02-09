@@ -383,25 +383,18 @@ class Identity(BaseSerializer):
         to = to.strip(
             self.TRAILING_SLASH) + self.TRAILING_SLASH
 
-        # # In case `root_url` (e.g. http://localhost) is not given, then we
-        # # work only with the relative URL.
-        # self.absolute_url = utils.urljoin(root_url, to) if root_url \
-        #     else None
-        self.rel_url = to
+        root_url = kwargs.get('root_url')
+        self.rel_url = utils.urljoin(root_url, to) if root_url else to
         super(Identity, self).__init__(*args, **kwargs)
 
     def get_repr_value(self, value, meta):
         if value is None:
             return value
 
-        root_url = meta.get('root_url')
-        path = utils.urljoin(root_url, self.rel_url) if root_url \
-               else self.rel_url
-
         if isnumeric(value) \
             or isinstance(value, (str, unicode)) \
             or isinstance(value, uuid.UUID):
-            return utils.urljoin(path, str(value))
+            return utils.urljoin(self.rel_url, str(value))
         try:
             return self.get_repr_value(
                 extract_value(value, 'pk'), meta)

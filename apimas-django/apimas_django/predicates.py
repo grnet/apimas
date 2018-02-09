@@ -25,7 +25,7 @@ spec_list = [
     {'.field.integer': {}},
     {'.field.identity': {'to': {'.string': {}}}},
 
-    {'.meta': {}},
+    {'.meta': {'*': {}}},
 
     {
         '.field.struct': {},

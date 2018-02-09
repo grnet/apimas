@@ -1,4 +1,8 @@
-CONFIG = {
+DEPLOY_CONFIG = {
+    ".meta": {"root_url": "http://127.0.0.1:8000/"},
+}
+
+APP_CONFIG = {
     ".apimas_app": {},
     ".meta": {"get_rules": "anapp.rules.get_rules"},
     "api/prefix": {

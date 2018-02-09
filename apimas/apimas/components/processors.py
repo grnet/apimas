@@ -6,30 +6,36 @@ from apimas.errors import UnauthorizedError, InvalidSpec, ValidationError
 from apimas.validators import CerberusValidator
 import docular
 
+# def _post_hook(context, instance):
+#     # If the parent node is `.array of` constructor, then simply return the
+#     # constructed instance. Otherwise, we need to pass the information
+#     # regarding the source of the field.
+#     if context.parent_name == '.array of=':
+#         return instance
+#     node = doc.doc_get(context.top_spec, context.loc[:-1])
+#     meta = node.get('.meta', {})
+#     source = meta.get('source', context.parent_name)
+#     return (instance, source)
 
-def _post_hook(context, instance):
-    # If the parent node is `.array of` constructor, then simply return the
-    # constructed instance. Otherwise, we need to pass the information
-    # regarding the source of the field.
-    if context.parent_name == '.array of=':
-        return instance
-    node = doc.doc_get(context.top_spec, context.loc[:-1])
-    meta = node.get('.meta', {})
-    source = meta.get('source', context.parent_name)
-    return (instance, source)
+
+def get_meta(top_spec, loc, key):
+    return docular.doc_spec_get(
+        docular.doc_inherit2(top_spec, loc, ('.meta', key)))
 
 
-def serializer_obj(cls):
-    def constructor(context, instance, loc):
+def serializer_obj(cls, dependencies=None):
+    def constructor(context, instance, loc, top_spec):
         docular.construct_last(context)
         predicate = context['predicate']
 
-        # kwargs = dict(docular.doc_spec_iter_values(instance))
-        kwargs = docular.doc_spec_get(instance) or {}
+        kwargs = {}
+        for key in dependencies or []:
+            kwargs[key] = get_meta(top_spec, loc, key)
 
         pred_instance = instance[predicate]
         pred_kwargs = dict(docular.doc_spec_iter_values(pred_instance)) \
                       if pred_instance else {}
+
         kwargs.update(pred_kwargs)
         serializer = cls(**kwargs)
         value = {'serializer': serializer, 'map_to': loc[-1]}
@@ -94,7 +100,7 @@ SERIALIZATION_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.field.struct': field_struct_constructor,
     '.field.string': serializer_obj(srs.String),
     '.field.serial': serializer_obj(srs.Serial),
-    '.field.identity': serializer_obj(srs.Identity),
+    '.field.identity': serializer_obj(srs.Identity, dependencies=['root_url']),
     '.field.integer': serializer_obj(srs.Integer),
     '.flag.*': no_constructor,
     '.flag.readonly': cerberus_flag('readonly'),
