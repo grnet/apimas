@@ -251,7 +251,6 @@ class DeSerializationProcessor(BaseSerialization):
 
     READ_KEYS = {
         'data': 'request/content',
-        'meta': 'request/meta',
         'allowed_fields': 'store/permissions/allowed_fields',
     }
 
@@ -265,8 +264,7 @@ class DeSerializationProcessor(BaseSerialization):
             return None
         allowed_fields = context_data['allowed_fields']
         serializer = self.get_serializer(data, allowed_fields)
-        meta = context_data['meta']
-        return {'data': serializer.deserialize(data, meta)}
+        return {'data': serializer.deserialize(data)}
 
 
 DeSerialization = ProcessorConstruction(
@@ -281,7 +279,6 @@ class SerializationProcessor(BaseSerialization):
 
     READ_KEYS = {
         'data': 'response/content',
-        'meta': 'request/meta',
         'allowed_fields': 'store/permissions/allowed_fields',
     }
 
@@ -295,8 +292,7 @@ class SerializationProcessor(BaseSerialization):
             return None
         allowed_fields = context_data['allowed_fields']
         serializer = self.get_serializer(data, allowed_fields)
-        meta = context_data['meta']
-        return {'data': serializer.serialize(data, meta)}
+        return {'data': serializer.serialize(data)}
 
 
 Serialization = ProcessorConstruction(

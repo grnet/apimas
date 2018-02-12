@@ -71,18 +71,18 @@ class BaseSerializer(object):
             assert callable(extractor), ('extractor must be a callable')
         self.extractor = extractor
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         """ Gets the python native value from a given value. """
         raise NotImplementedError('get_native_value() must be implemented')
 
-    def get_repr_value(self, value, meta):
+    def get_repr_value(self, value):
         """
         Gets the representative format of a value, ready to be easily
         serialized into a content type, e.g. JSON.
         """
         raise NotImplementedError('get_repr_value() must be implemented')
 
-    def serialize(self, value, meta):
+    def serialize(self, value):
         """
         Converts given value into a representative format.
 
@@ -91,9 +91,9 @@ class BaseSerializer(object):
         if self.writeonly:
             return _SKIP
         value = self.extractor(value) if self.extractor else value
-        return self.get_repr_value(value, meta)
+        return self.get_repr_value(value)
 
-    def deserialize(self, value, meta):
+    def deserialize(self, value):
         """
         Converts given value into a python native value.
 
@@ -102,7 +102,7 @@ class BaseSerializer(object):
         if self.readonly:
             return _SKIP
         value = self.default if value is None else value
-        return self.get_native_value(value, meta)
+        return self.get_native_value(value)
 
 
 class String(BaseSerializer):
@@ -117,18 +117,18 @@ class String(BaseSerializer):
 
         return value
 
-    def get_repr_value(self, value, meta):
+    def get_repr_value(self, value):
         return self._get_value(value)
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         return self._get_value(value)
 
 
 class UUID(BaseSerializer):
-    def get_repr_value(self, value, meta):
+    def get_repr_value(self, value):
         return str(value)
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         raise NotImplementedError('deserialize() is not meaningful for'
                                   ' \'UUID\' field')
 
@@ -144,10 +144,10 @@ class Email(String):
             raise ValidationError('Field is not a valid email')
         return value
 
-    def get_repr_value(self, value, meta):
+    def get_repr_value(self, value):
         return self._get_email(value)
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         return self._get_email(value)
 
 
@@ -158,12 +158,12 @@ class Serial(BaseSerializer):
     Deserialization is not meaningful for serials because the value is
     set automatically.
     """
-    def get_repr_value(self, value, meta):
+    def get_repr_value(self, value):
         if isinstance(value, str) and not value.isdigit():
             raise ValidationError('Field is not an integer')
         return int(value)
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         raise NotImplementedError('deserialize() is not meaningful for'
                                   ' \'serial\' field')
 
@@ -195,10 +195,10 @@ class Number(BaseSerializer):
 
         raise ValidationError('Field is not numeric.')
 
-    def get_repr_value(self, value, meta):
+    def get_repr_value(self, value):
         return self._get_value(value)
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         return self._get_value(value)
 
 
@@ -252,13 +252,13 @@ class Boolean(BaseSerializer):
         msg = 'Field is not boolean. {type!r} found instead.'
         raise ValidationError(msg.format(val=type(value)))
 
-    def serialize(self, value, meta):
+    def serialize(self, value):
         try:
             return self._get_bool_value(value)
         except ValidationError:
             return bool(value)
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         return self._get_bool_value(value)
 
 
@@ -287,7 +287,7 @@ class Date(BaseSerializer):
         self.date_format = date_format or self.DEFAULT_FORMAT
         super(Date, self).__init__(*args, **kwargs)
 
-    def get_repr_value(self, value, meta):
+    def get_repr_value(self, value):
         if not isinstance(value, (date, datetime)):
             msg = ('Field cannot be serialized. It is not a date object.'
                    ' {type!r} found instead.')
@@ -300,7 +300,7 @@ class Date(BaseSerializer):
             raise ValidationError(
                 msg.format(format=self.date_format) + e.message)
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         try:
             return datetime.strptime(value, self.date_format)
         except ValueError as e:
@@ -346,14 +346,14 @@ class Choices(BaseSerializer):
                             for i, k in enumerate(self.allowed)}
         super(Choices, self).__init__(*args, **kwargs)
 
-    def get_repr_value(self, value, meta):
+    def get_repr_value(self, value):
         value = self._values_map.get(value, value)
         if value not in self.displayed:
             msg = self.ERROR_MESSAGE.format(allowed=','.join(self.allowed))
             raise ValidationError(msg)
         return value
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         if value not in self.allowed:
             msg = self.ERROR_MESSAGE.format(allowed=','.join(self.allowed))
             raise ValidationError(msg)
@@ -387,7 +387,7 @@ class Identity(BaseSerializer):
         self.rel_url = utils.urljoin(root_url, to) if root_url else to
         super(Identity, self).__init__(*args, **kwargs)
 
-    def get_repr_value(self, value, meta):
+    def get_repr_value(self, value):
         if value is None:
             return value
 
@@ -397,19 +397,19 @@ class Identity(BaseSerializer):
             return utils.urljoin(self.rel_url, str(value))
         try:
             return self.get_repr_value(
-                extract_value(value, 'pk'), meta)
+                extract_value(value, 'pk'))
         except AttributeError:
             raise ValidationError(
                 'Cannot construct identity URL for the given value: {}'.format(
                     value))
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         raise NotImplementedError(
             'get_native_value() is not meaningful for \'.identity\' field')
 
 
 class Ref(Identity):
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         if value is None:
             return None
         parsed_value = urlparse(value)
@@ -426,10 +426,10 @@ class Ref(Identity):
 
 
 class File(BaseSerializer):
-    def get_repr_value(self, value, meta):
+    def get_repr_value(self, value):
         return value.name
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         return value
 
 
@@ -461,11 +461,11 @@ class Struct(BaseSerializer):
         self.schema = schema
         super(Struct, self).__init__(*args, **kwargs)
 
-    def get_repr_value(self, obj, meta):
+    def get_repr_value(self, obj):
         if obj is None:
             return obj
         if isinstance(obj, Iterable) and not isinstance(obj, Mapping):
-            return [self.get_repr_value(v, meta) for v in obj]
+            return [self.get_repr_value(v) for v in obj]
 
         serialized_data = {}
         for field_name, field_schema in self.schema.iteritems():
@@ -473,7 +473,7 @@ class Struct(BaseSerializer):
             map_to = field_schema['map_to']
             value = extract_value(obj, map_to)
             try:
-                ser_value = serializer.serialize(value, meta)
+                ser_value = serializer.serialize(value)
             except ValidationError as e:
                 msg = 'Cannot serialize field {field!r}. ' + e.message
                 raise ValidationError(msg.format(field=field_name))
@@ -482,12 +482,12 @@ class Struct(BaseSerializer):
             serialized_data[field_name] = ser_value
         return serialized_data
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         if value is None:
             return value
 
         if isinstance(value, Iterable) and not isinstance(value, Mapping):
-            return [self.get_native_value(v, meta) for v in value]
+            return [self.get_native_value(v) for v in value]
 
         deserialized_data = {}
         for k, v in value.iteritems():
@@ -497,7 +497,7 @@ class Struct(BaseSerializer):
             if serializer is None:
                 raise ValidationError('Invalid field {!r}'.format(k))
             try:
-                value = serializer.deserialize(v, meta)
+                value = serializer.deserialize(v)
             except ValidationError as e:
                 msg = 'Cannot serialize field {field!r}. ' + e.message
                 raise ValidationError(msg.format(field=k))
@@ -530,16 +530,16 @@ class List(BaseSerializer):
         self.serializer = serializer
         super(List, self).__init__(*args, **kwargs)
 
-    def get_repr_value(self, value, meta):
+    def get_repr_value(self, value):
         if value is None:
             return value
         if not isinstance(value, Iterable) or isinstance(value, Mapping):
             raise ValidationError('Given value is not a list-like object')
-        return [self.serializer.get_repr_value(v, meta) for v in value]
+        return [self.serializer.get_repr_value(v) for v in value]
 
-    def get_native_value(self, value, meta):
+    def get_native_value(self, value):
         if value is None:
             return value
         if not isinstance(value, Iterable) or isinstance(value, Mapping):
             raise ValidationError('Given value is not a list-like object')
-        return [self.serializer.get_native_value(v, meta) for v in value]
+        return [self.serializer.get_native_value(v) for v in value]

@@ -246,7 +246,7 @@ class Filter(object):
             return serializer_cls(**self.serializer_kwargs)
         return None
 
-    def to_native(self, value, operator, meta):
+    def to_native(self, value, operator):
         """
         Converts value of query parameter into a native represenation, using
         an appropriate serializer.
@@ -256,10 +256,10 @@ class Filter(object):
         """
         serializer = self._get_serializer(operator)
         if serializer:
-            return serializer.deserialize(value, meta)
+            return serializer.deserialize(value)
         return value
 
-    def filter(self, operator, queryset, value, meta):
+    def filter(self, operator, queryset, value):
         """
         Filter a given queryset based on a specific lookup operator, and a
         value.
@@ -267,14 +267,14 @@ class Filter(object):
         operators = getattr(self, 'OPERATORS', [])
         if operator and operator not in operators:
             return queryset
-        value = self.to_native(value, operator, meta)
+        value = self.to_native(value, operator)
         kwargs = {
             self.source + ('__' + operator if operator else ''): value
         }
         return queryset.filter(**kwargs)
 
-    def __call__(self, operator, queryset, value, meta):
-        return self.filter(operator, queryset, value, meta)
+    def __call__(self, operator, queryset, value):
+        return self.filter(operator, queryset, value)
 
 
 class BooleanFilter(Filter):
@@ -410,7 +410,6 @@ class FilteringProcessor(BaseProcessor):
 
     READ_KEYS = {
         'params': 'request/meta/params',
-        'meta': 'request/meta',
         'queryset': 'response/content',
     }
 
@@ -468,7 +467,6 @@ class FilteringProcessor(BaseProcessor):
         """
         processor_data = self.read(context)
         params = processor_data['params']
-        meta = processor_data['meta']
         queryset = processor_data['queryset']
         if not queryset or not params:
             return
@@ -479,7 +477,7 @@ class FilteringProcessor(BaseProcessor):
         for field_name, (operator, value) in filter_spec.iteritems():
             filter_obj = self.filters.get(field_name)
             if filter_obj:
-                queryset = filter_obj(operator, queryset, value, meta)
+                queryset = filter_obj(operator, queryset, value)
 
         self.write((queryset,), context)
 
