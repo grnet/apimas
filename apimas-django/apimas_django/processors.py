@@ -74,10 +74,11 @@ class InstanceToDictProcessor(BaseProcessor):
         'response/content',
     )
 
-    def __init__(self, collection_spec, on_collection):
+    def __init__(self, collection_spec, action_params):
         self.collection_spec = collection_spec  ### tentative
-        self.on_collection = on_collection
-        subspec = collection_spec if on_collection else collection_spec['fields']
+        self.on_collection = action_params['on_collection']
+        subspec = collection_spec if self.on_collection \
+                  else collection_spec['fields']
         self.spec = docular.doc_spec_get(subspec)
 
     # def _extract_many(self, instance, field_name):
@@ -454,7 +455,7 @@ class FilteringProcessor(BaseProcessor):
     #     'default':    Dummy()
     # }
 
-    def __init__(self, filters_spec, on_collection):
+    def __init__(self, filters_spec, action_params):
         self.filters = docular.doc_spec_get(filters_spec)
 
     def process(self, collection, url, action, context):

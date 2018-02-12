@@ -44,16 +44,16 @@ import pprint
 #     return pattern_set
 
 
-def _get_action_params(action_params):
-    method = docular.doc_spec_get(action_params.get('method'))
-    status_code = docular.doc_spec_get(action_params.get('status_code'))
-    content_type = docular.doc_spec_get(action_params.get('content_type'))
-    on_collection = docular.doc_spec_get(action_params.get('on_collection'))
-    action_url = docular.doc_spec_get(action_params.get('url'))
-    handler = docular.doc_spec_get(action_params.get('handler'))
+def read_action_spec(action_spec):
+    param_keys = ('method', 'status_code', 'content_type',
+                  'on_collection', 'url')
+    params = {k:v for k, v in (docular.doc_spec_iter_values(action_spec))
+              if k in param_keys}
 
-    pre = action_params.get('pre', {})
-    post = action_params.get('post', {})
+    handler = docular.doc_spec_get(action_spec, 'handler')
+    pre = action_spec.pop('pre', {})
+    post = action_spec.pop('post', {})
+
     # Initialize pre processors and post processors with spec.
     pre_keys = sorted(key for key in pre.keys()
                       if key[:1] not in ("*", ".", "="))
@@ -61,8 +61,8 @@ def _get_action_params(action_params):
     post_keys = sorted(key for key in post.keys()
                       if key[:1] not in ("*", ".", "="))
     post_proc = [docular.doc_spec_get(post.get(key)) for key in post_keys]
-    return (method, status_code, content_type, on_collection, action_url,
-            handler, pre_proc, post_proc)
+
+    return params, handler, pre_proc, post_proc
 
 
 # def action_constructor(instance, loc, context):
@@ -185,10 +185,10 @@ def construct_processors(processors, spec):
     return artifacts
 
 
-def make_processor(processor, collection_loc, on_collection, artifacts):
+def make_processor(processor, collection_loc, params, artifacts):
     proc_spec, cls = artifacts[processor]
     subspec = docular.doc_get(proc_spec, collection_loc)
-    return cls(subspec, on_collection)
+    return cls(subspec, params)
 
 
 def mk_url_prefix(loc):
@@ -208,9 +208,13 @@ def mk_url_prefix(loc):
 
 
 def mk_action_view(
-        action_name, action_params, collection_spec, context):
-    method, status_code, content_type, on_collection, action_url, handler, \
-        pre_proc, post_proc = _get_action_params(action_params)
+        action_name, action_spec, collection_spec, context):
+    params, handler, pre_proc, post_proc = read_action_spec(action_spec)
+    method = params['method']
+    status_code = params['status_code']
+    content_type = params['content_type']
+    on_collection = params['on_collection']
+    action_url = params['url']
 
     loc = context['loc']
     if method is None:
@@ -230,9 +234,9 @@ def mk_action_view(
 
     top_spec = context['top_spec']
     artifacts = docular.doc_spec_get(docular.doc_get(top_spec, ('.meta', 'artifacts')))
-    pre_proc = [make_processor(proc, loc, on_collection, artifacts) for proc in pre_proc]
-    post_proc = [make_processor(proc, loc, on_collection, artifacts) for proc in post_proc]
-    handler = make_processor(handler, loc, on_collection, artifacts)
+    pre_proc = [make_processor(proc, loc, params, artifacts) for proc in pre_proc]
+    post_proc = [make_processor(proc, loc, params, artifacts) for proc in post_proc]
+    handler = make_processor(handler, loc, params, artifacts)
 
     apimas_action = ApimasAction(
         collection_path, action_url, action_name, status_code, content_type,

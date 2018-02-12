@@ -169,7 +169,8 @@ class BaseSerialization(BaseProcessor):
     It uses the Serializer classes provided by apimas and reads from
     specification to construct them accordingly.
     """
-    def __init__(self, serializers_spec, on_collection):
+    def __init__(self, serializers_spec, action_params):
+        on_collection = action_params['on_collection']
         spec = serializers_spec if on_collection else serializers_spec['fields']
         self.serializer_dict = docular.doc_spec_get(spec)
 
@@ -393,7 +394,8 @@ class CerberusValidationProcessor(BaseProcessor):
 
     READ_KEYS = DeSerializationProcessor.WRITE_KEYS
 
-    def __init__(self, schema_spec, on_collection):
+    def __init__(self, schema_spec, action_params):
+        on_collection = action_params['on_collection']
         spec = schema_spec if on_collection else schema_spec['fields']
         schema = docular.doc_spec_get(spec)
         self.validation_schema = {'data': schema}

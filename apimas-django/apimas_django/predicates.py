@@ -79,9 +79,9 @@ spec_list = [
             'on_collection': False,
             'url': '/',
             'pre': {
-    #            '1': 'apimas.components.processors.Authentication',
-    #            '2': 'apimas_django.processors.UserRetrieval',
-#                '3': 'apimas_django.processors.Permissions',
+                # '1': 'apimas.components.processors.Authentication',
+                # '2': 'apimas_django.processors.UserRetrieval',
+                # '3': 'apimas_django.processors.Permissions',
                 '4': 'apimas.components.processors.DeSerialization',
                 '5': 'apimas.components.processors.CerberusValidation',
             },
