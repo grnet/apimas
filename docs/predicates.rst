@@ -112,7 +112,7 @@ Predicate         Description
                   supported.
 
                   **Parameters**:
-                      ``maxlength``: The upper bound of string's size (optional).
+                      ``max_length``: The upper bound of string's size (optional).
                       The default is 255.
 ``.text``         Parent node is a text.
 ``.boolean``      Parent node is either true or false.
