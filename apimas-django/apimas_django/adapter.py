@@ -215,6 +215,7 @@ def mk_action_view(
     content_type = params['content_type']
     on_collection = params['on_collection']
     action_url = params['url']
+    params['action_name'] = action_name
 
     loc = context['loc']
     if method is None:

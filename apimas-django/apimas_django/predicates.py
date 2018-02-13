@@ -104,7 +104,7 @@ spec_list = [
             'pre': {
     #            '1': 'apimas.components.processors.Authentication',
     #            '2': 'apimas_django.processors.UserRetrieval',
-#                '3': 'apimas_django.processors.Permissions',
+                '3': 'apimas.components.permissions.Permissions',
             },
             'handler': 'apimas_django.handlers.ListHandler',
             'post': {
@@ -144,6 +144,7 @@ spec_list = [
             'status_code': 200,
             'content_type': 'application/json',
             'on_collection': False,
+            'read_permissions': 'partial_update_response',
             'url': '/*/',
             'pre': {
     #                'apimas.components.processors.Authentication',

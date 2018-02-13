@@ -4,7 +4,7 @@ DEPLOY_CONFIG = {
 
 APP_CONFIG = {
     ".apimas_app": {},
-    ".meta": {"get_rules": "anapp.rules.get_rules"},
+    ".meta": {"permission_rules": "anapp.rules.get_rules"},
     "api/prefix": {
        ".endpoint": {},
         "groups": {

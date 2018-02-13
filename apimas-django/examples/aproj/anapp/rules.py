@@ -1,7 +1,9 @@
 # COLUMNS = ('collection', 'action', 'role', 'field', 'state', 'comment')
 
 RULES = [
-    ('*', 'list', '*', '*', '*', '*'),
+    ('api/prefix/groups', 'list', '*', 'url', '*', '*'),
+    ('api/prefix/groups', 'list', '*', 'users', '*', '*'),
+    ('api/prefix/groups/users', 'list', '*', 'users', '*', '*'),
     ('*', 'retrieve', '*', 'url', '*', '*'),
     ('*', 'retrieve', '*', 'name', '*', '*'),
     ('*', 'create', '*', '*', '*', '*'),
