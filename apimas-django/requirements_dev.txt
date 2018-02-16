@@ -3,4 +3,6 @@ pytest
 pytest-cov
 pytest-profiling
 pytest-django
+pytest-pythonpath
+pytest-env
 mock

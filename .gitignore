@@ -9,3 +9,7 @@ build/
 docs/_build
 *.sqlite3
 *.apimas_tests
+
+.tox
+pytestdebug.log
+.pytest_cache
