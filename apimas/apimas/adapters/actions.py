@@ -69,9 +69,9 @@ class ApimasAction(object):
         for processor in self.request_proc:
             processor.process(*args)
 
-        response_content = self.handler.process(*args)
+        self.handler.process(*args)
+
         response = {
-            'content': response_content,
             'meta': {
                 'content_type': self.content_type,
                 'status_code': self.status_code,

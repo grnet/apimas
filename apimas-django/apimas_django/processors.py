@@ -72,8 +72,7 @@ class InstanceToDictProcessor(BaseProcessor):
     name = 'apimas_django.processors.InstanceToDict'
 
     READ_KEYS = {
-        'instance': 'response/content',
-        'allowed_fields': 'store/permissions/allowed_fields',
+        'instance': 'backend/content',
     }
 
     WRITE_KEYS = (

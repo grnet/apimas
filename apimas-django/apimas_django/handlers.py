@@ -140,6 +140,10 @@ class DjangoBaseHandler(BaseHandler):
     }
     READ_KEYS.update(DeSerializationProcessor.WRITE_KEYS)
 
+    WRITE_KEYS = (
+        'backend/content',
+    )
+
     REQUIRED_KEYS = {
     }
 
@@ -253,7 +257,8 @@ class DjangoBaseHandler(BaseHandler):
               of the output of previous step.
         """
         context_data = self.read_context(context)
-        return self.execute(collection, url, action, context_data)
+        output = self.execute(collection, url, action, context_data)
+        self.write((output,), context)
 
 
 class CreateHandlerProcessor(DjangoBaseHandler):
