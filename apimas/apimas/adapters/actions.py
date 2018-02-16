@@ -60,6 +60,7 @@ class ApimasAction(object):
 
     @handle_exception
     def process_request(self, request):
+        self._error_context = None
         # Args for the request processors and handler.
         context = {
             'store': self._create_context()
