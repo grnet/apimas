@@ -81,8 +81,11 @@ def resource_constructor(context, instance, loc):
 
 def list_constructor(context, instance, loc):
     v = docular.doc_spec_get(instance['fields'])
-    serializer = srs.List(v['serializer'])
-    value = {'serializer': serializer, 'map_to': loc[-1]}
+    resource_serializer = v['serializer']
+    serializer = srs.List(resource_serializer)
+    value = {'serializer': serializer,
+             'resource_serializer': resource_serializer,
+             'map_to': loc[-1]}
     docular.doc_spec_set(instance, value)
 
 
@@ -93,7 +96,14 @@ def field_struct_constructor(context, instance, loc):
     return docular.doc_spec_set(instance, value)
 
 
+def construct_action(instance):
+    on_collection = docular.doc_spec_get(instance['on_collection'])
+    value = {'on_collection': on_collection}
+    docular.doc_spec_set(instance, value)
+
+
 SERIALIZATION_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
+    '.action': construct_action,
     '.resource': resource_constructor,
     '.field.collection.django': list_constructor,
     '.field.*': no_constructor,
@@ -169,10 +179,9 @@ class BaseSerialization(BaseProcessor):
     It uses the Serializer classes provided by apimas and reads from
     specification to construct them accordingly.
     """
-    def __init__(self, serializers_spec, action_params):
-        on_collection = action_params['on_collection']
-        spec = serializers_spec if on_collection else serializers_spec['fields']
-        self.serializer_dict = docular.doc_spec_get(spec)
+    def __init__(self, collection_loc, action_name,
+                 serializer, resource_serializer, map_to, on_collection):
+        self.serializer = serializer if on_collection else resource_serializer
 
     # def _update_nested_serializers(self, allowed_fields, serializer_info):
     #     """
@@ -225,8 +234,7 @@ class BaseSerialization(BaseProcessor):
         #     serializers = self._get_serializers(allowed_fields)
         # else:
 
-        serializer = self.serializer_dict['serializer']
-        return serializer
+        return self.serializer
 
     def perform_serialization(self, context_data):
         raise NotImplementedError(
@@ -311,7 +319,11 @@ def cerberus_type(cerb_type):
 
 
 def cerberus_resource_constructor(instance):
-    v = dict(docular.doc_spec_iter_values(instance))
+    v = {}
+    for field_name, field_schema in docular.doc_spec_iter_values(instance):
+        collection_schema = field_schema.get('collection_schema')
+        v[field_name] = collection_schema if collection_schema is not None \
+                          else field_schema
     value = docular.doc_spec_get(instance, default={})
     value['type'] = 'dict'
     value['schema'] = v
@@ -325,13 +337,15 @@ def propagate_resource_constructor(instance):
 
 def cerberus_collection_constructor(instance):
     v = docular.doc_spec_get(instance['fields'])
-    value = docular.doc_spec_get(instance, default={})
-    value['type'] = 'list'
-    value['schema'] = v
+    schema = docular.doc_spec_get(instance, default={})
+    schema['type'] = 'list'
+    schema['schema'] = v
+    value = {'collection_schema': schema}
     docular.doc_spec_set(instance, value)
 
 
 CERBERUS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
+    '.action': construct_action,
     '.resource': cerberus_resource_constructor,
     '.field.collection.django': cerberus_collection_constructor,
     '.field.*': no_constructor,
@@ -390,10 +404,10 @@ class CerberusValidationProcessor(BaseProcessor):
 
     READ_KEYS = DeSerializationProcessor.WRITE_KEYS
 
-    def __init__(self, schema_spec, action_params):
-        on_collection = action_params['on_collection']
-        spec = schema_spec if on_collection else schema_spec['fields']
-        schema = docular.doc_spec_get(spec)
+    def __init__(self, collection_loc, action_name,
+                 collection_schema, on_collection):
+        schema = collection_schema if on_collection \
+                 else collection_schema['schema']
         self.validation_schema = {'data': schema}
 
     def _validator_constructor(self, context):

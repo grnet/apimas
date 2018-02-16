@@ -62,6 +62,16 @@ def mk_collection_path(loc):
     return '/'.join(reversed(segments))
 
 
+def action_constructor(instance, loc):
+    action_name = loc[-1]
+    value = {}
+    value['read_permissions'] = instance.get('read_permissions', action_name)
+    value['write_permissions'] = instance.get('write_permissions', action_name)
+    value['permissions_namespace'] = docular.doc_get(
+        instance, 'permissions_namespace')
+    docular.doc_spec_set(instance, value)
+
+
 def get_rules_constructor(instance, loc, top_spec):
     value = {}
     value['permission_rules'] = docular.doc_spec_get(
@@ -71,7 +81,8 @@ def get_rules_constructor(instance, loc, top_spec):
 
 
 PERMISSIONS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
-    {'.field.collection.*': get_rules_constructor},
+    {'.field.collection.*': get_rules_constructor,
+     '.action': action_constructor},
     default=no_constructor)
 
 
@@ -116,19 +127,18 @@ class PermissionsProcessor(BaseProcessor):
 
     ANONYMOUS_ROLES = ['anonymous']
 
-    def __init__(self, collection_spec, action_params):
-        value = docular.doc_spec_get(collection_spec)
-        rules_funcname = value['permission_rules']
-        self.collection_path = value['collection_path']
+    def __init__(self, collection_loc, action_name,
+                 permission_rules, collection_path,
+                 read_permissions, write_permissions, permissions_namespace):
+
+        rules_funcname = permission_rules
         rules = utils.import_object(rules_funcname)() if rules_funcname \
                 else _default_rules
 
-        action_name = action_params['action_name']
-        self.read_permissions_tag = action_params.get(
-            'read_permissions', action_name)
-        self.write_permissions_tag = action_params.get(
-            'write_permissions', action_name)
-        self.namespace = action_params.get('permissions_namespace')
+        self.collection_path = collection_path
+        self.read_permissions_tag = read_permissions
+        self.write_permissions_tag = write_permissions
+        self.namespace = permissions_namespace
 
         self.tab_rules = self.init_tab_rules(rules)
 

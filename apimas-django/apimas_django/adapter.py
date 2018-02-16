@@ -185,10 +185,16 @@ def construct_processors(processors, spec):
     return artifacts
 
 
-def make_processor(processor, collection_loc, params, artifacts):
+def make_processor(processor, collection_loc, action_name, artifacts):
     proc_spec, cls = artifacts[processor]
-    subspec = docular.doc_get(proc_spec, collection_loc)
-    return cls(subspec, params)
+    collection_subspec = docular.doc_get(proc_spec, collection_loc)
+    collection_values = docular.doc_spec_get(collection_subspec) or {}
+    action_loc = collection_loc + ('actions', action_name)
+    action_subspec = docular.doc_get(proc_spec, action_loc)
+    action_values = docular.doc_spec_get(action_subspec) or {}
+    arguments = dict(collection_values)
+    arguments.update(action_values)
+    return cls(collection_loc, action_name, **arguments)
 
 
 def mk_url_prefix(loc):
@@ -215,7 +221,6 @@ def mk_action_view(
     content_type = params['content_type']
     on_collection = params['on_collection']
     action_url = params['url']
-    params['action_name'] = action_name
 
     loc = context['loc']
     if method is None:
@@ -235,9 +240,9 @@ def mk_action_view(
 
     top_spec = context['top_spec']
     artifacts = docular.doc_spec_get(docular.doc_get(top_spec, ('.meta', 'artifacts')))
-    pre_proc = [make_processor(proc, loc, params, artifacts) for proc in pre_proc]
-    post_proc = [make_processor(proc, loc, params, artifacts) for proc in post_proc]
-    handler = make_processor(handler, loc, params, artifacts)
+    pre_proc = [make_processor(proc, loc, action_name, artifacts) for proc in pre_proc]
+    post_proc = [make_processor(proc, loc, action_name, artifacts) for proc in post_proc]
+    handler = make_processor(handler, loc, action_name, artifacts)
 
     apimas_action = ApimasAction(
         collection_path, action_url, action_name, status_code, content_type,

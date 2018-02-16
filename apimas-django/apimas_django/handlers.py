@@ -36,10 +36,11 @@ def get_bounds(loc, top_spec):
 
 def struct_constructor(instance, loc):
     source = docular.doc_spec_get(instance.get('source', {})) or loc[-1]
-    value = {
+    spec = {
         'type': 'struct',
         'source': source,
     }
+    value = {'spec': spec}
     docular.doc_spec_set(instance, value)
 
 
@@ -51,12 +52,13 @@ def collection_constructor(instance, loc, top_spec):
     substructs = {}
     for field, field_value in docular.doc_spec_iter_values(instance['fields']):
         if field_value:
-            field_type = field_value['type']
+            field_spec = field_value['spec']
+            field_type = field_spec['type']
             if field_type == 'collection':
-                subcollections[field] = field_value
+                subcollections[field] = field_spec
             else:
-                substructs[field] = field_value
-    value = {
+                substructs[field] = field_spec
+    spec = {
         'type': 'collection',
         'model': utils.import_object(model),
         'source': source,
@@ -64,6 +66,7 @@ def collection_constructor(instance, loc, top_spec):
         'subcollections': subcollections,
         'substructs': substructs,
     }
+    value = {'spec': spec}
     docular.doc_spec_set(instance, value)
 
 
@@ -140,8 +143,8 @@ class DjangoBaseHandler(BaseHandler):
     REQUIRED_KEYS = {
     }
 
-    def __init__(self, django_spec, on_collection):
-        self.spec = docular.doc_spec_get(django_spec)
+    def __init__(self, collection_loc, action_name, spec):
+        self.spec = spec
         # self.model = value['model']
         # self.bounds = value['bounds']
 

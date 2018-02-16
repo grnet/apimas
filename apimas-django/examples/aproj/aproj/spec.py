@@ -27,11 +27,11 @@ APP_CONFIG = {
                     'model': 'anapp.models.User',
                     'source': 'user_set',
                     'bound': 'group',
-                    'actions': {
-                        '.action-template.django.list': {},
-                        '.action-template.django.create': {},
-                        '.action-template.django.retrieve': {},
-                    },
+                    # 'actions': {
+                    #     '.action-template.django.list': {},
+                    #     '.action-template.django.create': {},
+                    #     '.action-template.django.retrieve': {},
+                    # },
                     'fields': {
                         'id': {'.field.serial': {}},
                         'username': {'.field.string': {}},

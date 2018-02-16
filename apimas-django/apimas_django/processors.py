@@ -40,7 +40,7 @@ def construct_struct(instance, loc):
     source = docular.doc_spec_get(instance.get('source', {}),
                                   default=loc[-1])
     fields = docular.doc_spec_get(instance['fields'])
-    v = {'source': source, 'fields': fields, 'type': 'struct'}
+    v = {'source': source, 'fields': fields, 'field_type': 'struct'}
     docular.doc_spec_set(instance, v)
 
 
@@ -49,13 +49,20 @@ def construct_collection(instance, loc, context):
     source = docular.doc_spec_get(instance.get('source', {}),
                                   default=loc[-1])
     fields = docular.doc_spec_get(instance['fields'])
-    v = {'source': source, 'fields': fields, 'type': 'collection'}
-    docular.doc_spec_set(instance, v)
+    value = {'source': source, 'fields': fields, 'field_type': 'collection'}
+    docular.doc_spec_set(instance, value)
+
+
+def construct_action(instance, loc):
+    on_collection = docular.doc_spec_get(instance['on_collection'])
+    value = {'on_collection': on_collection}
+    docular.doc_spec_set(instance, value)
 
 
 INSTANCETODICT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
     {'.field.*': construct_field,
      '.resource': construct_resource,
+     '.action': construct_action,
      '.field.collection.django': construct_collection,
     },
     default=no_constructor)
@@ -73,12 +80,13 @@ class InstanceToDictProcessor(BaseProcessor):
         'response/content',
     )
 
-    def __init__(self, collection_spec, action_params):
-        self.collection_spec = collection_spec  ### tentative
-        self.on_collection = action_params['on_collection']
-        subspec = collection_spec if self.on_collection \
-                  else collection_spec['fields']
-        self.spec = docular.doc_spec_get(subspec)
+    def __init__(self, collection_loc, action_name,
+                 source, fields, field_type, on_collection):
+        self.collection_spec = {'source': source,
+                                'fields': fields,
+                                'field_type': field_type}
+        self.on_collection = on_collection
+        self.field_spec = fields
 
     # def _extract_many(self, instance, field_name):
     #     """
@@ -146,7 +154,7 @@ class InstanceToDictProcessor(BaseProcessor):
         for k, v in spec.iteritems():
             source = v['source'] if v else k
             fields = v.get('fields') if v else None
-            fields_type = v.get('type') if v else None
+            fields_type = v.get('field_type') if v else None
             value = instance
             for elem in source.split('.'):
                 if value is None:
@@ -195,13 +203,12 @@ class InstanceToDictProcessor(BaseProcessor):
                        isinstance(instance, QuerySet)):
             msg = 'A model instance or a queryset is expected. {!r} found.'
             raise InvalidInput(msg.format(type(instance)))
+
         if not self.on_collection:
-            spec = self.spec
             instance = None if instance is None else self.to_dict(
-                instance, spec)
+                instance, self.field_spec)
         else:
-            spec = self.spec['fields']
-            instance = [self.to_dict(inst, spec) for inst in instance]
+            instance = [self.to_dict(inst, self.field_spec) for inst in instance]
         self.write((instance,), context)
 
 
@@ -388,7 +395,8 @@ def flag_constructor(flag):
 
 def collect_constructor(context, instance, loc):
     v = dict(docular.doc_spec_iter_values(instance['fields']))
-    docular.doc_spec_set(instance, v)
+    value = {'filters': v}
+    docular.doc_spec_set(instance, value)
 
 
 FILTERING_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
@@ -453,8 +461,8 @@ class FilteringProcessor(BaseProcessor):
     #     'default':    Dummy()
     # }
 
-    def __init__(self, filters_spec, action_params):
-        self.filters = docular.doc_spec_get(filters_spec)
+    def __init__(self, collection_loc, action_name, filters):
+        self.filters = filters
 
     def process(self, collection, url, action, context):
         """
