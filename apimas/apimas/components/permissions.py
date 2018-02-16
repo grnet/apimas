@@ -9,6 +9,8 @@ from apimas.tabmatch import Tabmatch
 def no_constructor(instance):
     pass
 
+FIELD_SEPARATOR = '/'
+
 
 _default_rules = []
 
@@ -26,12 +28,14 @@ def _strip_fields(fields):
     Example:
     ['foo/bar', 'foo'] => ['foo']
     """
-    stripped_fields = {}
-    for path in sorted(
-            fields,
-            cmp=lambda x, y: cmp(len(y.split('/')), len(x.split('/')))):
-        stripped_fields.update(_to_dict(path.split('/'), {}))
-    return docular.doc_to_ns(stripped_fields).keys()
+    stripped_fields = []
+    prev = FIELD_SEPARATOR
+    for field in sorted(fields):
+        if field.startswith(prev):
+            continue
+        stripped_fields.append(field)
+        prev = field + FIELD_SEPARATOR
+    return stripped_fields
 
 
 def _get_allowed_fields(matches):
