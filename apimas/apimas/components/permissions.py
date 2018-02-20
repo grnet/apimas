@@ -4,6 +4,10 @@ from apimas import documents as doc
 from apimas import utils
 from apimas.errors import AccessDeniedError, InvalidInput
 from apimas.tabmatch import Tabmatch
+from apimas.components.utils import expand_doc_keys, Singleton
+
+
+Leaf = Singleton('Leaf')
 
 
 def no_constructor(instance):
@@ -15,30 +19,34 @@ FIELD_SEPARATOR = '/'
 _default_rules = []
 
 
-def _to_dict(segments, v):
-    if len(segments) == 0:
-        return v
-    return {segments[0]: _to_dict(segments[1:], v)}
+def _is_prefixed(path, prefix=None):
+    if prefix is None:
+        return False
+    prefix_len = len(prefix)
+    return prefix_len < len(path) and path[:prefix_len] == prefix
 
 
-def _strip_fields(fields):
-    """
-    Keep the most generic field definition.
+def expand_paths(matched_fields, fields_spec):
+    if matched_fields is doc.ANY:
+        return expand_doc_keys(fields_spec)
 
-    Example:
-    ['foo/bar', 'foo'] => ['foo']
-    """
-    stripped_fields = []
-    prev = FIELD_SEPARATOR
-    for field in sorted(fields):
-        if field.startswith(prev):
+    paths = set()
+    prev = None
+    for field in sorted(matched_fields):
+        if _is_prefixed(field, prev):
             continue
-        stripped_fields.append(field)
-        prev = field + FIELD_SEPARATOR
-    return stripped_fields
+
+        subspec = docular.doc_get(fields_spec, field)
+        if subspec is None:
+            raise InvalidInput(
+                "illegal field '%s' in permission rules" % str(field))
+
+        paths.update(expand_doc_keys(subspec, prefix=field))
+        prev = field
+    return paths
 
 
-def _get_allowed_fields(matches):
+def get_matched_allowed_fields(matches):
     """
     Checks which fields are allowed to be modified or viewed based on
     matches.
@@ -47,8 +55,8 @@ def _get_allowed_fields(matches):
     for row in matches:
         if isinstance(row.field, doc.AnyPattern):
             return doc.ANY
-        allowed_keys.add(row.field)
-    return _strip_fields(allowed_keys)
+        allowed_keys.add(tuple(row.field.split(FIELD_SEPARATOR)))
+    return allowed_keys
 
 
 def mk_collection_path(loc):
@@ -76,16 +84,34 @@ def action_constructor(instance, loc):
     docular.doc_spec_set(instance, value)
 
 
-def get_rules_constructor(instance, loc, top_spec):
+def make_fields_spec(instance):
+    fields_spec = {}
+    for key, value in docular.doc_spec_iter_values(instance['fields']):
+        if value:
+            value = value['fields_spec']
+        else:
+            value = Leaf
+        fields_spec[key] = value
+    return fields_spec
+
+
+def collection_constructor(instance, loc, top_spec):
     value = {}
     value['permission_rules'] = docular.doc_spec_get(
         docular.doc_inherit2(top_spec, loc, ('.meta', 'permission_rules')))
     value['collection_path'] = mk_collection_path(loc)
+    value['fields_spec'] = make_fields_spec(instance)
+    docular.doc_spec_set(instance, value)
+
+
+def struct_constructor(instance):
+    value = {'fields_spec': make_fields_spec(instance)}
     docular.doc_spec_set(instance, value)
 
 
 PERMISSIONS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
-    {'.field.collection.*': get_rules_constructor,
+    {'.field.collection.*': collection_constructor,
+     '.field.struct': struct_constructor,
      '.action': action_constructor},
     default=no_constructor)
 
@@ -132,14 +158,16 @@ class PermissionsProcessor(BaseProcessor):
     ANONYMOUS_ROLES = ['anonymous']
 
     def __init__(self, collection_loc, action_name,
-                 permission_rules, collection_path,
+                 permission_rules, collection_path, fields_spec,
                  read_permissions, write_permissions, permissions_namespace):
 
         rules_funcname = permission_rules
         rules = utils.import_object(rules_funcname)() if rules_funcname \
                 else _default_rules
 
+        self.fields_spec = fields_spec
         self.collection_path = collection_path
+        self.action_name = action_name
         self.read_permissions_tag = read_permissions
         self.write_permissions_tag = write_permissions
         self.namespace = permissions_namespace
@@ -246,8 +274,9 @@ class PermissionsProcessor(BaseProcessor):
 
         # As a final step, we save in the context the list of fields that
         # are allowed to be read or written.
-        allowed_fields = _get_allowed_fields(matches)
-        return True, allowed_fields
+        allowed_fields = get_matched_allowed_fields(matches)
+        expanded_fields = expand_paths(allowed_fields, self.fields_spec)
+        return True, expanded_fields
 
     def process(self, collection, url, action, context):
         context_data = self.read(context)
