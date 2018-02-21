@@ -5,8 +5,13 @@ RULES = [
 
     ('api/prefix/groups', 'list', '*', 'url', '*', '*'),
     ('api/prefix/groups', 'list', '*', 'users/username', '*', '*'),
+#    ('api/prefix/groups', 'list', '*', 'users', '*', '*'),
     ('api/prefix/groups', 'list', '*', 'users/name_variants/el', '*', '*'),
     ('api/prefix/groups', 'list', '*', 'users/name_variants', '*', '*'),
+
+    ('api/prefix/groups', 'create', '*', 'users/name_variants', '*', '*'),
+    ('api/prefix/groups', 'create', '*', 'users/username', '*', '*'),
+    ('api/prefix/groups', 'create', '*', 'name', '*', '*'),
 
     ('api/prefix/groups/users', 'list', '*', 'users', '*', '*'),
     ('*', 'retrieve', '*', 'url', '*', '*'),

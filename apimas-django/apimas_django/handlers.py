@@ -137,8 +137,8 @@ class DjangoBaseHandler(BaseHandler):
     READ_KEYS = {
         'kwargs': 'request/meta/kwargs',
         'pk': 'request/meta/kwargs/pk',
+        'data': 'imported/content',
     }
-    READ_KEYS.update(DeSerializationProcessor.WRITE_KEYS)
 
     WRITE_KEYS = (
         'backend/content',

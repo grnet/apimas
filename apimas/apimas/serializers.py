@@ -464,14 +464,11 @@ class Struct(BaseSerializer):
     def get_repr_value(self, obj):
         if obj is None:
             return obj
-        if isinstance(obj, Iterable) and not isinstance(obj, Mapping):
-            return [self.get_repr_value(v) for v in obj]
 
         serialized_data = {}
-        for field_name, field_schema in self.schema.iteritems():
+        for field_name, value in obj.iteritems():
+            field_schema = self.schema[field_name]
             serializer = field_schema['serializer']
-            map_to = field_schema['map_to']
-            value = extract_value(obj, map_to)
             try:
                 ser_value = serializer.serialize(value)
             except ValidationError as e:

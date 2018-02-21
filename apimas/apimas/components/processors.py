@@ -3,7 +3,10 @@ from collections import Iterable, Mapping
 from apimas import serializers as srs, utils, auth
 from apimas.components import BaseProcessor, ProcessorConstruction
 from apimas.errors import UnauthorizedError, InvalidSpec, ValidationError
+from apimas.errors import AccessDeniedError
 from apimas.validators import CerberusValidator
+from apimas.components.utils import collect_paths
+from apimas import documents as doc
 import docular
 
 # def _post_hook(context, instance):
@@ -251,6 +254,28 @@ class BaseSerialization(BaseProcessor):
             self.write(output, context)
 
 
+def check_field(allowed, field):
+    while True:
+        if field in allowed:
+            return field
+        splits = field.rsplit('/', 1)
+        prefix = splits[0]
+        if field == prefix:
+            return False
+        field = prefix
+        continue
+
+
+def check_field_permissions(allowed, write_data):
+    if allowed is doc.ANY:
+        return
+
+
+def path_exists(doc, path):
+    feed, trail, nodes = docular.doc_locate(doc, path)
+    return not feed
+
+
 class DeSerializationProcessor(BaseSerialization):
     """
     Processor responsible for the deserialization of data.
@@ -258,21 +283,40 @@ class DeSerializationProcessor(BaseSerialization):
     name = 'apimas.components.processors.DeSerialization'
 
     READ_KEYS = {
-        'data': 'request/content',
-        'allowed_fields': 'store/permissions/allowed_fields',
+        'write_data': 'request/content',
+        'parameters': 'request/meta/params',
+        'can_read': 'permissions/can_read',
+        'read_fields': 'permissions/read_fields',
+        'can_write': 'permissions/write_fields',
+        'write_fields': 'permissions/write_fields',
     }
 
     WRITE_KEYS = {
-        'data': 'store/' + name + '/deserialized_data',
+        'imported_content': 'imported/content',
     }
 
-    def perform_serialization(self, context_data):
-        data = context_data['data']
-        if data is None:
+    def process_write_data(self, context_data):
+        write_data = context_data['write_data']
+        if not write_data:
             return None
-        allowed_fields = context_data['allowed_fields']
-        serializer = self.get_serializer(data, allowed_fields)
-        return {'data': serializer.deserialize(data)}
+        can_write = context_data['can_write']
+        if not can_write:
+            raise AccessDeniedError(
+                'You do not have permission to do this action')
+
+        can_write_fields = context_data['write_fields']
+        write_data_keys = collect_paths(write_data)
+        for field in write_data_keys:
+            if not path_exists(can_write_fields, field):
+                raise AccessDeniedError(
+                    "You do not have permission to write field '%s'"
+                    % str(field))
+
+        return self.serializer.deserialize(write_data)
+
+    def perform_serialization(self, context_data):
+        imported_content = self.process_write_data(context_data)
+        return {'imported_content': imported_content}
 
 
 DeSerialization = ProcessorConstruction(
@@ -286,8 +330,7 @@ class SerializationProcessor(BaseSerialization):
     name = 'apimas.components.processors.Serialization'
 
     READ_KEYS = {
-        'data': 'response/content',
-        'allowed_fields': 'store/permissions/allowed_fields',
+        'export_data': 'exportable/content',
     }
 
     WRITE_KEYS = {
@@ -295,12 +338,10 @@ class SerializationProcessor(BaseSerialization):
     }
 
     def perform_serialization(self, context_data):
-        data = context_data['data']
-        if data is None:
+        export_data = context_data['export_data']
+        if export_data is None:
             return None
-        allowed_fields = context_data['allowed_fields']
-        serializer = self.get_serializer(data, allowed_fields)
-        return {'data': serializer.serialize(data)}
+        return {'data': self.serializer.serialize(export_data)}
 
 
 Serialization = ProcessorConstruction(
@@ -402,7 +443,9 @@ class CerberusValidationProcessor(BaseProcessor):
     """
     name = 'apimas.components.processors.CerberusValidation'
 
-    READ_KEYS = DeSerializationProcessor.WRITE_KEYS
+    READ_KEYS = {
+        'data': 'imported/content',
+    }
 
     def __init__(self, collection_loc, action_name,
                  collection_schema, on_collection):

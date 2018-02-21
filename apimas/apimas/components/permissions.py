@@ -4,7 +4,7 @@ from apimas import documents as doc
 from apimas import utils
 from apimas.errors import AccessDeniedError, InvalidInput
 from apimas.tabmatch import Tabmatch
-from apimas.components.utils import expand_doc_keys, Singleton
+from apimas.components.utils import Singleton
 
 
 Leaf = Singleton('Leaf')
@@ -28,9 +28,9 @@ def _is_prefixed(path, prefix=None):
 
 def expand_paths(matched_fields, fields_spec):
     if matched_fields is doc.ANY:
-        return expand_doc_keys(fields_spec)
+        return fields_spec
 
-    paths = set()
+    expanded = {}
     prev = None
     for field in sorted(matched_fields):
         if _is_prefixed(field, prev):
@@ -40,10 +40,9 @@ def expand_paths(matched_fields, fields_spec):
         if subspec is None:
             raise InvalidInput(
                 "illegal field '%s' in permission rules" % str(field))
-
-        paths.update(expand_doc_keys(subspec, prefix=field))
+        docular.doc_set(expanded, field, subspec)
         prev = field
-    return paths
+    return expanded
 
 
 def get_matched_allowed_fields(matches):
