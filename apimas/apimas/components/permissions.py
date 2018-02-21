@@ -76,8 +76,10 @@ def mk_collection_path(loc):
 def action_constructor(instance, loc):
     action_name = loc[-1]
     value = {}
-    value['read_permissions'] = instance.get('read_permissions', action_name)
-    value['write_permissions'] = instance.get('write_permissions', action_name)
+    value['read_permissions'] = docular.doc_spec_get(
+        instance['read_permissions']) or action_name
+    value['write_permissions'] = docular.doc_spec_get(
+        instance['write_permissions']) or action_name
     value['permissions_namespace'] = docular.doc_get(
         instance, 'permissions_namespace')
     docular.doc_spec_set(instance, value)

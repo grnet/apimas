@@ -43,6 +43,8 @@ spec_list = [
                 'method': {'.string': {}},
                 'status_code': {'.integer': {}},
                 'content_type': {'.string': {}},
+                'read_permissions': {'.string': {}},
+                'write_permissions': {'.string': {}},
                 'url': {'.string': {}},
                 'handler': {".handler": {}},
                 'pre': {"*": {".handler": {}}},
@@ -77,6 +79,7 @@ spec_list = [
             'status_code': 201,
             'content_type': 'application/json',
             'on_collection': False,
+            'read_permissions': 'create_response',
             'url': '/',
             'pre': {
                 # '1': 'apimas.components.processors.Authentication',
