@@ -305,14 +305,7 @@ class DeSerializationProcessor(BaseSerialization):
                 'You do not have permission to do this action')
 
         can_write_fields = context_data['write_fields']
-        write_data_keys = collect_paths(write_data)
-        for field in write_data_keys:
-            if not path_exists(can_write_fields, field):
-                raise AccessDeniedError(
-                    "You do not have permission to write field '%s'"
-                    % str(field))
-
-        return self.serializer.deserialize(write_data)
+        return self.serializer.deserialize(write_data, can_write_fields)
 
     def perform_serialization(self, context_data):
         imported_content = self.process_write_data(context_data)
@@ -331,6 +324,8 @@ class SerializationProcessor(BaseSerialization):
 
     READ_KEYS = {
         'export_data': 'exportable/content',
+        'can_read': 'permissions/can_read',
+        'read_fields': 'permissions/read_fields',
     }
 
     WRITE_KEYS = {
@@ -341,7 +336,13 @@ class SerializationProcessor(BaseSerialization):
         export_data = context_data['export_data']
         if export_data is None:
             return None
-        return {'data': self.serializer.serialize(export_data)}
+        can_read = context_data['can_read']
+        if not can_read:
+            raise AccessDeniedError(
+                'You do not have permission to do this action')
+
+        can_read_fields = context_data['read_fields']
+        return {'data': self.serializer.serialize(export_data, can_read_fields)}
 
 
 Serialization = ProcessorConstruction(

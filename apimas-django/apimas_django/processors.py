@@ -134,7 +134,7 @@ class InstanceToDictProcessor(BaseProcessor):
     #     return self.to_dict(field.related_model, getattr(instance, source),
     #                         field_spec['.struct='])
 
-    def to_dict(self, instance, spec, allowed_fields):
+    def to_dict(self, instance, spec):
         """
         Constructs a given model instance a python dict.
 
@@ -154,9 +154,6 @@ class InstanceToDictProcessor(BaseProcessor):
 
         data = {}
         for k, v in spec.iteritems():
-            if k not in allowed_fields:
-                continue
-
             source = v['source'] if v else k
             fields = v.get('fields') if v else None
             fields_type = v.get('field_type') if v else None
@@ -167,15 +164,12 @@ class InstanceToDictProcessor(BaseProcessor):
                 value = getattr(value, elem)
 
             if fields:
-                allowed_subfields = allowed_fields[k]
                 if fields_type == 'collection':
                     subvalues = value.all()
-                    value = [self.to_dict(
-                        subvalue, fields, allowed_subfields)
+                    value = [self.to_dict(subvalue, fields)
                              for subvalue in subvalues]
                 elif fields_type == 'struct':
-                    value = self.to_dict(
-                        value, fields, allowed_subfields)
+                    value = self.to_dict(value, fields)
 
             # try:
             #     field = orm_model._meta.get_field(source)
@@ -207,13 +201,6 @@ class InstanceToDictProcessor(BaseProcessor):
             self.write(None, context)
             return
 
-        can_read = processor_data['can_read']
-        if not can_read:
-            raise AccessDeniedError(
-                'You do not have permission to do this action')
-
-        allowed_read_fields = processor_data['read_fields']
-
         if instance and (not isinstance(instance, Model) and not
                        isinstance(instance, QuerySet)):
             msg = 'A model instance or a queryset is expected. {!r} found.'
@@ -221,10 +208,9 @@ class InstanceToDictProcessor(BaseProcessor):
 
         if not self.on_collection:
             instance = None if instance is None else self.to_dict(
-                instance, self.field_spec, allowed_read_fields)
+                instance, self.field_spec)
         else:
-            instance = [self.to_dict(
-                inst, self.field_spec, allowed_read_fields)
+            instance = [self.to_dict(inst, self.field_spec)
                         for inst in instance]
         self.write((instance,), context)
 

@@ -10,10 +10,15 @@ RULES = [
 #    ('api/prefix/groups', 'list', '*', 'users/name_variants', '*', '*'),
 
     ('api/prefix/groups', 'create', '*', 'users/name_variants', '*', '*'),
-    ('api/prefix/groups', 'create', '*', 'users/username', '*', '*'),
-    ('api/prefix/groups', 'create', '*', '*', '*', '*'),
+    ('api/prefix/groups', 'create', '*', 'users', '*', '*'),
+    ('api/prefix/groups', 'create', '*', 'name', '*', '*'),
+
+#    ('api/prefix/groups', 'create', '*', '*', '*', '*'),
 
     ('api/prefix/groups', 'create_response', '*', 'id', '*', '*'),
+    ('api/prefix/groups', 'create_response', '*', 'url', '*', '*'),
+    ('api/prefix/groups', 'create_response', '*', 'users/username', '*', '*'),
+    ('api/prefix/groups', 'create_response', '*', 'users/age', '*', '*'),
 
     ('api/prefix/groups/users', 'list', '*', 'users', '*', '*'),
     ('*', 'retrieve', '*', 'url', '*', '*'),

@@ -6,10 +6,11 @@ from collections import Iterable, Mapping
 from datetime import date, datetime
 from urlparse import urlparse
 from apimas import utils
-from apimas.errors import ValidationError, InvalidInput, GenericFault
+from apimas.errors import ValidationError, InvalidInput, GenericFault, \
+    AccessDeniedError
 
 
-_SKIP = object()
+Nothing = object()
 
 
 def isnumeric(value):
@@ -59,7 +60,7 @@ class BaseSerializer(object):
         extractor (callablel): A callable used to extract the python native
             value from a given object during serialization.
     """
-    def __init__(self, default=None, readonly=False, writeonly=False,
+    def __init__(self, default=Nothing, readonly=False, writeonly=False,
                  extractor=None, nullable=False, *args, **kwargs):
         assert not (readonly and writeonly), (
             '`readonly` and `writeonly` properties are mutually exclusive')
@@ -71,38 +72,51 @@ class BaseSerializer(object):
             assert callable(extractor), ('extractor must be a callable')
         self.extractor = extractor
 
-    def get_native_value(self, value):
+    def get_native_value(self, value, permissions):
         """ Gets the python native value from a given value. """
         raise NotImplementedError('get_native_value() must be implemented')
 
-    def get_repr_value(self, value):
+    def get_repr_value(self, value, permissions):
         """
         Gets the representative format of a value, ready to be easily
         serialized into a content type, e.g. JSON.
         """
         raise NotImplementedError('get_repr_value() must be implemented')
 
-    def serialize(self, value):
+    def serialize(self, value, permissions):
         """
         Converts given value into a representative format.
-
-        It skips this process if `writeonly` is set `True`.
         """
-        if self.writeonly:
-            return _SKIP
-        value = self.extractor(value) if self.extractor else value
-        return self.get_repr_value(value)
+        if not permissions:
+            return Nothing
 
-    def deserialize(self, value):
+        if self.writeonly:
+            return Nothing
+
+        value = self.extractor(value) if self.extractor else value
+        return self.get_repr_value(value, permissions)
+
+    def deserialize(self, value, permissions):
         """
         Converts given value into a python native value.
-
-        It skips this process if `readonly` is set `True`.
         """
+        if value is Nothing:
+            if self.default is Nothing:
+                return Nothing
+            value = self.default
+        elif not permissions:
+            raise AccessDeniedError(
+                "You do not have permission to write field")
+
         if self.readonly:
-            return _SKIP
-        value = self.default if value is None else value
-        return self.get_native_value(value)
+            raise ValidationError("Field is readonly")
+
+        if value is None:
+            if self.nullable:
+                return None
+            raise ValidationError("Field cannot be None")
+
+        return self.get_native_value(value, permissions)
 
 
 class String(BaseSerializer):
@@ -117,18 +131,18 @@ class String(BaseSerializer):
 
         return value
 
-    def get_repr_value(self, value):
+    def get_repr_value(self, value, permissions):
         return self._get_value(value)
 
-    def get_native_value(self, value):
+    def get_native_value(self, value, permissions):
         return self._get_value(value)
 
 
 class UUID(BaseSerializer):
-    def get_repr_value(self, value):
+    def get_repr_value(self, value, permissions):
         return str(value)
 
-    def get_native_value(self, value):
+    def get_native_value(self, value, permissions):
         raise NotImplementedError('deserialize() is not meaningful for'
                                   ' \'UUID\' field')
 
@@ -138,17 +152,17 @@ class Email(String):
     EMAIL_REGEX = re.compile(
         r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
 
-    def _get_email(self, value):
-        value = super(Email, self).get_repr_value(value)
+    def _get_email(self, value, permissions):
+        value = super(Email, self).get_repr_value(value, permissions)
         if not self.EMAIL_REGEX.match(value):
             raise ValidationError('Field is not a valid email')
         return value
 
-    def get_repr_value(self, value):
-        return self._get_email(value)
+    def get_repr_value(self, value, permissions):
+        return self._get_email(value, permissions)
 
-    def get_native_value(self, value):
-        return self._get_email(value)
+    def get_native_value(self, value, permissions):
+        return self._get_email(value, permissions)
 
 
 class Serial(BaseSerializer):
@@ -158,12 +172,12 @@ class Serial(BaseSerializer):
     Deserialization is not meaningful for serials because the value is
     set automatically.
     """
-    def get_repr_value(self, value):
+    def get_repr_value(self, value, permissions):
         if isinstance(value, str) and not value.isdigit():
             raise ValidationError('Field is not an integer')
         return int(value)
 
-    def get_native_value(self, value):
+    def get_native_value(self, value, permissions):
         raise NotImplementedError('deserialize() is not meaningful for'
                                   ' \'serial\' field')
 
@@ -188,17 +202,15 @@ class Number(BaseSerializer):
         number_type = getattr(self, 'NUMBER_TYPE', None)
         if number_type is None:
             raise GenericFault('`NUMBER_TYPE` needs to be set')
-        if self.nullable and value is None:
-            return value
         if isnumeric(value):
             return number_type(value)
 
         raise ValidationError('Field is not numeric.')
 
-    def get_repr_value(self, value):
+    def get_repr_value(self, value, permissions):
         return self._get_value(value)
 
-    def get_native_value(self, value):
+    def get_native_value(self, value, permissions):
         return self._get_value(value)
 
 
@@ -243,8 +255,6 @@ class Boolean(BaseSerializer):
     }
 
     def _get_bool_value(self, value):
-        if value is None:
-            return None
         if value in self.TRUE_VALUES:
             return True
         if value in self.FALSE_VALUES:
@@ -252,13 +262,13 @@ class Boolean(BaseSerializer):
         msg = 'Field is not boolean. {type!r} found instead.'
         raise ValidationError(msg.format(val=type(value)))
 
-    def serialize(self, value):
+    def get_repr_value(self, value, permissions):
         try:
             return self._get_bool_value(value)
         except ValidationError:
             return bool(value)
 
-    def get_native_value(self, value):
+    def get_native_value(self, value, permissions):
         return self._get_bool_value(value)
 
 
@@ -287,7 +297,7 @@ class Date(BaseSerializer):
         self.date_format = date_format or self.DEFAULT_FORMAT
         super(Date, self).__init__(*args, **kwargs)
 
-    def get_repr_value(self, value):
+    def get_repr_value(self, value, permissions):
         if not isinstance(value, (date, datetime)):
             msg = ('Field cannot be serialized. It is not a date object.'
                    ' {type!r} found instead.')
@@ -300,7 +310,7 @@ class Date(BaseSerializer):
             raise ValidationError(
                 msg.format(format=self.date_format) + e.message)
 
-    def get_native_value(self, value):
+    def get_native_value(self, value, permissions):
         try:
             return datetime.strptime(value, self.date_format)
         except ValueError as e:
@@ -346,14 +356,14 @@ class Choices(BaseSerializer):
                             for i, k in enumerate(self.allowed)}
         super(Choices, self).__init__(*args, **kwargs)
 
-    def get_repr_value(self, value):
+    def get_repr_value(self, value, permissions):
         value = self._values_map.get(value, value)
         if value not in self.displayed:
             msg = self.ERROR_MESSAGE.format(allowed=','.join(self.allowed))
             raise ValidationError(msg)
         return value
 
-    def get_native_value(self, value):
+    def get_native_value(self, value, permissions):
         if value not in self.allowed:
             msg = self.ERROR_MESSAGE.format(allowed=','.join(self.allowed))
             raise ValidationError(msg)
@@ -387,31 +397,19 @@ class Identity(BaseSerializer):
         self.rel_url = utils.urljoin(root_url, to) if root_url else to
         super(Identity, self).__init__(*args, **kwargs)
 
-    def get_repr_value(self, value):
-        if value is None:
-            return value
-
+    def get_repr_value(self, value, permissions):
         if isnumeric(value) \
             or isinstance(value, (str, unicode)) \
             or isinstance(value, uuid.UUID):
             return utils.urljoin(self.rel_url, str(value))
-        try:
-            return self.get_repr_value(
-                extract_value(value, 'pk'))
-        except AttributeError:
-            raise ValidationError(
-                'Cannot construct identity URL for the given value: {}'.format(
-                    value))
 
-    def get_native_value(self, value):
+    def get_native_value(self, value, permissions):
         raise NotImplementedError(
             'get_native_value() is not meaningful for \'.identity\' field')
 
 
 class Ref(Identity):
-    def get_native_value(self, value):
-        if value is None:
-            return None
+    def get_native_value(self, value, permissions):
         parsed_value = urlparse(value)
         parsed_url = urlparse(self.absolute_url or self.rel_url)
         _, match, suffix = parsed_value.path.partition(self.rel_url)
@@ -426,10 +424,10 @@ class Ref(Identity):
 
 
 class File(BaseSerializer):
-    def get_repr_value(self, value):
+    def get_repr_value(self, value, permissions):
         return value.name
 
-    def get_native_value(self, value):
+    def get_native_value(self, value, permissions):
         return value
 
 
@@ -461,48 +459,42 @@ class Struct(BaseSerializer):
         self.schema = schema
         super(Struct, self).__init__(*args, **kwargs)
 
-    def get_repr_value(self, obj):
-        if obj is None:
-            return obj
-
-        serialized_data = {}
-        for field_name, value in obj.iteritems():
-            field_schema = self.schema[field_name]
+    def get_dict_values(self, value, permissions, importing):
+        data = {}
+        for field_name, field_schema in self.schema.iteritems():
             serializer = field_schema['serializer']
+            field_permissions = permissions.get(field_name)
+            field_value = value.get(field_name, Nothing)
+            func = serializer.deserialize if importing else serializer.serialize
             try:
-                ser_value = serializer.serialize(value)
-            except ValidationError as e:
-                msg = 'Cannot serialize field {field!r}. ' + e.message
-                raise ValidationError(msg.format(field=field_name))
-            if ser_value is _SKIP:
-                continue
-            serialized_data[field_name] = ser_value
-        return serialized_data
-
-    def get_native_value(self, value):
-        if value is None:
-            return value
-
-        if isinstance(value, Iterable) and not isinstance(value, Mapping):
-            return [self.get_native_value(v) for v in value]
-
-        deserialized_data = {}
-        for k, v in value.iteritems():
-            field_schema = self.schema.get(k, {})
-            serializer = field_schema.get('serializer')
-            map_to = field_schema.get('map_to')
-            if serializer is None:
-                raise ValidationError('Invalid field {!r}'.format(k))
-            try:
-                value = serializer.deserialize(v)
+                computed_value = func(field_value, field_permissions)
             except ValidationError as e:
                 msg = 'Cannot serialize field {field!r}. ' + e.message
                 raise ValidationError(msg.format(field=k))
-            if value is _SKIP:
-                continue
-            deserialized_data[map_to] = value
 
-        return deserialized_data
+            if computed_value is not Nothing:
+                data[field_name] = computed_value
+
+        return data
+
+    def get_repr_value(self, value, permissions):
+        if not isinstance(value, dict):
+            raise ValidationError("Must be a dict")
+
+        return self.get_dict_values(value, permissions, importing=False)
+
+    def get_native_value(self, value, permissions):
+        if not isinstance(value, dict):
+            raise ValidationError("Must be a dict")
+
+        input_keys = set(value.keys())
+        permitted_keys = set(permissions.keys())
+        disallowed_keys = input_keys - permitted_keys
+        if disallowed_keys:
+            raise AccessDeniedError(
+                "Writing fields %s is not allowed" % disallowed_keys)
+
+        return self.get_dict_values(value, permissions, importing=True)
 
 
 class List(BaseSerializer):
@@ -527,16 +519,16 @@ class List(BaseSerializer):
         self.serializer = serializer
         super(List, self).__init__(*args, **kwargs)
 
-    def get_repr_value(self, value):
-        if value is None:
-            return value
+    def get_list_elems(self, value, permissions, importing):
         if not isinstance(value, Iterable) or isinstance(value, Mapping):
             raise ValidationError('Given value is not a list-like object')
-        return [self.serializer.get_repr_value(v) for v in value]
 
-    def get_native_value(self, value):
-        if value is None:
-            return value
-        if not isinstance(value, Iterable) or isinstance(value, Mapping):
-            raise ValidationError('Given value is not a list-like object')
-        return [self.serializer.get_native_value(v) for v in value]
+        serializer = self.serializer
+        func = serializer.deserialize if importing else serializer.serialize
+        return [func(elem, permissions) for elem in value]
+
+    def get_repr_value(self, value, permissions):
+        return self.get_list_elems(value, permissions, importing=False)
+
+    def get_native_value(self, value, permissions):
+        return self.get_list_elems(value, permissions, importing=True)
