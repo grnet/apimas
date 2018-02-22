@@ -3,6 +3,9 @@ from django.db import models
 
 class Group(models.Model):
     name = models.TextField()
+    founded = models.DateField()
+    active = models.BooleanField()
+    email = models.CharField(max_length=100)
 
 
 class Variants(models.Model):

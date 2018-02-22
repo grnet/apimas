@@ -470,7 +470,7 @@ class Struct(BaseSerializer):
                 computed_value = func(field_value, field_permissions)
             except ValidationError as e:
                 msg = 'Cannot serialize field {field!r}. ' + e.message
-                raise ValidationError(msg.format(field=k))
+                raise ValidationError(msg.format(field=field_name))
 
             if computed_value is not Nothing:
                 data[field_name] = computed_value

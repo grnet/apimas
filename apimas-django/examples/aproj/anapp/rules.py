@@ -3,7 +3,7 @@
 RULES = [
 
 
-    ('api/prefix/groups', 'list', '*', 'url', '*', '*'),
+    ('api/prefix/groups', 'list', '*', '*', '*', '*'),
 #    ('api/prefix/groups', 'list', '*', 'users/username', '*', '*'),
 #    ('api/prefix/groups', 'list', '*', 'users', '*', '*'),
 #    ('api/prefix/groups', 'list', '*', 'users/name_variants/el', '*', '*'),
@@ -13,7 +13,7 @@ RULES = [
     ('api/prefix/groups', 'create', '*', 'users', '*', '*'),
     ('api/prefix/groups', 'create', '*', 'name', '*', '*'),
 
-#    ('api/prefix/groups', 'create', '*', '*', '*', '*'),
+    ('api/prefix/groups', 'create', '*', '*', '*', '*'),
 
     ('api/prefix/groups', 'create_response', '*', 'id', '*', '*'),
     ('api/prefix/groups', 'create_response', '*', 'url', '*', '*'),

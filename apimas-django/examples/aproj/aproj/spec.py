@@ -21,6 +21,9 @@ APP_CONFIG = {
                 "url": {".field.identity": {"to": "api/prefix/groups"},
                         "source": "id"},
                 "name": {".field.string": {}},
+                "founded": {".field.date": {}},
+                "active": {".field.boolean": {}},
+                "email": {".field.email": {}},
                 "users": {
                     '.field.collection.django': {},
                     '.field.collection.*': {},

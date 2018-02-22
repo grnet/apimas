@@ -3,6 +3,8 @@ import docular
 spec_list = [
     {'.boolean': {}},
     {'.string': {}},
+    {'.integer': {}},
+    {'.float': {}},
 
     {'.handler': {}, '.string': {}},
 
@@ -23,7 +25,14 @@ spec_list = [
     {'.field.string': {}},
     {'.field.serial': {}},
     {'.field.integer': {}},
+    {'.field.float': {}},
     {'.field.identity': {'to': {'.string': {}}}},
+    {'.field.uuid': {}},
+    {'.field.text': {}},
+    {'.field.email': {}},
+    {'.field.boolean': {}},
+    {'.field.datetime': {}},
+    {'.field.date': {}},
 
     {'.meta': {'*': {}}},
 
@@ -86,7 +95,7 @@ spec_list = [
                 # '2': 'apimas_django.processors.UserRetrieval',
                 '3': 'apimas.components.permissions.Permissions',
                 '4': 'apimas.components.impexp.ImportData',
-                '5': 'apimas.components.processors.CerberusValidation',
+#                '5': 'apimas.components.processors.CerberusValidation',
             },
             'handler': 'apimas_django.handlers.CreateHandler',
             'post': {
@@ -155,7 +164,7 @@ spec_list = [
     #                'apimas_django.processors.ObjectRetrieval',
 #                '4': 'apimas_django.processors.Permissions',
                 '5': 'apimas.components.impexp.ImportData',
-                '6': 'apimas.components.processors.CerberusValidation',
+#                '6': 'apimas.components.processors.CerberusValidation',
             },
             'handler': 'apimas_django.handlers.UpdateHandler',
             'post': {
