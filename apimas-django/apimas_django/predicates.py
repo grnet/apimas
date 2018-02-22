@@ -85,13 +85,13 @@ spec_list = [
                 # '1': 'apimas.components.processors.Authentication',
                 # '2': 'apimas_django.processors.UserRetrieval',
                 '3': 'apimas.components.permissions.Permissions',
-                '4': 'apimas.components.processors.DeSerialization',
+                '4': 'apimas.components.impexp.ImportData',
                 '5': 'apimas.components.processors.CerberusValidation',
             },
             'handler': 'apimas_django.handlers.CreateHandler',
             'post': {
                 '1': 'apimas_django.processors.InstanceToDict',
-                '2': 'apimas.components.processors.Serialization'
+                '2': 'apimas.components.impexp.ExportData'
             },
         },
     },
@@ -113,7 +113,7 @@ spec_list = [
             'post': {
                 '1': 'apimas_django.processors.Filtering',
                 '2': 'apimas_django.processors.InstanceToDict',
-                '3': 'apimas.components.processors.Serialization',
+                '3': 'apimas.components.impexp.ExportData',
             }
         },
     },
@@ -135,7 +135,7 @@ spec_list = [
             'handler': 'apimas_django.handlers.RetrieveHandler',
             'post': {
                 '1': 'apimas_django.processors.InstanceToDict',
-                '2': 'apimas.components.processors.Serialization',
+                '2': 'apimas.components.impexp.ExportData',
             }
         },
     },
@@ -154,13 +154,13 @@ spec_list = [
     #                'apimas_django.processors.UserRetrieval',
     #                'apimas_django.processors.ObjectRetrieval',
 #                '4': 'apimas_django.processors.Permissions',
-                '5': 'apimas.components.processors.DeSerialization',
+                '5': 'apimas.components.impexp.ImportData',
                 '6': 'apimas.components.processors.CerberusValidation',
             },
             'handler': 'apimas_django.handlers.UpdateHandler',
             'post': {
                 '1': 'apimas_django.processors.InstanceToDict',
-                '2': 'apimas.components.processors.Serialization',
+                '2': 'apimas.components.impexp.ExportData',
             },
         },
     },

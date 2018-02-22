@@ -3,7 +3,6 @@ from django.db.models.query import QuerySet
 from apimas import utils
 from apimas_django import utils as django_utils
 from apimas.components import BaseHandler, ProcessorConstruction
-from apimas.components.processors import DeSerializationProcessor
 import docular
 
 
