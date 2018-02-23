@@ -1,0 +1,62 @@
+Authentication:
+in: request/meta/headers
+out: auth/identity
+
+UserRetrieval:
+in: auth/identity
+out: auth/user
+
+ObjectRetrieval:
+in: request/meta/kwargs/pk
+out: backend/instance
+
+Permissions:
+in: auth/user
+    backend/instance if not on_collection
+out: permissions/can_read
+     permissions/read_fields
+     permissions/can_write
+     permissions/write_fields
+(Fail if it cannot write nor read)
+
+ImportData:
+in: request/content
+    request/meta/params
+    permissions/can_read
+    permissions/read_fields
+    permissions/can_write
+    permissions/write_fields
+
+out: imported/content
+     imported/filter_params
+     imported/order_params
+     imported/request_params
+
+(Note: by default content is checked for write, (get) params for read; can be
+overridden in the action spec. Params are interpreted based on the scheme:
+"field__operation=value".)
+
+ObjectRetrieval:
+in: request/meta/kwargs/pk
+out: backend/instance
+
+Handler:
+in: imported/content
+    backend/instance
+    request/meta/kwargs
+out: backend/content
+
+Filtering:
+in: backend/content
+    imported/filter_params
+out: backend/content
+
+InstanceToDict:
+in: backend/content
+out: exportable/content
+
+ExportData:
+in: exportable/content
+    permissions/can_read
+    permissions/read_fields
+out: response/content
