@@ -25,7 +25,7 @@ def serializer_obj(cls, dependencies=None):
 
         kwargs.update(pred_kwargs)
         serializer = cls(**kwargs)
-        value = {'serializer': serializer, 'map_to': loc[-1]}
+        value = {'serializer': serializer}
         docular.doc_spec_set(instance, value)
     return constructor
 
@@ -70,16 +70,17 @@ def list_constructor(context, instance, loc):
     v = docular.doc_spec_get(instance['fields'])
     resource_serializer = v['serializer']
     serializer = srs.List(resource_serializer)
-    value = {'serializer': serializer,
-             'resource_serializer': resource_serializer,
-             'map_to': loc[-1]}
+    value = {
+        'serializer': serializer,
+        'resource_serializer': resource_serializer,
+    }
     docular.doc_spec_set(instance, value)
 
 
 def field_struct_constructor(context, instance, loc):
     v = docular.doc_spec_get(instance['fields'])
     serializer = v['serializer']
-    value = {'serializer': serializer, 'map_to': loc[-1]}
+    value = {'serializer': serializer}
     return docular.doc_spec_set(instance, value)
 
 
@@ -137,7 +138,7 @@ class ImportExportData(BaseProcessor):
     specification to construct them accordingly.
     """
     def __init__(self, collection_loc, action_name,
-                 serializer, resource_serializer, map_to, on_collection):
+                 serializer, resource_serializer, on_collection):
         self.serializer = serializer if on_collection else resource_serializer
 
 
