@@ -31,15 +31,10 @@ def construct_field(instance, loc):
     docular.doc_spec_set(instance, v)
 
 
-def construct_resource(instance):
-    v = dict(docular.doc_spec_iter_values(instance))
-    docular.doc_spec_set(instance, v)
-
-
 def construct_struct(instance, loc):
     source = docular.doc_spec_get(instance.get('source', {}),
                                   default=loc[-1])
-    fields = docular.doc_spec_get(instance['fields'])
+    fields = dict(docular.doc_spec_iter_values(instance['fields']))
     v = {'source': source, 'fields': fields, 'field_type': 'struct'}
     docular.doc_spec_set(instance, v)
 
@@ -48,7 +43,7 @@ def construct_collection(instance, loc, context):
     docular.construct_last(context)
     source = docular.doc_spec_get(instance.get('source', {}),
                                   default=loc[-1])
-    fields = docular.doc_spec_get(instance['fields'])
+    fields = dict(docular.doc_spec_iter_values(instance['fields']))
     value = {'source': source, 'fields': fields, 'field_type': 'collection'}
     docular.doc_spec_set(instance, value)
 
@@ -62,7 +57,6 @@ def construct_action(instance, loc):
 INSTANCETODICT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
     {'.field.*': construct_field,
      '.field.struct': construct_struct,
-     '.resource': construct_resource,
      '.action': construct_action,
      '.field.collection.django': construct_collection,
     },

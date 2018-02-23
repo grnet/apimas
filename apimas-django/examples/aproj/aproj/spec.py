@@ -18,7 +18,8 @@ APP_CONFIG = {
             "fields": {
                 ".resource": {},
                 "id": {".field.serial": {}},
-                "url": {".field.identity": {"to": "api/prefix/groups"},
+                "url": {".field.identity": {},
+                        "to": "api/prefix/groups",
                         "source": "id"},
                 "name": {".field.string": {}},
                 "founded": {".field.date": {}},
@@ -42,7 +43,6 @@ APP_CONFIG = {
                             ".field.struct": {},
                             "source": "name_variants",
                             "fields": {
-                                ".resource": {},
                                 "en": {".field.string": {}},
                                 "el": {".field.string": {}},
                             },

@@ -13,8 +13,6 @@ spec_list = [
     {'.flag.nullable': {}},
     {'.flag.filterable': {}},
 
-    {'.resource': {}},
-
     {
         '.field.*': {},
         'source': {'.string': {}},
@@ -26,7 +24,8 @@ spec_list = [
     {'.field.serial': {}},
     {'.field.integer': {}},
     {'.field.float': {}},
-    {'.field.identity': {'to': {'.string': {}}}},
+    {'.field.identity': {},
+     'to': {'.string': {}}},
     {'.field.uuid': {}},
     {'.field.text': {}},
     {'.field.email': {}},
@@ -38,8 +37,7 @@ spec_list = [
 
     {
         '.field.struct': {},
-        'fields': {'.resource': {},
-                   '*': {'.field.*': {}}},
+        'fields': {'*': {'.field.*': {}}},
     },
 
     {
@@ -60,8 +58,7 @@ spec_list = [
                 'post': {"*": {".handler": {}}},
             }
         },
-        'fields': {'.resource': {},
-                   '*': {".field.*": {}}},
+        'fields': {'*': {".field.*": {}}},
         '*': {},
     },
 
@@ -139,7 +136,7 @@ spec_list = [
     #            '1': 'apimas.components.processors.Authentication',
     #            '2': 'apimas_django.processors.UserRetrieval',
     #            '3': 'apimas_django.processors.ObjectRetrieval',
-#                '4': 'apimas_django.processors.Permissions',
+                '4': 'apimas.components.permissions.Permissions',
             },
             'handler': 'apimas_django.handlers.RetrieveHandler',
             'post': {

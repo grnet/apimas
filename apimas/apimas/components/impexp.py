@@ -15,15 +15,14 @@ def serializer_obj(cls, dependencies=None):
         docular.construct_last(context)
         predicate = context['predicate']
 
-        kwargs = {}
+        kwargs = docular.doc_spec_get(instance, default={})
         for key in dependencies or []:
             kwargs[key] = get_meta(top_spec, loc, key)
 
-        pred_instance = instance[predicate]
-        pred_kwargs = dict(docular.doc_spec_iter_values(pred_instance)) \
-                      if pred_instance else {}
 
-        kwargs.update(pred_kwargs)
+        instance_args = dict(docular.doc_spec_iter_values(instance))
+        kwargs.update(instance_args)
+
         serializer = cls(**kwargs)
         value = {'serializer': serializer}
         docular.doc_spec_set(instance, value)
@@ -50,38 +49,24 @@ def construct_string(instance, loc):
         instance['='] = str(instance['='])
 
 
-def resource_constructor(context, instance, loc):
-    docular.construct_last(context)
+def list_constructor(context, instance, loc, top_spec):
     predicate = context['predicate']
-
-    kwargs = dict(docular.doc_spec_iter(instance))
-
-    pred_instance = instance[predicate]
-    pred_kwargs = dict(docular.doc_spec_iter_values(pred_instance)) \
-                  if pred_instance else {}
-    kwargs.update(pred_kwargs)
-    v = dict(docular.doc_spec_iter_values(instance))
-    serializer = srs.Struct(v, **kwargs)
-    value = {'serializer': serializer}
+    value = docular.doc_spec_get(instance, default={})
+    field_serializers = dict(docular.doc_spec_iter_values(instance['fields']))
+    resource_serializer = srs.Struct(schema=field_serializers)
+    value['serializer'] = resource_serializer
     docular.doc_spec_set(instance, value)
+    serializer_obj(srs.List, dependencies=None)(
+        context, instance, loc, top_spec)
 
 
-def list_constructor(context, instance, loc):
-    v = docular.doc_spec_get(instance['fields'])
-    resource_serializer = v['serializer']
-    serializer = srs.List(resource_serializer)
-    value = {
-        'serializer': serializer,
-        'resource_serializer': resource_serializer,
-    }
+def field_struct_constructor(context, instance, loc, top_spec):
+    value = docular.doc_spec_get(instance, default={})
+    field_serializers = dict(docular.doc_spec_iter_values(instance['fields']))
+    value['schema'] = field_serializers
     docular.doc_spec_set(instance, value)
-
-
-def field_struct_constructor(context, instance, loc):
-    v = docular.doc_spec_get(instance['fields'])
-    serializer = v['serializer']
-    value = {'serializer': serializer}
-    return docular.doc_spec_set(instance, value)
+    serializer_obj(srs.Struct, dependencies=None)(
+        context, instance, loc, top_spec)
 
 
 def construct_action(instance):
@@ -92,7 +77,6 @@ def construct_action(instance):
 
 IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.action': construct_action,
-    '.resource': resource_constructor,
     '.field.collection.django': list_constructor,
     '.field.*': no_constructor,
     '.field.struct': field_struct_constructor,
@@ -137,9 +121,8 @@ class ImportExportData(BaseProcessor):
     It uses the Serializer classes provided by apimas and reads from
     specification to construct them accordingly.
     """
-    def __init__(self, collection_loc, action_name,
-                 serializer, resource_serializer, on_collection):
-        self.serializer = serializer if on_collection else resource_serializer
+    def __init__(self, collection_loc, action_name, serializer, on_collection):
+        self.serializer = serializer if on_collection else serializer.serializer
 
 
     def get_serializer(self, data, allowed_fields):

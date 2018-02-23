@@ -15,6 +15,8 @@ RULES = [
 
     ('api/prefix/groups', 'create', '*', '*', '*', '*'),
 
+    ('api/prefix/groups', 'retrieve', '*', '*', '*', '*'),
+
     ('api/prefix/groups', 'create_response', '*', 'id', '*', '*'),
     ('api/prefix/groups', 'create_response', '*', 'url', '*', '*'),
     ('api/prefix/groups', 'create_response', '*', 'users/username', '*', '*'),
