@@ -143,7 +143,7 @@ spec_list = [
             'pre': {
     #            '1': 'apimas.components.processors.Authentication',
     #            '2': 'apimas_django.processors.UserRetrieval',
-    #            '3': 'apimas_django.processors.ObjectRetrieval',
+                '3': 'apimas_django.processors.ObjectRetrieval',
                 '4': 'apimas.components.permissions.Permissions',
             },
             'handler': 'apimas_django.handlers.RetrieveHandler',

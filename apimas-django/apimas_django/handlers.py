@@ -249,9 +249,17 @@ class ListHandlerProcessor(DjangoBaseHandler):
 ListHandler = _django_base_construction(ListHandlerProcessor)
 
 
+def get_model_instance(spec, pk):
+    model = spec['model']
+    objects = model.objects
+    objects = prefetch_related(objects, spec['subcollections'])
+    objects = select_related(objects, spec['substructs'])
+    return django_utils.get_instance(objects, pk)
+
+
 class RetrieveHandlerProcessor(DjangoBaseHandler):
     READ_KEYS = {
-        'instance': 'store/instance',
+        'instance': 'backend/instance',
     }
     READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     REQUIRED_KEYS = {
@@ -264,12 +272,9 @@ class RetrieveHandlerProcessor(DjangoBaseHandler):
         resource ID extracted from request context.
         """
         pk = context_data['pk']
-        model = self.spec['model']
-        objects = model.objects
-        objects = prefetch_related(objects, self.spec['subcollections'])
-        objects = select_related(objects, self.spec['substructs'])
-
-        instance = django_utils.get_instance(objects, pk)
+        instance = context_data['instance']
+        if not instance:
+            instance = get_model_instance(self.spec, pk)
         return (instance,)
 
 

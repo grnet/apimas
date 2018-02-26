@@ -8,6 +8,7 @@ from apimas.errors import (AccessDeniedError, ConflictError, InvalidInput,
 from apimas.components import BaseProcessor, ProcessorConstruction
 from apimas_django import utils as django_utils
 from apimas.converters import Date, DateTime, Integer, Float, Boolean, List
+from apimas_django import handlers
 import docular
 
 
@@ -514,28 +515,18 @@ class UserRetrieval(BaseProcessor):
         return (user,)
 
 
-class ObjectRetrieval(BaseProcessor):
+class ObjectRetrievalProcessor(handlers.DjangoBaseHandler):
     READ_KEYS = {
-        'model': 'store/orm_model',
-        'pk': 'request/meta/pk',
+        'pk': 'request/meta/kwargs/pk',
     }
 
     WRITE_KEYS = (
-        'store/instance',
+        'backend/instance',
     )
 
     def execute(self, context_data):
-        model, resource_id = context_data['model'], context_data['pk']
-        if model is None:
-            loc = self.READ_KEYS['model']
-            raise InvalidInput(
-                'Processor requires a django model on location {!r},'
-                ' nothing found'.format(loc))
-
-        if resource_id is None:
-            loc = self.READ_KEYS['pk']
-            msg = 'Processor requires a pk on location {!r}, nothing found'
-            raise InvalidInput(msg.format(loc))
-
-        instance = django_utils.get_instance(model, resource_id)
+        pk = context_data['pk']
+        instance = handlers.get_model_instance(self.spec, pk)
         return (instance,)
+
+ObjectRetrieval = handlers._django_base_construction(ObjectRetrievalProcessor)
