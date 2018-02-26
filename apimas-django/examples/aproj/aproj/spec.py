@@ -32,11 +32,14 @@ APP_CONFIG = {
                     'model': 'anapp.models.User',
                     'source': 'user_set',
                     'bound': 'group',
-                    # 'actions': {
-                    #     '.action-template.django.list': {},
-                    #     '.action-template.django.create': {},
-                    #     '.action-template.django.retrieve': {},
-                    # },
+                    'actions': {
+                        '.action-template.django.list': {},
+                        'list': {'.action': {}},
+                        '.action-template.django.create': {},
+                        'create': {'.action': {}},
+                        '.action-template.django.retrieve': {},
+                        'retrieve': {'.action': {}},
+                    },
                     'fields': {
                         'id': {'.field.serial': {}},
                         'username': {'.field.string': {}},
