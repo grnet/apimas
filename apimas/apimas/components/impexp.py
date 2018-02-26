@@ -147,20 +147,6 @@ class ImportExportData(BaseProcessor):
     def __init__(self, collection_loc, action_name, converter, on_collection):
         self.converter = converter if on_collection else converter.converter
 
-    def run(self, context_data):
-        raise NotImplementedError(
-            'run() must be implemented')
-
-    def process(self, collection, url, action, context):
-        """i
-        Reads data which we want to serialize from context, it performs
-        serialization on them and finally it saves output to context.
-        """
-        context_data = self.read(context)
-        output = self.run(context_data)
-        if output is not None:
-            self.write(output, context)
-
 
 def check_field(allowed, field):
     while True:
@@ -197,9 +183,9 @@ class ImportDataProcessor(ImportExportData):
         'write_fields': 'permissions/write_fields',
     }
 
-    WRITE_KEYS = {
-        'imported_content': 'imported/content',
-    }
+    WRITE_KEYS = (
+        'imported/content',
+    )
 
     def process_write_data(self, context_data):
         write_data = context_data['write_data']
@@ -213,9 +199,9 @@ class ImportDataProcessor(ImportExportData):
         can_write_fields = context_data['write_fields']
         return self.converter.import_data(write_data, can_write_fields)
 
-    def run(self, context_data):
+    def execute(self, context_data):
         imported_content = self.process_write_data(context_data)
-        return {'imported_content': imported_content}
+        return (imported_content,)
 
 
 ImportData = ProcessorConstruction(
@@ -232,11 +218,11 @@ class ExportDataProcessor(ImportExportData):
         'read_fields': 'permissions/read_fields',
     }
 
-    WRITE_KEYS = {
-        'data': 'response/content',
-    }
+    WRITE_KEYS = (
+        'response/content',
+    )
 
-    def run(self, context_data):
+    def execute(self, context_data):
         export_data = context_data['export_data']
         if export_data is None:
             return None
@@ -248,7 +234,7 @@ class ExportDataProcessor(ImportExportData):
         can_read_fields = context_data['read_fields']
         exported_data = self.converter.export_data(
             export_data, can_read_fields)
-        return {'data': exported_data}
+        return (exported_data,)
 
 
 ExportData = ProcessorConstruction(

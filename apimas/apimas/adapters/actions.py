@@ -64,12 +64,10 @@ class ApimasAction(object):
         return self.handle_error(self.process_context, context)
 
     def process_context(self, context):
-        args = (self.collection, self.url, self.action_name, context)
-
         for processor in self.request_proc:
-            processor.process(*args)
+            processor.process(context)
 
-        self.handler.process(*args)
+        self.handler.process(context)
 
         response = {
             'meta': {
@@ -80,7 +78,7 @@ class ApimasAction(object):
         context['response'] = response
 
         for processor in self.response_proc:
-            processor.process(*args)
+            processor.process(context)
 
         return context['response']
 

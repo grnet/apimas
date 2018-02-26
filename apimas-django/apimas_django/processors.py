@@ -64,8 +64,6 @@ INSTANCETODICT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
 
 
 class InstanceToDictProcessor(BaseProcessor):
-    name = 'apimas_django.processors.InstanceToDict'
-
     READ_KEYS = {
         'instance': 'backend/content',
         'can_read': 'permissions/can_read',
@@ -181,7 +179,7 @@ class InstanceToDictProcessor(BaseProcessor):
             data[k] = value
         return data
 
-    def process(self, collection, url, action, context):
+    def execute(self, processor_data):
         """
         A processor which is responsible for converting a
         `django.db.models.Model` or a `django.db.models.query.QuerySet`
@@ -189,7 +187,6 @@ class InstanceToDictProcessor(BaseProcessor):
 
         This dict holds only the information specified by the spec.
         """
-        processor_data = self.read(context)
         instance = processor_data['instance']
         if instance is None:
             self.write(None, context)
@@ -206,7 +203,7 @@ class InstanceToDictProcessor(BaseProcessor):
         else:
             instance = [self.to_dict(inst, self.field_spec)
                         for inst in instance]
-        self.write((instance,), context)
+        return (instance,)
 
 
 InstanceToDict = ProcessorConstruction(
@@ -410,8 +407,6 @@ class FilteringProcessor(BaseProcessor):
     A django processor responsible for the filtering of a response, based
     on a query string.
     """
-    name = 'apimas_django.processors.Filtering'
-
     READ_KEYS = {
         'params': 'request/meta/params',
         'queryset': 'response/content',
@@ -461,7 +456,7 @@ class FilteringProcessor(BaseProcessor):
     def __init__(self, collection_loc, action_name, filters):
         self.filters = filters
 
-    def process(self, collection, url, action, context):
+    def process(self, context):
         """
         The expected response is a `django.db.models.queryset.QuerySet` object
         returned by a django handler.
@@ -508,8 +503,7 @@ class UserRetrieval(BaseProcessor):
                 '"userid_extractor" must be a callable')
         self.userid_extractor = userid_extractor
 
-    def process(self, collection, url, action, context):
-        context_data = self.read(context)
+    def execute(self, context_data):
         identity = context_data.get('identity')
         if not identity or not self.userid_extractor:
             user_id = None
@@ -517,7 +511,7 @@ class UserRetrieval(BaseProcessor):
             user_id = self.userid_extractor(identity)
         model_backend = ModelBackend()
         user = model_backend.get_user(user_id)
-        self.write((user,), context)
+        return (user,)
 
 
 class ObjectRetrieval(BaseProcessor):
@@ -530,8 +524,7 @@ class ObjectRetrieval(BaseProcessor):
         'store/instance',
     )
 
-    def process(self, collection, url, action, context):
-        context_data = self.read(context)
+    def execute(self, context_data):
         model, resource_id = context_data['model'], context_data['pk']
         if model is None:
             loc = self.READ_KEYS['model']
@@ -545,4 +538,4 @@ class ObjectRetrieval(BaseProcessor):
             raise InvalidInput(msg.format(loc))
 
         instance = django_utils.get_instance(model, resource_id)
-        self.write((instance,), context)
+        return (instance,)

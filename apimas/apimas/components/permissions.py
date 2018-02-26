@@ -279,7 +279,7 @@ class PermissionsProcessor(BaseProcessor):
         expanded_fields = expand_paths(allowed_fields, self.fields_spec)
         return True, expanded_fields
 
-    def process(self, collection, url, action, context):
+    def process(self, context):
         context_data = self.read(context)
         user = context_data.get('user')
         instance = context_data.get('instance')

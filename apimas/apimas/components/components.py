@@ -148,38 +148,20 @@ class BaseProcessor(object):
         raise InvalidInput('Incompatible types for \'keys\' ({!r}) and'
                            ' \'data\' ({!r})'.format(type(keys), type(data)))
 
-    def process(self, collection, url, action, context):
+    def execute(self, context_data):
         """
-        Actual hook of the processor.
-
+        Actual hook of a processor.
         Args:
-            collection (str): Collection path on which action is performed.
-            url (str): Action url.
-            action (str): Action name.
-            context (dict): Context used by processor to reads its data and
-                writes its state.
+            context_data (dict): Processor-specific keys extracted from
+            context.
+        Returns:
+            Tuple of data to be written to context.
+
         """
-        raise NotImplementedError('process() must be implemeneted')
+        raise NotImplementedError('execute() must be implemented')
 
-
-class BaseHandler(BaseProcessor):
-    """
-    Interface for implementing a handler.
-
-    Handlers have the same behaviour with processors. However, handlers are
-    also responsible for handling any error occured in processors or handler.
-    """
-    name = 'apimas.components.BaseHandler'
-
-    def handle_error(self, component, cmp_args, ex):
-        """
-        Handles any error occcured in handler or processors.
-
-        Args:
-            component (str): Identifier of handler/processor in which error
-                occured.
-            cmp_args (tuple): Args with which handler/processors was called
-                 by apimas.
-            ex (Exception): Error instance raised by handler of processors.
-        """
-        raise NotImplementedError('handle_error() must be implemented')
+    def process(self, context):
+        context_data = self.read(context)
+        output = self.execute(context_data)
+        if output is not None:
+            self.write(output, context)

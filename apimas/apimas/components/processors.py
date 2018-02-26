@@ -117,7 +117,6 @@ class CerberusValidationProcessor(BaseProcessor):
     Processor for validating request data using Cerberus
     tool (http://docs.python-cerberus.org/en/stable/).
     """
-    name = 'apimas.components.processors.CerberusValidation'
 
     READ_KEYS = {
         'data': 'imported/content',
@@ -171,14 +170,13 @@ class CerberusValidationProcessor(BaseProcessor):
         context.instance.update({'validator': cerberus_funcs})
         return context.instance
 
-    def process(self, collection, url, action, context):
+    def execute(self, data):
         """
         It reads from request data and it applies Cerberus validation based
         on the validation schema constructed during object initialization.
 
         If validation fails, then `apimas.errors.ValidationError` is raised.
         """
-        data = self.read(context)
         validator = CerberusValidator(self.validation_schema)
         isvalid = validator.validate(data)
         if not isvalid:

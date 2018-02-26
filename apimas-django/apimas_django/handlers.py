@@ -2,7 +2,7 @@ from django.db.models import Model
 from django.db.models.query import QuerySet
 from apimas import utils
 from apimas_django import utils as django_utils
-from apimas.components import BaseHandler, ProcessorConstruction
+from apimas.components import BaseProcessor, ProcessorConstruction
 import docular
 
 
@@ -82,7 +82,7 @@ def _django_base_construction(action):
         DJANGEBASEHANDLER_CONSTRUCTORS, action)
 
 
-class DjangoBaseHandler(BaseHandler):
+class DjangoBaseHandler(BaseProcessor):
     """
     Base handler for django specific actions.
 
@@ -131,8 +131,6 @@ class DjangoBaseHandler(BaseHandler):
         ...            raise InvalidInput('Handler operates on resources.')
         ...        return model.objects.get(pk=pk)
     """
-    name = 'apimas_django.handlers.DjangoBaseHandler'
-
     READ_KEYS = {
         'kwargs': 'request/meta/kwargs',
         'pk': 'request/meta/kwargs/pk',
@@ -151,118 +149,8 @@ class DjangoBaseHandler(BaseHandler):
         # self.model = value['model']
         # self.bounds = value['bounds']
 
-    def _parse_ref(self, orm_model, data):
-        """
-        A function used to handle the case of related fields (either one
-        or many).
-
-        * In case of one to one or many to one relations, we use the
-          `<field_name>_id` as key.
-
-        * In case of many to many or one to many relations, we isolate
-          the data used for the many relations and we extract the actual
-          model instances corresponding to the primary keys.
-        """
-        ref_keys = []
-        many_ref_keys = []
-        spec_properties = self.fields_spec
-        for k, v in spec_properties.iteritems():
-            if REF in v:
-                ref_keys.append(k)
-            if ARRAY_OF in v and REF in v[ARRAY_OF]:
-                many_ref_keys.append(k)
-        for k in ref_keys:
-            data[k + '_id'] = data.pop(k, None)
-        many = {}
-        for k in many_ref_keys:
-            field = orm_model._meta.get_field(k)
-            ids = data.pop(k, [])
-            if not ids:
-                continue
-            many[k] = [field.related_model.objects.get(
-                pk=refid) for refid in ids]
-        return data, many
-
-
-    def get_resource(self, orm_model, resource_id, context):
-        """
-        Get model instance based on the given resource id.
-
-        Args:
-            orm_model: ORM model which corresponds to the resource we want
-                to retrieve.
-            resource_id: ID of resource to be retrieved.
-
-        Raises:
-            NotFound: A model instance with the given id cannot be found.
-        """
-        instance = context.get('instance')
-        if not instance:
-            instance = django_utils.get_instance(orm_model, resource_id)
-        return instance
-
-    def read_context(self, context):
-        """
-        Reads handler-specific keys from context.
-
-        Args:
-            context (dict): Request context.
-
-        Raises:
-            InvalidInput: Given is not valid for the handler.
-
-        Returns:
-            dict: A subset of context which contains only the
-            handler-specific fields.
-        """
-        data = {}
-        for k, v in self.READ_KEYS.iteritems():
-            value = self.extract(context, v)
-            if value is None and k in self.REQUIRED_KEYS:
-                msg = 'Key {key!r} is required for this handler'
-                raise InvalidInput(msg.format(key=k))
-            data[k] = value
-        return data
-
-    def execute(self, collection, url, action, context_data):
-        """
-        Actual hook of a django handler.
-
-        It is expected that there would be an interaction with the django
-        models, and therefore, a model instance or queryset to be returned as
-        the content of the handler's response.
-
-        Args:
-            collection (str): Collection corresponding to the handler.
-            url (str): Relative URL of the action.
-            action (str): Action name correspond to the handler.
-            context_data (dict): Handler-specific keys extracted from
-                request context.
-        Returns:
-            A model instance or a queryset corresponding to the interaction of
-            handler with the django models. Returns `None` for an empty
-            response.
-
-        """
-        raise NotImplementedError('execute() must be implemented')
-
-    def process(self, collection, url, action, context):
-        """
-        Django adapter includes three stages:
-            * Reads required keys from the request context.
-            * Produces a model instance/QuerySet based on the handler-specific
-              data.
-            * Returns the response using the python native format
-              of the output of previous step.
-        """
-        context_data = self.read_context(context)
-        output = self.execute(collection, url, action, context_data)
-        self.write((output,), context)
-
 
 class CreateHandlerProcessor(DjangoBaseHandler):
-    name = 'apimas_django.handlers.CreateHandler'
-
     REQUIRED_KEYS = {
         'data',
     }
@@ -300,7 +188,7 @@ class CreateHandlerProcessor(DjangoBaseHandler):
             self.create_with(instance.id, *rec)
         return instance
 
-    def execute(self, collection, url, action, context_data):
+    def execute(self, context_data):
         """ Creates a new django model instance. """
 
         data = context_data['data']
@@ -310,7 +198,7 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         # if many:
         #     for k, v in many.iteritems():
         #         getattr(instance, k).add(*v)
-        return instance
+        return (instance,)
 
 
 CreateHandler = _django_base_construction(CreateHandlerProcessor)
@@ -333,12 +221,10 @@ def prefetch_related(objects, subcollections):
 
 
 class ListHandlerProcessor(DjangoBaseHandler):
-    name = 'apimas_django.handlers.ListHandler'
-
     REQUIRED_KEYS = {
     }
 
-    def execute(self, collection, url, action, context_data):
+    def execute(self, context_data):
         """
         Gets all django model instances based on the orm model extracted
         from request context.
@@ -357,15 +243,13 @@ class ListHandlerProcessor(DjangoBaseHandler):
         objects = model.objects
         objects = prefetch_related(objects, self.spec['subcollections'])
         objects = select_related(objects, self.spec['substructs'])
-        return objects.filter(**flts)
+        return (objects.filter(**flts),)
 
 
 ListHandler = _django_base_construction(ListHandlerProcessor)
 
 
 class RetrieveHandlerProcessor(DjangoBaseHandler):
-    name = 'apimas_django.handlers.RetrieveHandler'
-
     READ_KEYS = {
         'instance': 'store/instance',
     }
@@ -374,7 +258,7 @@ class RetrieveHandlerProcessor(DjangoBaseHandler):
         'pk',
     }
 
-    def execute(self, collection, url, action, context_data):
+    def execute(self, context_data):
         """
         Gets a single model instance which based on the orm model and
         resource ID extracted from request context.
@@ -384,15 +268,15 @@ class RetrieveHandlerProcessor(DjangoBaseHandler):
         objects = model.objects
         objects = prefetch_related(objects, self.spec['subcollections'])
         objects = select_related(objects, self.spec['substructs'])
-        return objects.get(pk=pk)
+
+        instance = django_utils.get_instance(objects, pk)
+        return (instance,)
 
 
 RetrieveHandler = _django_base_construction(RetrieveHandlerProcessor)
 
 
 class UpdateHandlerProcessor(CreateHandlerProcessor):
-    name = 'apimas_django.handlers.UpdateHandler'
-
     READ_KEYS = {
         'instance': 'store/instance',
     }
@@ -408,7 +292,7 @@ class UpdateHandlerProcessor(CreateHandlerProcessor):
         obj.save()
         return obj
 
-    def execute(self, collection, url, action, context_data):
+    def execute(self, context_data):
         """
         Updates an existing model instance based on the data of request.
         """
@@ -421,15 +305,13 @@ class UpdateHandlerProcessor(CreateHandlerProcessor):
         # if many:
         #     for k, v in many.iteritems():
         #         getattr(instance, k).add(*v)
-        return instance
+        return (instance,)
 
 
 UpdateHandler = _django_base_construction(UpdateHandlerProcessor)
 
 
 class DeleteHandlerProcessor(RetrieveHandlerProcessor):
-    name = 'apimas_django.handlers.DeleteHandler'
-
     STATUS_CODE = 204
     READ_KEYS = {
         'instance': 'store/instance',
@@ -440,7 +322,7 @@ class DeleteHandlerProcessor(RetrieveHandlerProcessor):
         'pk',
     }
 
-    def execute(self, collection, url, action, context_data):
+    def execute(self, context_data):
         """ Deletes an existing model instance. """
         instance = super(DeleteHandler, self).execute(
             collection, url, action, context_data)
@@ -451,7 +333,7 @@ class DeleteHandlerProcessor(RetrieveHandlerProcessor):
 DeleteHandler = _django_base_construction(DeleteHandlerProcessor)
 
 
-class TokenAuthHandler(BaseHandler):
+class TokenAuthHandler(BaseProcessor):
     """
     Add handler for generating JWT tokens to authenticated parties.
     """
