@@ -44,7 +44,7 @@ def extract_value(obj, attr):
                     attr=attr))
 
 
-class BaseSerializer(object):
+class DataConverter(object):
     """
     Class used to convert a value taken from a request into a python native
     value ready to be used for the business logic of an application and
@@ -83,7 +83,7 @@ class BaseSerializer(object):
         """
         raise NotImplementedError('get_repr_value() must be implemented')
 
-    def serialize(self, value, permissions):
+    def export_data(self, value, permissions):
         """
         Converts given value into a representative format.
         """
@@ -102,7 +102,7 @@ class BaseSerializer(object):
 
         return self.get_repr_value(value, permissions)
 
-    def deserialize(self, value, permissions):
+    def import_data(self, value, permissions):
         """
         Converts given value into a python native value.
         """
@@ -125,7 +125,7 @@ class BaseSerializer(object):
         return self.get_native_value(value, permissions)
 
 
-class String(BaseSerializer):
+class String(DataConverter):
     def _get_value(self, value):
         valid_types = (str, unicode)
         if not isinstance(value, valid_types):
@@ -141,7 +141,7 @@ class String(BaseSerializer):
         return self._get_value(value)
 
 
-class UUID(BaseSerializer):
+class UUID(DataConverter):
     def get_repr_value(self, value, permissions):
         return str(value)
 
@@ -168,7 +168,7 @@ class Email(String):
         return self._get_email(value, permissions)
 
 
-class Serial(BaseSerializer):
+class Serial(DataConverter):
     """
     Serialize serial numbers.
 
@@ -185,7 +185,7 @@ class Serial(BaseSerializer):
                                   ' \'serial\' field')
 
 
-class Number(BaseSerializer):
+class Number(DataConverter):
     """
     Serializes and deserializes a numeric value.
 
@@ -240,7 +240,7 @@ class Float(Number):
     NUMBER_TYPE = float
 
 
-class Boolean(BaseSerializer):
+class Boolean(DataConverter):
     TRUE_VALUES = {
         'true',
         'True',
@@ -275,7 +275,7 @@ class Boolean(BaseSerializer):
         return self._get_bool_value(value)
 
 
-class Date(BaseSerializer):
+class Date(DataConverter):
     """
     It converts a python string representing a date into a python date object
     and vice versa.
@@ -327,7 +327,7 @@ class DateTime(Date):
     DEFAULT_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
 
-class Choices(BaseSerializer):
+class Choices(DataConverter):
     """
     The internal value can be one of the allowed. Similarly, the displayed
     value can be the one mapped to the corresponding internal.
@@ -373,7 +373,7 @@ class Choices(BaseSerializer):
         return value
 
 
-class Identity(BaseSerializer):
+class Identity(DataConverter):
     """
     Constructs the URL pointing to an entity.
 
@@ -425,7 +425,7 @@ class Ref(Identity):
         return suffix.split(self.TRAILING_SLASH, 1)[0]
 
 
-class File(BaseSerializer):
+class File(DataConverter):
     def get_repr_value(self, value, permissions):
         return value.name
 
@@ -433,7 +433,13 @@ class File(BaseSerializer):
         return value
 
 
-class Struct(BaseSerializer):
+def pick_converter(converter, importing):
+    if importing:
+        return converter.import_data
+    return converter.export_data
+
+
+class Struct(DataConverter):
     """
     Serializes and deserializes a compound of fields.
 
@@ -464,10 +470,9 @@ class Struct(BaseSerializer):
     def get_dict_values(self, value, permissions, importing):
         data = {}
         for field_name, field_schema in self.schema.iteritems():
-            serializer = field_schema['serializer']
             field_permissions = permissions.get(field_name)
             field_value = value.get(field_name, Nothing)
-            func = serializer.deserialize if importing else serializer.serialize
+            func = pick_converter(field_schema['converter'], importing)
             try:
                 computed_value = func(field_value, field_permissions)
             except ValidationError as e:
@@ -499,7 +504,7 @@ class Struct(BaseSerializer):
         return self.get_dict_values(value, permissions, importing=True)
 
 
-class List(BaseSerializer):
+class List(DataConverter):
     """
     Serializes and deserializes a list of items.
 
@@ -517,16 +522,15 @@ class List(BaseSerializer):
         >>> field.deserialize(['foo', 'bar'])
         ['foo', 'bar']
     """
-    def __init__(self, serializer, **kwargs):
-        self.serializer = serializer
+    def __init__(self, converter, **kwargs):
+        self.converter = converter
         super(List, self).__init__(**kwargs)
 
     def get_list_elems(self, value, permissions, importing):
         if not isinstance(value, Iterable) or isinstance(value, Mapping):
             raise ValidationError('Given value is not a list-like object')
 
-        serializer = self.serializer
-        func = serializer.deserialize if importing else serializer.serialize
+        func = pick_converter(self.converter, importing)
         return [func(elem, permissions) for elem in value]
 
     def get_repr_value(self, value, permissions):

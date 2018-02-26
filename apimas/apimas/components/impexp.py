@@ -1,5 +1,5 @@
 import docular
-from apimas import serializers as srs
+from apimas import serializers as cnvs
 from apimas import documents as doc
 from apimas.errors import AccessDeniedError
 from apimas.components import BaseProcessor, ProcessorConstruction
@@ -14,7 +14,7 @@ def get_meta(top_spec, loc, key):
 FIELD_ARGS = ['default']
 
 
-def serializer_obj(cls, dependencies=None, extra_args=None):
+def converter_obj(cls, dependencies=None, extra_args=None):
     def constructor(context, instance, loc, top_spec):
         docular.construct_last(context)
         predicate = context['predicate']
@@ -33,8 +33,8 @@ def serializer_obj(cls, dependencies=None, extra_args=None):
                 if v is not Null:
                     kwargs[field_arg] = v
 
-        serializer = cls(**kwargs)
-        value = {'serializer': serializer}
+        converter = cls(**kwargs)
+        value = {'converter': converter}
         docular.doc_spec_set(instance, value)
     return constructor
 
@@ -67,13 +67,13 @@ def list_constructor(context, instance, loc, top_spec):
     value = docular.doc_spec_get(instance, default={})
     args = value.get('args', {})
 
-    field_serializers = dict(docular.doc_spec_iter_values(instance['fields']))
-    resource_serializer = srs.Struct(schema=field_serializers)
-    args['serializer'] = resource_serializer
+    field_converters = dict(docular.doc_spec_iter_values(instance['fields']))
+    resource_converter = cnvs.Struct(schema=field_converters)
+    args['converter'] = resource_converter
     value['args'] = args
 
     docular.doc_spec_set(instance, value)
-    serializer_obj(srs.List, dependencies=None)(
+    converter_obj(cnvs.List, dependencies=None)(
         context, instance, loc, top_spec)
 
 
@@ -81,12 +81,12 @@ def field_struct_constructor(context, instance, loc, top_spec):
     value = docular.doc_spec_get(instance, default={})
     args = value.get('args', {})
 
-    field_serializers = dict(docular.doc_spec_iter_values(instance['fields']))
-    args['schema'] = field_serializers
+    field_converters = dict(docular.doc_spec_iter_values(instance['fields']))
+    args['schema'] = field_converters
     value['args'] = args
 
     docular.doc_spec_set(instance, value)
-    serializer_obj(srs.Struct, dependencies=None)(
+    converter_obj(cnvs.Struct, dependencies=None)(
         context, instance, loc, top_spec)
 
 
@@ -101,18 +101,18 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.field.collection.django': list_constructor,
     '.field.*': no_constructor,
     '.field.struct': field_struct_constructor,
-    '.field.string': serializer_obj(srs.String),
-    '.field.serial': serializer_obj(srs.Serial),
-    '.field.identity': serializer_obj(
-        srs.Identity, dependencies=['root_url'], extra_args=['to']),
-    '.field.integer': serializer_obj(srs.Integer),
-    '.field.float': serializer_obj(srs.Float),
-    '.field.uuid': serializer_obj(srs.UUID),
-    '.field.text': serializer_obj(srs.String),
-    '.field.email': serializer_obj(srs.Email),
-    '.field.boolean': serializer_obj(srs.Boolean),
-    '.field.datetime': serializer_obj(srs.DateTime),
-    '.field.date': serializer_obj(srs.Date),
+    '.field.string': converter_obj(cnvs.String),
+    '.field.serial': converter_obj(cnvs.Serial),
+    '.field.identity': converter_obj(
+        cnvs.Identity, dependencies=['root_url'], extra_args=['to']),
+    '.field.integer': converter_obj(cnvs.Integer),
+    '.field.float': converter_obj(cnvs.Float),
+    '.field.uuid': converter_obj(cnvs.UUID),
+    '.field.text': converter_obj(cnvs.String),
+    '.field.email': converter_obj(cnvs.Email),
+    '.field.boolean': converter_obj(cnvs.Boolean),
+    '.field.datetime': converter_obj(cnvs.DateTime),
+    '.field.date': converter_obj(cnvs.Date),
 
     '.flag.*': no_constructor,
     '.flag.readonly': cerberus_flag('readonly'),
@@ -123,12 +123,12 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
 }, default=no_constructor)
 
     # _CONSTRUCTORS = {
-    #     'ref':        Object(srs.Ref, kwargs_spec=True, kwargs_instance=True,
+    #     'ref':        Object(cnvs.Ref, kwargs_spec=True, kwargs_instance=True,
     #                          last=True, post_hook=_post_hook),
-    #     'choices':    Object(srs.Choices, kwargs_spec=True,
+    #     'choices':    Object(cnvs.Choices, kwargs_spec=True,
     #                          kwargs_instance=True, last=True,
     #                          post_hook=_post_hook),
-    #     'file':       Object(srs.File, kwargs_spec=True, kwargs_instance=True,
+    #     'file':       Object(cnvs.File, kwargs_spec=True, kwargs_instance=True,
     #                          last=True, post_hook=_post_hook),
     #     'readonly':   Flag('readonly'),
     #     'writeonly':  Flag('writeonly'),
@@ -144,20 +144,12 @@ class ImportExportData(BaseProcessor):
     It uses the Serializer classes provided by apimas and reads from
     specification to construct them accordingly.
     """
-    def __init__(self, collection_loc, action_name, serializer, on_collection):
-        self.serializer = serializer if on_collection else serializer.serializer
+    def __init__(self, collection_loc, action_name, converter, on_collection):
+        self.converter = converter if on_collection else converter.converter
 
-
-    def get_serializer(self, data, allowed_fields):
-        # if allowed_fields is not None:
-        #     serializers = self._get_serializers(allowed_fields)
-        # else:
-
-        return self.serializer
-
-    def perform_serialization(self, context_data):
+    def run(self, context_data):
         raise NotImplementedError(
-            'perform_serialization() must be implemented')
+            'run() must be implemented')
 
     def process(self, collection, url, action, context):
         """i
@@ -165,7 +157,7 @@ class ImportExportData(BaseProcessor):
         serialization on them and finally it saves output to context.
         """
         context_data = self.read(context)
-        output = self.perform_serialization(context_data)
+        output = self.run(context_data)
         if output is not None:
             self.write(output, context)
 
@@ -196,8 +188,6 @@ class ImportDataProcessor(ImportExportData):
     """
     Processor responsible for the deserialization of data.
     """
-    name = 'apimas.components.processors.DeSerialization'
-
     READ_KEYS = {
         'write_data': 'request/content',
         'parameters': 'request/meta/params',
@@ -221,9 +211,9 @@ class ImportDataProcessor(ImportExportData):
                 'You do not have permission to do this action')
 
         can_write_fields = context_data['write_fields']
-        return self.serializer.deserialize(write_data, can_write_fields)
+        return self.converter.import_data(write_data, can_write_fields)
 
-    def perform_serialization(self, context_data):
+    def run(self, context_data):
         imported_content = self.process_write_data(context_data)
         return {'imported_content': imported_content}
 
@@ -236,8 +226,6 @@ class ExportDataProcessor(ImportExportData):
     """
     Processor responsible for the serialization of data.
     """
-    name = 'apimas.components.processors.Serialization'
-
     READ_KEYS = {
         'export_data': 'exportable/content',
         'can_read': 'permissions/can_read',
@@ -248,7 +236,7 @@ class ExportDataProcessor(ImportExportData):
         'data': 'response/content',
     }
 
-    def perform_serialization(self, context_data):
+    def run(self, context_data):
         export_data = context_data['export_data']
         if export_data is None:
             return None
@@ -258,7 +246,9 @@ class ExportDataProcessor(ImportExportData):
                 'You do not have permission to do this action')
 
         can_read_fields = context_data['read_fields']
-        return {'data': self.serializer.serialize(export_data, can_read_fields)}
+        exported_data = self.converter.export_data(
+            export_data, can_read_fields)
+        return {'data': exported_data}
 
 
 ExportData = ProcessorConstruction(
