@@ -5,23 +5,33 @@ from apimas.errors import AccessDeniedError
 from apimas.components import BaseProcessor, ProcessorConstruction
 
 
+Null = object()
+
 def get_meta(top_spec, loc, key):
     return docular.doc_spec_get(
         docular.doc_inherit2(top_spec, loc, ('.meta', key)))
 
+FIELD_ARGS = ['default']
 
-def serializer_obj(cls, dependencies=None):
+
+def serializer_obj(cls, dependencies=None, extra_args=None):
     def constructor(context, instance, loc, top_spec):
         docular.construct_last(context)
         predicate = context['predicate']
 
-        kwargs = docular.doc_spec_get(instance, default={})
+        kwargs = docular.doc_spec_get(instance, default={}).get('args', {})
+
         for key in dependencies or []:
             kwargs[key] = get_meta(top_spec, loc, key)
 
 
-        instance_args = dict(docular.doc_spec_iter_values(instance))
-        kwargs.update(instance_args)
+        extra_check = extra_args or []
+        for field_arg in FIELD_ARGS + extra_check:
+            argdoc = instance.get(field_arg)
+            if argdoc:
+                v = docular.doc_spec_get(argdoc, default=Null)
+                if v is not Null:
+                    kwargs[field_arg] = v
 
         serializer = cls(**kwargs)
         value = {'serializer': serializer}
@@ -32,7 +42,9 @@ def serializer_obj(cls, dependencies=None):
 def cerberus_flag(flag):
     def constructor(instance, loc):
         value = docular.doc_spec_get(instance, default={})
-        value[flag] = True
+        args = value.get('args', {})
+        args[flag] = True
+        value['args'] = args
         docular.doc_spec_set(instance, value)
     return constructor
 
@@ -51,10 +63,15 @@ def construct_string(instance, loc):
 
 def list_constructor(context, instance, loc, top_spec):
     predicate = context['predicate']
+
     value = docular.doc_spec_get(instance, default={})
+    args = value.get('args', {})
+
     field_serializers = dict(docular.doc_spec_iter_values(instance['fields']))
     resource_serializer = srs.Struct(schema=field_serializers)
-    value['serializer'] = resource_serializer
+    args['serializer'] = resource_serializer
+    value['args'] = args
+
     docular.doc_spec_set(instance, value)
     serializer_obj(srs.List, dependencies=None)(
         context, instance, loc, top_spec)
@@ -62,8 +79,12 @@ def list_constructor(context, instance, loc, top_spec):
 
 def field_struct_constructor(context, instance, loc, top_spec):
     value = docular.doc_spec_get(instance, default={})
+    args = value.get('args', {})
+
     field_serializers = dict(docular.doc_spec_iter_values(instance['fields']))
-    value['schema'] = field_serializers
+    args['schema'] = field_serializers
+    value['args'] = args
+
     docular.doc_spec_set(instance, value)
     serializer_obj(srs.Struct, dependencies=None)(
         context, instance, loc, top_spec)
@@ -82,7 +103,8 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.field.struct': field_struct_constructor,
     '.field.string': serializer_obj(srs.String),
     '.field.serial': serializer_obj(srs.Serial),
-    '.field.identity': serializer_obj(srs.Identity, dependencies=['root_url']),
+    '.field.identity': serializer_obj(
+        srs.Identity, dependencies=['root_url'], extra_args=['to']),
     '.field.integer': serializer_obj(srs.Integer),
     '.field.float': serializer_obj(srs.Float),
     '.field.uuid': serializer_obj(srs.UUID),
@@ -94,6 +116,7 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
 
     '.flag.*': no_constructor,
     '.flag.readonly': cerberus_flag('readonly'),
+    '.flag.writeonly': cerberus_flag('writeonly'),
     '.flag.nullable': cerberus_flag('nullable'),
     '.meta': no_constructor,
     '.string': construct_string,

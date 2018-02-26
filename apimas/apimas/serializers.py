@@ -61,7 +61,7 @@ class BaseSerializer(object):
             value from a given object during serialization.
     """
     def __init__(self, default=Nothing, readonly=False, writeonly=False,
-                 extractor=None, nullable=False, *args, **kwargs):
+                 extractor=None, nullable=False):
         assert not (readonly and writeonly), (
             '`readonly` and `writeonly` properties are mutually exclusive')
         self.default = default
@@ -94,6 +94,12 @@ class BaseSerializer(object):
             return Nothing
 
         value = self.extractor(value) if self.extractor else value
+
+        if value is None:
+            if self.nullable:
+                return None
+            raise ValidationError("Field cannot be None")
+
         return self.get_repr_value(value, permissions)
 
     def deserialize(self, value, permissions):
@@ -122,9 +128,6 @@ class BaseSerializer(object):
 class String(BaseSerializer):
     def _get_value(self, value):
         valid_types = (str, unicode)
-        if self.nullable:
-            valid_types += (types.NoneType,)
-
         if not isinstance(value, valid_types):
             msg = ('Field is not of type \'string\'. {type!r} found instead.')
             raise ValidationError(msg.format(type=type(value)))
@@ -293,9 +296,9 @@ class Date(BaseSerializer):
     """
     DEFAULT_FORMAT = '%Y-%m-%d'
 
-    def __init__(self, date_format=None, *args, **kwargs):
+    def __init__(self, date_format=None, **kwargs):
         self.date_format = date_format or self.DEFAULT_FORMAT
-        super(Date, self).__init__(*args, **kwargs)
+        super(Date, self).__init__(**kwargs)
 
     def get_repr_value(self, value, permissions):
         if not isinstance(value, (date, datetime)):
@@ -347,14 +350,14 @@ class Choices(BaseSerializer):
     """
     ERROR_MESSAGE = 'Given value must be one of [{allowed!s}]'
 
-    def __init__(self, allowed, displayed=None, *args, **kwargs):
+    def __init__(self, allowed, displayed=None, **kwargs):
         self.allowed = allowed
         self.displayed = displayed or allowed
 
         assert len(self.allowed) == len(self.displayed)
         self._values_map = {k: displayed[i]
                             for i, k in enumerate(self.allowed)}
-        super(Choices, self).__init__(*args, **kwargs)
+        super(Choices, self).__init__(**kwargs)
 
     def get_repr_value(self, value, permissions):
         value = self._values_map.get(value, value)
@@ -389,13 +392,12 @@ class Identity(BaseSerializer):
     """
     TRAILING_SLASH = '/'
 
-    def __init__(self, to, *args, **kwargs):
+    def __init__(self, to, root_url, **kwargs):
         to = to.strip(
             self.TRAILING_SLASH) + self.TRAILING_SLASH
 
-        root_url = kwargs.get('root_url')
         self.rel_url = utils.urljoin(root_url, to) if root_url else to
-        super(Identity, self).__init__(*args, **kwargs)
+        super(Identity, self).__init__(**kwargs)
 
     def get_repr_value(self, value, permissions):
         if isnumeric(value) \
@@ -455,9 +457,9 @@ class Struct(BaseSerializer):
         {'foo': 'x', 'bar': 10}
     """
 
-    def __init__(self, schema, *args, **kwargs):
+    def __init__(self, schema, **kwargs):
         self.schema = schema
-        super(Struct, self).__init__(*args, **kwargs)
+        super(Struct, self).__init__(**kwargs)
 
     def get_dict_values(self, value, permissions, importing):
         data = {}
@@ -515,9 +517,9 @@ class List(BaseSerializer):
         >>> field.deserialize(['foo', 'bar'])
         ['foo', 'bar']
     """
-    def __init__(self, serializer, *args, **kwargs):
+    def __init__(self, serializer, **kwargs):
         self.serializer = serializer
-        super(List, self).__init__(*args, **kwargs)
+        super(List, self).__init__(**kwargs)
 
     def get_list_elems(self, value, permissions, importing):
         if not isinstance(value, Iterable) or isinstance(value, Mapping):

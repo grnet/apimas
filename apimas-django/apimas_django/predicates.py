@@ -17,19 +17,27 @@ spec_list = [
         '.field.*': {},
         'source': {'.string': {}},
         '.flag.*': {},
+        'default': {},
         '*': {},
     },
 
-    {'.field.string': {}},
+    {'.field.string': {},
+     'default': {'.string': {}}},
+
     {'.field.serial': {}},
     {'.field.integer': {}},
     {'.field.float': {}},
+
     {'.field.identity': {},
      'to': {'.string': {}}},
+
     {'.field.uuid': {}},
     {'.field.text': {}},
     {'.field.email': {}},
-    {'.field.boolean': {}},
+
+    {'.field.boolean': {},
+     'default': {'.boolean': {}}},
+
     {'.field.datetime': {}},
     {'.field.date': {}},
 

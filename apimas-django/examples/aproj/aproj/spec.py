@@ -18,11 +18,13 @@ APP_CONFIG = {
             "fields": {
                 "id": {".field.serial": {}},
                 "url": {".field.identity": {},
+                        '.flag.readonly': True,
                         "to": "api/prefix/groups",
                         "source": "id"},
                 "name": {".field.string": {}},
                 "founded": {".field.date": {}},
-                "active": {".field.boolean": {}},
+                "active": {".field.boolean": {},
+                           'default': True},
                 "email": {".field.email": {}},
                 "users": {
                     '.field.collection.django': {},
@@ -47,6 +49,7 @@ APP_CONFIG = {
                             },
                         },
                         'age': {'.field.integer': {}},
+
                 #         'emails': {
                 #             '.field.collection.django': {},
                 #             'model': 'anapp.models.Email',
