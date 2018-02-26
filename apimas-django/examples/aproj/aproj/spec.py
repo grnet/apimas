@@ -16,7 +16,6 @@ APP_CONFIG = {
                 '.action-template.django.retrieve': {},
             },
             "fields": {
-                ".resource": {},
                 "id": {".field.serial": {}},
                 "url": {".field.identity": {},
                         "to": "api/prefix/groups",
@@ -79,7 +78,6 @@ APP_CONFIG = {
     #             '.action-template.django.retrieve': {},
     #         },
     #         "fields": {
-    #             ".resource": {},
     #             "id": {".field.serial": {}},
     #             "url": {".field.identity": {"to": "api/prefix2/groups"},
     #                     "source": "id"},
