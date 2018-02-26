@@ -33,20 +33,7 @@ def get_bounds(loc, top_spec):
     return bounds
 
 
-def struct_constructor(instance, loc):
-    source = docular.doc_spec_get(instance.get('source', {})) or loc[-1]
-    spec = {
-        'type': 'struct',
-        'source': source,
-    }
-    value = {'spec': spec}
-    docular.doc_spec_set(instance, value)
-
-
-def collection_constructor(instance, loc, top_spec):
-    model = docular.doc_spec_get(instance['model'])
-    source = docular.doc_spec_get(instance.get('source', {}))
-    bounds = get_bounds(loc, top_spec)
+def get_sub_elements(instance):
     subcollections = {}
     substructs = {}
     for field, field_value in docular.doc_spec_iter_values(instance['fields']):
@@ -57,6 +44,27 @@ def collection_constructor(instance, loc, top_spec):
                 subcollections[field] = field_spec
             else:
                 substructs[field] = field_spec
+    return subcollections, substructs
+
+
+def struct_constructor(instance, loc):
+    source = docular.doc_spec_get(instance.get('source', {})) or loc[-1]
+    subcollections, substructs = get_sub_elements(instance)
+    spec = {
+        'type': 'struct',
+        'source': source,
+        'subcollections': subcollections,
+        'substructs': substructs,
+    }
+    value = {'spec': spec}
+    docular.doc_spec_set(instance, value)
+
+
+def collection_constructor(instance, loc, top_spec):
+    model = docular.doc_spec_get(instance['model'])
+    source = docular.doc_spec_get(instance.get('source', {}))
+    bounds = get_bounds(loc, top_spec)
+    subcollections, substructs = get_sub_elements(instance)
     spec = {
         'type': 'collection',
         'model': utils.import_object(model),
@@ -157,7 +165,7 @@ class CreateHandlerProcessor(DjangoBaseHandler):
 
     def do_create(self, key, spec, data):
         model = spec['model']
-        bounds = spec['bounds']
+        bounds = spec.get('bounds')
         if bounds:
             print "BOUNDS", bounds
             assert key
@@ -166,26 +174,32 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         return model.objects.create(**data)
 
     def create_with(self, key, spec, data):
-        recs = []
+        deferred = []
         subcollections = spec['subcollections']
         for subkey in data.keys():
             if subkey in subcollections:
                 values = data.pop(subkey)
-                recs.extend((subcollections[subkey], value)
-                            for value in values)
+                deferred.extend((subcollections[subkey], value)
+                                for value in values)
+
         substructs = spec['substructs']
+        model = spec['model']
         for subkey in data.keys():
-            if subkey in substructs:
-                struct_data = data.pop(subkey)
-                model = spec['model']
-                field = model._meta.get_field(subkey)
-                struct_instance = field.related_model.objects.create(
-                    **struct_data)
-                data[subkey] = struct_instance
+            substruct_spec = substructs.get(subkey)
+            if not substruct_spec:
+                continue
+
+            struct_data = data.pop(subkey)
+            field = model._meta.get_field(subkey)
+            struct_model = field.related_model
+            substruct_spec['model'] = struct_model
+            struct_instance = self.create_with(
+                None, substruct_spec, struct_data)
+            data[subkey] = struct_instance
 
         instance = self.do_create(key, spec, data)
-        for rec in recs:
-            self.create_with(instance.id, *rec)
+        for args in deferred:
+            self.create_with(instance.id, *args)
         return instance
 
     def execute(self, context_data):
@@ -195,9 +209,6 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         kwargs = context_data['kwargs']
         key = kwargs.get('id0')
         instance = self.create_with(key, self.spec, data)
-        # if many:
-        #     for k, v in many.iteritems():
-        #         getattr(instance, k).add(*v)
         return (instance,)
 
 
