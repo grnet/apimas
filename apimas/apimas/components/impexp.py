@@ -1,5 +1,5 @@
 import docular
-from apimas import serializers as cnvs
+from apimas import converters as cnvs
 from apimas import documents as doc
 from apimas.errors import AccessDeniedError
 from apimas.components import BaseProcessor, ProcessorConstruction

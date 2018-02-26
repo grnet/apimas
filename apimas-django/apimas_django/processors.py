@@ -7,7 +7,7 @@ from apimas.errors import (AccessDeniedError, ConflictError, InvalidInput,
                            InvalidSpec)
 from apimas.components import BaseProcessor, ProcessorConstruction
 from apimas_django import utils as django_utils
-from apimas.serializers import Date, DateTime, Integer, Float, Boolean, List
+from apimas.converters import Date, DateTime, Integer, Float, Boolean, List
 import docular
 
 
