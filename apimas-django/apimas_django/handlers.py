@@ -3,12 +3,15 @@ from django.db.models.query import QuerySet
 from apimas import utils
 from apimas_django import utils as django_utils
 from apimas.components import BaseProcessor, ProcessorConstruction
+from apimas.errors import ValidationError
 import docular
 
 
 REF = '.ref'
 STRUCT = '.struct='
 ARRAY_OF = '.array of='
+
+Nothing = type('Nothing', (), {'__repr__': lambda self: 'Nothing'})()
 
 
 def no_constructor(instance):
@@ -36,51 +39,93 @@ def get_bounds(loc, top_spec):
 def get_sub_elements(instance):
     subcollections = {}
     substructs = {}
+    subfields = {}
     for field, field_value in docular.doc_spec_iter_values(instance['fields']):
         if field_value:
             field_spec = field_value['spec']
             field_type = field_spec['type']
             if field_type == 'collection':
                 subcollections[field] = field_spec
-            else:
+            elif field_type == 'struct':
                 substructs[field] = field_spec
-    return subcollections, substructs
+            elif field_type == 'regular':
+                subfields[field] = field_spec
+    return subcollections, substructs, subfields
 
 
-def struct_constructor(instance, loc):
+def struct_constructor(context, instance, loc):
+    docular.construct_last(context)
+    value = docular.doc_spec_get(instance)
+    spec = value['spec']
+
     source = docular.doc_spec_get(instance.get('source', {})) or loc[-1]
-    subcollections, substructs = get_sub_elements(instance)
-    spec = {
-        'type': 'struct',
-        'source': source,
-        'subcollections': subcollections,
-        'substructs': substructs,
-    }
-    value = {'spec': spec}
+    subcollections, substructs, subfields = get_sub_elements(instance)
+    spec['type'] = 'struct'
+    spec['source'] = source
+    spec['subcollections'] = subcollections
+    spec['substructs'] = substructs
+    spec['subfields'] = subfields
     docular.doc_spec_set(instance, value)
 
 
-def collection_constructor(instance, loc, top_spec):
+def collection_constructor(context, instance, loc, top_spec):
+    docular.construct_last(context)
+    value = docular.doc_spec_get(instance, default={})
+    spec = value.get('spec', {})
+
     model = docular.doc_spec_get(instance['model'])
     source = docular.doc_spec_get(instance.get('source', {}))
     bounds = get_bounds(loc, top_spec)
-    subcollections, substructs = get_sub_elements(instance)
-    spec = {
-        'type': 'collection',
-        'model': utils.import_object(model),
-        'source': source,
-        'bounds': bounds,
-        'subcollections': subcollections,
-        'substructs': substructs,
-    }
-    value = {'spec': spec}
+    subcollections, substructs, subfields = get_sub_elements(instance)
+
+    spec['type'] = 'collection'
+    spec['model'] = utils.import_object(model)
+    spec['source'] = source
+    spec['bounds'] = bounds
+    spec['subcollections'] = subcollections
+    spec['substructs'] = substructs
+    spec['subfields'] = subfields
+    value['spec'] = spec
     docular.doc_spec_set(instance, value)
+
+
+def field_constructor(instance, loc):
+    value = docular.doc_spec_get(instance, default={})
+    spec = value.get('spec', {})
+    spec['type'] = 'regular'
+    source = docular.doc_spec_get(instance.get('source', {}))
+    spec['source'] = source if source else loc[-1]
+
+    argdoc = instance.get('default')
+    if argdoc:
+        v = docular.doc_spec_get(argdoc, default=Nothing)
+        if v is not Nothing:
+            spec['default'] = v
+
+    value['spec'] = spec
+    docular.doc_spec_set(instance, value)
+
+
+def construct_flag(flag):
+    def constructor(instance, loc):
+        value = docular.doc_spec_get(instance, default={})
+        spec = value.get('spec', {})
+        flags = spec.get('flags', [])
+        flags.append(flag)
+        spec['flags'] = flags
+        value['spec'] = spec
+        docular.doc_spec_set(instance, value)
+    return constructor
 
 
 DJANGEBASEHANDLER_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
     {
+        '.field.*': field_constructor,
         '.field.struct': struct_constructor,
         '.field.collection.django': collection_constructor,
+        '.flag.readonly': construct_flag('readonly'),
+        '.flag.writeonly': construct_flag('writeonly'),
+        '.flag.nullable': construct_flag('nullable'),
     },
     default=no_constructor)
 
@@ -153,9 +198,209 @@ class DjangoBaseHandler(BaseProcessor):
     }
 
     def __init__(self, collection_loc, action_name, spec):
+        self.collection_loc = collection_loc
+        self.collection_name = collection_loc[-1]
         self.spec = spec
         # self.model = value['model']
         # self.bounds = value['bounds']
+
+
+def check_write_flags(name, spec, value):
+    flags = spec.get('flags', [])
+    default = spec.get('default', Nothing)
+
+    if 'readonly' in flags:
+        if value is not Nothing:
+            raise ValidationError("'%s': Field is readonly" % name)
+        return Nothing
+
+    if value is Nothing:
+        value = default
+
+    if value is None and 'nullable' not in flags:
+        raise ValidationError("'%s': Field is not nullable" % name)
+
+    if value is Nothing:
+        raise ValidationError("'%s': Field is required" % name)
+
+    return value
+
+
+def check_update_flags(name, spec, value, instance):
+    flags = spec.get('flags', [])
+
+    if 'readonly' in flags:
+        if value is not Nothing:
+            raise ValidationError("'%s': Field is readonly" % name)
+        return Nothing
+
+    if value is None and 'nullable' not in flags:
+        raise ValidationError("'%s': Field is not nullable" % name)
+
+    if 'writeonce' in flags and instance is not None:
+        raise ValidationError("'%s': Field is writeonce" % name)
+
+    return value
+
+
+def get_write_fields(subspecs, data):
+    create_args = {}
+    for field_name, field_spec in subspecs.iteritems():
+        value = data.get(field_name, Nothing)
+        value = check_write_flags(field_name, field_spec, value)
+        source = field_spec['source']
+        if value is not Nothing:
+            create_args[source] = value
+
+    return create_args
+
+
+def get_update_fields(subspecs, data, instance):
+    update_args = {}
+    for field_name, field_spec in subspecs.iteritems():
+        value = data.get(field_name, Nothing)
+        value = check_update_flags(field_name, field_spec, value, instance)
+        source = field_spec['source']
+        if value is not Nothing:
+            update_args[source] = value
+
+    return update_args
+
+
+def get_bound_name(spec):
+    bounds = spec.get('bounds')
+    if bounds:
+        bound = bounds[0]
+        return bound + '_id'
+    return None
+
+
+def do_create(key, spec, data, precreated=None):
+    create_args = {}
+    if precreated:
+        create_args.update(precreated)
+
+    model = spec['model']
+    bound_name = get_bound_name(spec)
+    if bound_name is not None:
+        assert key
+        create_args[bound_name] = key
+
+    create_args.update(get_write_fields(spec['subfields'], data))
+
+    print "CREATE_ARGS", create_args
+    return model.objects.create(**create_args)
+
+
+def defer_create_subcollections(spec, data):
+    deferred = []
+    for subname, subspec in spec['subcollections'].iteritems():
+        subdata = data.get(subname, Nothing)
+        if subdata is Nothing:
+            continue
+        deferred.extend((subname, subspec, elem) for elem in subdata)
+    return deferred
+
+
+def create_substructs(spec, data):
+    created = {}
+    model = spec['model']
+    for subname, subspec in spec['substructs'].iteritems():
+        subsource = subspec['source']
+        field = model._meta.get_field(subsource)
+        struct_model = field.related_model
+        subspec['model'] = struct_model
+        subdata = data.get(subname, Nothing)
+        struct_instance = create_resource(subname, subspec, subdata)
+        created[subsource] = struct_instance
+    return created
+
+
+def create_resource(name, spec, data, key=None):
+    data = check_write_flags(name, spec, data)
+    if data is Nothing:
+        raise ValidationError("'%s': Nothing to create" % name)
+
+    if data is None:
+        return None
+
+    deferred = defer_create_subcollections(spec, data)
+    precreated = create_substructs(spec, data)
+    instance = do_create(key, spec, data, precreated)
+    for args in deferred:
+        create_resource(*args, key=instance.id)
+    return instance
+
+
+def delete_subcollection(key, spec):
+    model = spec['model']
+    bound_name = get_bound_name(spec)
+    assert bound_name is not None
+    flt = {bound_name: key}
+    print "DELETING for", flt
+    model.objects.filter(**flt).delete()
+
+
+def update_subcollections(spec, data, instance):
+    for subname, subspec in spec['subcollections'].iteritems():
+        subdata = data.get(subname, Nothing)
+        subdata = check_update_flags(subname, spec, subdata, instance)
+        if subdata is Nothing:
+            continue
+        delete_subcollection(instance.id, subspec)
+        for elem in subdata:
+            create_resource(subname, subspec, elem, key=instance.id)
+
+
+def update_substructs(spec, data, instance):
+    created = {}
+    model = spec['model']
+    for subname, subspec in spec['substructs'].iteritems():
+        subsource = subspec['source']
+        field = model._meta.get_field(subsource)
+        struct_model = field.related_model
+        subspec['model'] = struct_model
+        subdata = data.get(subname, Nothing)
+        subinstance = getattr(instance, subsource)
+        if subinstance is None:
+            struct_instance = create_resource(subname, subspec, subdata)
+            created[subsource] = struct_instance
+        else:
+            struct_instance = update_resource(
+                subname, subspec, subdata, subinstance)
+            if struct_instance is None:
+                created[subsource] = None
+    return created
+
+
+def do_update(spec, data, instance, precreated=None):
+    update_args = {}
+    if precreated:
+        update_args.update(precreated)
+
+    model = spec['model']
+    update_args.update(get_update_fields(spec['subfields'], data, instance))
+
+    print "UPDATE ARGS", update_args
+    for key, value in update_args.iteritems():
+        setattr(instance, key, value)
+    instance.save()
+    return instance
+
+
+def update_resource(name, spec, data, instance):
+    data = check_update_flags(name, spec, data, instance)
+    if data is Nothing:
+        return Nothing
+
+    if data is None:
+        print "DELETING instance", instance
+        instance.delete()
+        return None
+
+    update_subcollections(spec, data, instance)
+    precreated = update_substructs(spec, data, instance)
+    return do_update(spec, data, instance, precreated)
 
 
 class CreateHandlerProcessor(DjangoBaseHandler):
@@ -163,52 +408,14 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         'data',
     }
 
-    def do_create(self, key, spec, data):
-        model = spec['model']
-        bounds = spec.get('bounds')
-        if bounds:
-            print "BOUNDS", bounds
-            assert key
-            bound = bounds[0]
-            data[bound + '_id'] = key
-        return model.objects.create(**data)
-
-    def create_with(self, key, spec, data):
-        deferred = []
-        subcollections = spec['subcollections']
-        for subkey in data.keys():
-            if subkey in subcollections:
-                values = data.pop(subkey)
-                deferred.extend((subcollections[subkey], value)
-                                for value in values)
-
-        substructs = spec['substructs']
-        model = spec['model']
-        for subkey in data.keys():
-            substruct_spec = substructs.get(subkey)
-            if not substruct_spec:
-                continue
-
-            struct_data = data.pop(subkey)
-            field = model._meta.get_field(subkey)
-            struct_model = field.related_model
-            substruct_spec['model'] = struct_model
-            struct_instance = self.create_with(
-                None, substruct_spec, struct_data)
-            data[subkey] = struct_instance
-
-        instance = self.do_create(key, spec, data)
-        for args in deferred:
-            self.create_with(instance.id, *args)
-        return instance
-
     def execute(self, context_data):
         """ Creates a new django model instance. """
 
         data = context_data['data']
         kwargs = context_data['kwargs']
         key = kwargs.get('id0')
-        instance = self.create_with(key, self.spec, data)
+        instance = create_resource(
+            self.collection_name, self.spec, data, key=key)
         return (instance,)
 
 
@@ -231,6 +438,17 @@ def prefetch_related(objects, subcollections):
     return objects
 
 
+def get_bound_filters(bounds, kwargs):
+    flts = {}
+    prev = ''
+    for i, bound in enumerate(bounds):
+        prefix = (prev + '__') if prev else ''
+        ref = prefix + bound
+        flts[ref + '_id'] = kwargs['id' + str(i)]
+        prev = ref
+    return flts
+
+
 class ListHandlerProcessor(DjangoBaseHandler):
     REQUIRED_KEYS = {
     }
@@ -243,13 +461,7 @@ class ListHandlerProcessor(DjangoBaseHandler):
         model = self.spec['model']
         bounds = self.spec['bounds']
         kwargs = context_data['kwargs']
-        flts = {}
-        prev = ''
-        for i, bound in enumerate(bounds):
-            prefix = (prev + '__') if prev else ''
-            ref = prefix + bound
-            flts[ref + '_id'] = kwargs['id' + str(i)]
-            prev = ref
+        flts = get_bound_filters(bounds, kwargs)
 
         objects = model.objects
         objects = prefetch_related(objects, self.spec['subcollections'])
@@ -260,9 +472,10 @@ class ListHandlerProcessor(DjangoBaseHandler):
 ListHandler = _django_base_construction(ListHandlerProcessor)
 
 
-def get_model_instance(spec, pk):
+def get_model_instance(spec, pk, kwargs):
     model = spec['model']
-    objects = model.objects
+    flts = get_bound_filters(spec['bounds'], kwargs)
+    objects = model.objects.filter(**flts)
     objects = prefetch_related(objects, spec['subcollections'])
     objects = select_related(objects, spec['substructs'])
     return django_utils.get_instance(objects, pk)
@@ -283,9 +496,10 @@ class RetrieveHandlerProcessor(DjangoBaseHandler):
         resource ID extracted from request context.
         """
         pk = context_data['pk']
+        kwargs = context_data['kwargs']
         instance = context_data['instance']
         if not instance:
-            instance = get_model_instance(self.spec, pk)
+            instance = get_model_instance(self.spec, pk, kwargs)
         return (instance,)
 
 
@@ -294,7 +508,7 @@ RetrieveHandler = _django_base_construction(RetrieveHandlerProcessor)
 
 class UpdateHandlerProcessor(CreateHandlerProcessor):
     READ_KEYS = {
-        'instance': 'store/instance',
+        'instance': 'backend/instance',
     }
     READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     REQUIRED_KEYS = {
@@ -302,25 +516,19 @@ class UpdateHandlerProcessor(CreateHandlerProcessor):
         'data',
     }
 
-    def _update_obj(self, obj, data):
-        for k, v in data.iteritems():
-            setattr(obj, k, v)
-        obj.save()
-        return obj
-
     def execute(self, context_data):
         """
         Updates an existing model instance based on the data of request.
         """
-        model = self.spec['model']
         pk = context_data['pk']
+        kwargs = context_data['kwargs']
         data = context_data['data']
-        instance = model.objects.get(pk=pk)
-#        data, many = self._parse_ref(model, data)
-        instance = self._update_obj(instance, data)
-        # if many:
-        #     for k, v in many.iteritems():
-        #         getattr(instance, k).add(*v)
+        instance = context_data['instance']
+        if not instance:
+            instance = get_model_instance(self.spec, pk, kwargs)
+
+        update_resource(self.collection_name, self.spec, data, instance)
+        instance = get_model_instance(self.spec, pk, kwargs)
         return (instance,)
 
 

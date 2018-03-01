@@ -96,9 +96,7 @@ class DataConverter(object):
         value = self.extractor(value) if self.extractor else value
 
         if value is None:
-            if self.nullable:
-                return None
-            raise ValidationError("Field cannot be None")
+            return None
 
         return self.get_repr_value(value, permissions)
 
@@ -107,15 +105,10 @@ class DataConverter(object):
         Converts given value into a python native value.
         """
         if value is Nothing:
-            if self.default is Nothing:
-                return Nothing
-            value = self.default
+            return Nothing
         elif not permissions:
             raise AccessDeniedError(
                 "You do not have permission to write field")
-
-        if self.readonly:
-            raise ValidationError("Field is readonly")
 
         if value is None:
             if self.nullable:

@@ -17,7 +17,7 @@ class User(models.Model):
     username = models.TextField()
     age = models.IntegerField()
     group = models.ForeignKey(Group)
-    name_variants = models.ForeignKey(Variants)
+    name_variants = models.ForeignKey(Variants, null=True)
 
 
 class Email(models.Model):

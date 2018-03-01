@@ -9,6 +9,9 @@ RULES = [
 #    ('api/prefix/groups', 'list', '*', 'users/name_variants/el', '*', '*'),
 #    ('api/prefix/groups', 'list', '*', 'users/name_variants', '*', '*'),
 
+    ('api/prefix/groups', 'partial_update', '*', '*', '*', '*'),
+    ('api/prefix/groups', 'partial_update_response', '*', '*', '*', '*'),
+
     ('api/prefix/groups', 'create', '*', 'users/name_variants', '*', '*'),
     ('api/prefix/groups', 'create', '*', 'users', '*', '*'),
     ('api/prefix/groups', 'create', '*', 'name', '*', '*'),
@@ -17,12 +20,18 @@ RULES = [
 
     ('api/prefix/groups', 'retrieve', '*', '*', '*', '*'),
 
-    ('api/prefix/groups', 'create_response', '*', 'id', '*', '*'),
+    ('api/prefix/groups', 'create_response', '*', '*', '*', '*'),
     ('api/prefix/groups', 'create_response', '*', 'url', '*', '*'),
     ('api/prefix/groups', 'create_response', '*', 'users/username', '*', '*'),
     ('api/prefix/groups', 'create_response', '*', 'users/age', '*', '*'),
 
-    ('api/prefix/groups/users', 'list', '*', 'users', '*', '*'),
+    ('api/prefix/groups/users', 'list', '*', '*', '*', '*'),
+    ('api/prefix/groups/users', 'create', '*', '*', '*', '*'),
+    ('api/prefix/groups/users', 'create_response', '*', '*', '*', '*'),
+    ('api/prefix/groups/users', 'retrieve', '*', '*', '*', '*'),
+    ('api/prefix/groups/users', 'partial_update', '*', '*', '*', '*'),
+    ('api/prefix/groups/users', 'partial_update_response', '*', '*', '*', '*'),
+
     ('*', 'retrieve', '*', 'url', '*', '*'),
     ('*', 'retrieve', '*', 'name', '*', '*'),
     ('*', 'create', '*', '*', '*', '*'),

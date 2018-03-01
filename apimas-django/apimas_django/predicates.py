@@ -24,7 +24,8 @@ spec_list = [
     {'.field.string': {},
      'default': {'.string': {}}},
 
-    {'.field.serial': {}},
+    {'.field.serial': {},
+     '.flag.readonly': {}},
     {'.field.integer': {}},
     {'.field.float': {}},
 
@@ -167,7 +168,7 @@ spec_list = [
     #                'apimas.components.processors.Authentication',
     #                'apimas_django.processors.UserRetrieval',
     #                'apimas_django.processors.ObjectRetrieval',
-#                '4': 'apimas_django.processors.Permissions',
+                '4': 'apimas.components.permissions.Permissions',
                 '5': 'apimas.components.impexp.ImportData',
 #                '6': 'apimas.components.processors.CerberusValidation',
             },

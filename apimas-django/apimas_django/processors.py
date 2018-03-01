@@ -517,6 +517,7 @@ class UserRetrieval(BaseProcessor):
 
 class ObjectRetrievalProcessor(handlers.DjangoBaseHandler):
     READ_KEYS = {
+        'kwargs': 'request/meta/kwargs',
         'pk': 'request/meta/kwargs/pk',
     }
 
@@ -526,7 +527,8 @@ class ObjectRetrievalProcessor(handlers.DjangoBaseHandler):
 
     def execute(self, context_data):
         pk = context_data['pk']
-        instance = handlers.get_model_instance(self.spec, pk)
+        kwargs = context_data['kwargs']
+        instance = handlers.get_model_instance(self.spec, pk, kwargs)
         return (instance,)
 
 ObjectRetrieval = handlers._django_base_construction(ObjectRetrievalProcessor)

@@ -12,6 +12,7 @@ APP_CONFIG = {
             "model": "anapp.models.Group",
             "actions": {
                 '.action-template.django.list': {},
+                '.action-template.django.partial_update': {},
                 '.action-template.django.create': {},
                 '.action-template.django.retrieve': {},
             },
@@ -39,19 +40,30 @@ APP_CONFIG = {
                         'create': {'.action': {}},
                         '.action-template.django.retrieve': {},
                         'retrieve': {'.action': {}},
+                        '.action-template.django.partial_update': {},
+                        'partial_update': {'.action': {}},
                     },
                     'fields': {
-                        'id': {'.field.serial': {}},
-                        'username': {'.field.string': {}},
-                        "name_variants": {
+                        'id': {'.field.serial': {},
+                               '.field.*': {}},
+                        'onoma': {'.field.string': {},
+                                  'source': 'username',
+                                     '.field.*': {}},
+                        "variants": {
                             ".field.struct": {},
+                            '.field.*': {},
+                            '.flag.nullable': {},
+                            'default': {'=': None},
                             "source": "name_variants",
                             "fields": {
-                                "en": {".field.string": {}},
-                                "el": {".field.string": {}},
+                                "en": {".field.string": {},
+                                       '.field.*': {}},
+                                "el": {".field.string": {},
+                                       '.field.*': {}},
                             },
                         },
-                        'age': {'.field.integer': {}},
+                        'age': {'.field.integer': {},
+                                '.field.*': {}},
 
                 #         'emails': {
                 #             '.field.collection.django': {},

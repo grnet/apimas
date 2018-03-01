@@ -189,8 +189,6 @@ class ImportDataProcessor(ImportExportData):
 
     def process_write_data(self, context_data):
         write_data = context_data['write_data']
-        if not write_data:
-            return None
         can_write = context_data['can_write']
         if not can_write:
             raise AccessDeniedError(
