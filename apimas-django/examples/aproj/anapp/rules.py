@@ -3,6 +3,12 @@
 RULES = [
 
 
+    ('api/prefix/institutions', 'list', '*', '*', '*', '*'),
+    ('api/prefix/institutions', 'create', '*', '*', '*', '*'),
+    ('api/prefix/institutions', 'create_response', '*', '*', '*', '*'),
+    ('api/prefix/institutions', 'partial_update', '*', '*', '*', '*'),
+    ('api/prefix/institutions', 'partial_update_response', '*', '*', '*', '*'),
+
     ('api/prefix/groups', 'list', '*', '*', '*', '*'),
 #    ('api/prefix/groups', 'list', '*', 'users/username', '*', '*'),
 #    ('api/prefix/groups', 'list', '*', 'users', '*', '*'),

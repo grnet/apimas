@@ -29,6 +29,9 @@ spec_list = [
     {'.field.integer': {}},
     {'.field.float': {}},
 
+    {'.field.ref': {},
+     'to': {'.string': {}}},
+
     {'.field.identity': {},
      'to': {'.string': {}}},
 

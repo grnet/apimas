@@ -1,11 +1,16 @@
 from django.db import models
 
 
+class Institution(models.Model):
+    name = models.TextField()
+
+
 class Group(models.Model):
     name = models.TextField()
     founded = models.DateField()
     active = models.BooleanField()
     email = models.CharField(max_length=100)
+    institution = models.ForeignKey(Institution, null=True)
 
 
 class Variants(models.Model):

@@ -7,6 +7,21 @@ APP_CONFIG = {
     ".meta": {"permission_rules": "anapp.rules.get_rules"},
     "api/prefix": {
        ".endpoint": {},
+
+        "institutions": {
+            ".field.collection.django": {},
+            "model": "anapp.models.Institution",
+            "actions": {
+                '.action-template.django.list': {},
+                '.action-template.django.create': {},
+                '.action-template.django.partial_update': {},
+            },
+            "fields": {
+                "id": {".field.serial": {}},
+                "name": {".field.string": {}},
+            }
+        },
+
         "groups": {
             ".field.collection.django": {},
             "model": "anapp.models.Group",
@@ -28,6 +43,8 @@ APP_CONFIG = {
                 "active": {".field.boolean": {},
                            'default': True},
                 "email": {".field.email": {}},
+                "institution_id": {".field.ref": {},
+                                   "to": "api/prefix/institutions"},
                 "users": {
                     '.field.collection.django': {},
                     '.field.collection.*': {},
