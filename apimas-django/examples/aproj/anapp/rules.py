@@ -19,6 +19,7 @@ RULES = [
     ('api/prefix/groups', 'create', '*', '*', '*', '*'),
 
     ('api/prefix/groups', 'retrieve', '*', '*', '*', '*'),
+    ('api/prefix/groups', 'delete', '*', '*', '*', '*'),
 
     ('api/prefix/groups', 'create_response', '*', '*', '*', '*'),
     ('api/prefix/groups', 'create_response', '*', 'url', '*', '*'),
@@ -31,6 +32,7 @@ RULES = [
     ('api/prefix/groups/users', 'retrieve', '*', '*', '*', '*'),
     ('api/prefix/groups/users', 'partial_update', '*', '*', '*', '*'),
     ('api/prefix/groups/users', 'partial_update_response', '*', '*', '*', '*'),
+    ('api/prefix/groups/users', 'delete', '*', '*', '*', '*'),
 
     ('*', 'retrieve', '*', 'url', '*', '*'),
     ('*', 'retrieve', '*', 'name', '*', '*'),

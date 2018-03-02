@@ -167,7 +167,7 @@ spec_list = [
             'pre': {
     #                'apimas.components.processors.Authentication',
     #                'apimas_django.processors.UserRetrieval',
-    #                'apimas_django.processors.ObjectRetrieval',
+                '3': 'apimas_django.processors.ObjectRetrieval',
                 '4': 'apimas.components.permissions.Permissions',
                 '5': 'apimas.components.impexp.ImportData',
 #                '6': 'apimas.components.processors.CerberusValidation',
@@ -179,6 +179,24 @@ spec_list = [
             },
         },
     },
+
+    {
+        '.action-template.django.delete': {},
+        'delete': {
+            'method': 'DELETE',
+            'status_code': 204,
+            'content_type': 'application/json',
+            'on_collection': False,
+            'url': '/*/',
+            'pre': {
+                #'1': 'apimas.components.processors.Authentication',
+                #'2': 'apimas_django.processors.UserRetrieval',
+                '3': 'apimas_django.processors.ObjectRetrieval',
+                '4': 'apimas.components.permissions.Permissions',
+            },
+            'handler': 'apimas_django.handlers.DeleteHandler',
+        },
+    }
 ]
 
 PREDICATES = {}
@@ -209,19 +227,5 @@ for spec in spec_list:
 
 #         },
 #     },
-#     '.action-template.django.delete': {
-#         '.action-template.django.delete': {},
-#         'delete': {
-#             'method': 'DELETE',
-#             'url': '/',
-#             'pre': [
-#                 'apimas.components.processors.Authentication',
-#                 'apimas_django.processors.UserRetrieval',
-#                 'apimas_django.processors.ObjectRetrieval',
-#                 'apimas_django.processors.Permissions',
-#             ],
-#             'handler': 'apimas_django.handlers.DeleteHandler',
-#         },
-#     }
 # }
 

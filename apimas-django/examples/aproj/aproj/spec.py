@@ -15,6 +15,7 @@ APP_CONFIG = {
                 '.action-template.django.partial_update': {},
                 '.action-template.django.create': {},
                 '.action-template.django.retrieve': {},
+                '.action-template.django.delete': {},
             },
             "fields": {
                 "id": {".field.serial": {}},
@@ -42,6 +43,8 @@ APP_CONFIG = {
                         'retrieve': {'.action': {}},
                         '.action-template.django.partial_update': {},
                         'partial_update': {'.action': {}},
+                        '.action-template.django.delete': {},
+                        'delete': {'.action': {}},
                     },
                     'fields': {
                         'id': {'.field.serial': {},

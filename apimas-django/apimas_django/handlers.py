@@ -506,7 +506,7 @@ class RetrieveHandlerProcessor(DjangoBaseHandler):
 RetrieveHandler = _django_base_construction(RetrieveHandlerProcessor)
 
 
-class UpdateHandlerProcessor(CreateHandlerProcessor):
+class UpdateHandlerProcessor(DjangoBaseHandler):
     READ_KEYS = {
         'instance': 'backend/instance',
     }
@@ -536,20 +536,9 @@ UpdateHandler = _django_base_construction(UpdateHandlerProcessor)
 
 
 class DeleteHandlerProcessor(RetrieveHandlerProcessor):
-    STATUS_CODE = 204
-    READ_KEYS = {
-        'instance': 'store/instance',
-    }
-    READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
-    CONTENT_TYPE = None
-    REQUIRED_KEYS = {
-        'pk',
-    }
-
     def execute(self, context_data):
         """ Deletes an existing model instance. """
-        instance = super(DeleteHandler, self).execute(
-            collection, url, action, context_data)
+        (instance,) = RetrieveHandlerProcessor.execute(self, context_data)
         instance.delete()
         return None
 
