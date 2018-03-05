@@ -2,6 +2,10 @@ import base64
 from apimas.errors import UnauthorizedError
 
 
+class MissingCredentials(UnauthorizedError):
+    pass
+
+
 class AuthenticationMethod(object):
     """ Base class which represents an authentication method. """
 
