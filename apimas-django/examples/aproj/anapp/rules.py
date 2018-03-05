@@ -43,6 +43,11 @@ RULES = [
     ('*', 'retrieve', '*', 'url', '*', '*'),
     ('*', 'retrieve', '*', 'name', '*', '*'),
     ('*', 'create', '*', '*', '*', '*'),
+
+    ('api/prefix/posts', 'list', '*', '*', '*', '*'),
+    ('api/prefix/posts', 'create', 'admin', '*', '*', '*'),
+    ('api/prefix/posts', 'create_response', 'admin', '*', '*', '*'),
+    ('api/prefix/posts', 'retrieve', '*', '*', '*', '*'),
 ]
 
 def get_rules():

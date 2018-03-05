@@ -29,3 +29,7 @@ class Email(models.Model):
     email = models.TextField()
     user = models.ForeignKey(User)
 
+
+class Post(models.Model):
+    title = models.TextField()
+    body = models.TextField()

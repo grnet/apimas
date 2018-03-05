@@ -7,7 +7,29 @@ APP_CONFIG = {
     ".meta": {"permission_rules": "anapp.rules.get_rules"},
     "api/prefix": {
        ".endpoint": {},
-
+        "posts": {
+            ".field.collection.django": {},
+            "auth": {
+                "authenticator": "apimas.auth.TokenAuthentication",
+                "verifier": "aproj.auth.token_verifier",
+                "user_resolver": "aproj.auth.user_resolver"
+            },
+            "model": "anapp.models.Post",
+            "actions": {
+                '.action-template.django.list': {},
+                '.action-template.django.create': {},
+                '.action-template.django.retrieve': {},
+            },
+            "fields": {
+                "id": {".field.serial": {}},
+                "url": {".field.identity": {},
+                        '.flag.readonly': True,
+                        "to": "api/prefix/groups",
+                        "source": "id"},
+                "title": {".field.string": {}},
+                "body": {".field.string": {}}
+            }
+        },
         "institutions": {
             ".field.collection.django": {},
             "model": "anapp.models.Institution",
@@ -21,7 +43,6 @@ APP_CONFIG = {
                 "name": {".field.string": {}},
             }
         },
-
         "groups": {
             ".field.collection.django": {},
             "model": "anapp.models.Group",
