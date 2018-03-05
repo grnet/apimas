@@ -12,9 +12,9 @@ from apimas.errors import (InvalidInput, ConflictError, AdapterError,
 from apimas.adapters.actions import ApimasAction
 from apimas_django.wrapper import DjangoWrapper
 from apimas_django.testing import TestCase
-from apimas.components.processors import Authentication
 from apimas_django.predicates import PREDICATES
 from apimas_django.collect_construction import collect_processors
+
 import docular
 import docular.constructors
 import pprint
