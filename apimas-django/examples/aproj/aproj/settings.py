@@ -40,11 +40,6 @@ INSTALLED_APPS = (
     'anapp',
 )
 
-class ExceptionLoggingMiddleware(object):
-    def process_exception(self, request, exception):
-        import traceback
-        print traceback.format_exc()
-
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
