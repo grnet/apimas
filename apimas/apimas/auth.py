@@ -84,11 +84,13 @@ class TokenAuthentication(BasicAuthentication):
     def extract_from_headers(self, headers):
         authorization = headers.get('HTTP_AUTHORIZATION')
         if authorization is None:
-            raise UnauthorizedError('Missing token')
+            raise MissingCredentials('Missing token')
         _, match, token = authorization.partition(
                 '{} '.format(self.AUTH_HEADERS))
         if not match:
-            raise UnauthorizedError('Invalid token given')
+            _, match, token = authorization.partition('Token ')
+            if not match:
+                raise UnauthorizedError('Invalid token given')
         return token
 
 
