@@ -1,4 +1,3 @@
-from django.contrib.auth.backends import ModelBackend
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models  import Model
 from django.db.models.query import QuerySet
@@ -483,36 +482,6 @@ class FilteringProcessor(BaseProcessor):
 
 
 Filtering = ProcessorConstruction(FILTERING_CONSTRUCTORS, FilteringProcessor)
-
-
-class UserRetrieval(BaseProcessor):
-    READ_KEYS = {
-        'identity': 'store/auth/identity',
-    }
-
-    WRITE_KEYS = (
-        'store/auth/user',
-    )
-
-    def __init__(self, collection, collection_spec, userid_extractor=None,
-                 **meta):
-        super(UserRetrieval, self).__init__(
-            collection, collection_spec, **meta)
-        if userid_extractor:
-            userid_extractor = utils.import_object(userid_extractor)
-            assert callable(userid_extractor), (
-                '"userid_extractor" must be a callable')
-        self.userid_extractor = userid_extractor
-
-    def execute(self, context_data):
-        identity = context_data.get('identity')
-        if not identity or not self.userid_extractor:
-            user_id = None
-        else:
-            user_id = self.userid_extractor(identity)
-        model_backend = ModelBackend()
-        user = model_backend.get_user(user_id)
-        return (user,)
 
 
 class ObjectRetrievalProcessor(handlers.DjangoBaseHandler):
