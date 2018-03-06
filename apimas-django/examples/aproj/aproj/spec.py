@@ -11,8 +11,8 @@ APP_CONFIG = {
             ".field.collection.django": {},
             "auth": {
                 "authenticator": "apimas.auth.TokenAuthentication",
-                "verifier": "aproj.auth.token_verifier",
-                "user_resolver": "aproj.auth.user_resolver"
+                "verifier": "anapp.auth.token_verifier",
+                "user_resolver": "anapp.auth.user_resolver"
             },
             "model": "anapp.models.Post",
             "actions": {
