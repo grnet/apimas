@@ -23,20 +23,22 @@ def test_groups(client):
     api = client.copy(prefix='/api/prefix/')
     assert api.get('groups').json() == []
 
-    resp = api.post('groups', {
-        'name': 'users',
-        'founded': '2014-12-31',
-        'active': True
-    })
-    assert resp.status_code == 400
-    assert "'email': Field is required" in resp.json().get("details")
+    resp = api.post('institutions', dict(name="inst1"))
+    assert resp.status_code == 201
+    inst = resp.json()
 
-    resp = api.post('groups', {
+    group_data = {
         'name': 'users',
         'founded': '2014-12-31',
         'active': True,
-        'email': 'users@apim.as'
-    })
+        'institution_id': inst.get('id')
+    }
+    resp = api.post('groups', group_data)
+    assert resp.status_code == 400
+    assert "'email': Field is required" in resp.json().get("details")
+
+    group_data['email'] = 'group@apim.as'
+    resp = api.post('groups', group_data)
     assert resp.status_code == 201
 
     group1 = resp.json()
@@ -45,17 +47,12 @@ def test_groups(client):
     assert u'founded' in group1
     assert u'active' in group1
 
-    resp = api.post('groups', {
-        'name': 'users',
-        'founded': '2014-12-31',
-        'email': 'group@api.mas',
-        'active': True
-    })
+    resp = api.post('groups', group_data)
     assert resp.status_code == 201
 
     assert group1.get('url').endswith('groups/{}/'.format(group1.get('id')))
-    group1 = api.get(group1.get('url'))
-    assert group1.status_code == 200
+    resp = api.get(group1.get('url'))
+    assert resp.status_code == 200
 
     # groups created
     resp = api.get('groups')
@@ -63,4 +60,4 @@ def test_groups(client):
     assert len(resp.json()) == 2
 
     # method not allowed
-    assert api.delete('groups/1').status_code == 405
+    assert api.delete('groups/{}'.format(group1.get('id'))).status_code == 204
