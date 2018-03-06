@@ -217,7 +217,7 @@ spec_list = [
 PREDICATES = {}
 
 for spec in spec_list:
-    docular.doc_scan_spec(spec, PREDICATES)
+    docular.doc_compile_spec(spec, PREDICATES)
 
 
 # PREDICATES =  {
