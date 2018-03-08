@@ -17,9 +17,10 @@ class AuthenticationProcessor(BaseProcessor):
         'headers': 'request/meta/headers'
     }
 
-    WRITE_KEYS = (
-        'auth/identity',
-    )
+    WRITE_KEYS = {
+        'identity': 'auth/identity',
+        'www_authenticate': 'response/meta/headers/WWW-Authenticate',
+    }
 
     authenticator = None
 
@@ -50,11 +51,9 @@ class AuthenticationProcessor(BaseProcessor):
             auth_headers = getattr(self.authenticator, 'AUTH_HEADERS',
                                    None)
             if auth_headers:
-                response_headers = {'WWW-Authenticate': auth_headers}
-                path = 'response/meta/headers'
-                self.save(context, path, response_headers)
+                self.write({'www_authenticate': auth_headers}, context)
             raise
-        self.write((identity,), context)
+        self.write({'identity': identity}, context)
 
 
 class UserRetrievalProcessor(BaseProcessor):
