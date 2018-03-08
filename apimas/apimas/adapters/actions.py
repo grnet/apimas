@@ -57,10 +57,17 @@ class ApimasAction(object):
             }
 
     def process(self, request):
-        context = {
-            'store': {},
+        response = {
+            'meta': {
+                'content_type': self.content_type,
+                'status_code': self.status_code,
+            },
         }
-        context['request'] = request
+
+        context = {
+            'request': request,
+            'response': response,
+        }
         return self.handle_error(self.process_context, context)
 
     def process_context(self, context):
@@ -68,14 +75,6 @@ class ApimasAction(object):
             processor.process(context)
 
         self.handler.process(context)
-
-        response = {
-            'meta': {
-                'content_type': self.content_type,
-                'status_code': self.status_code,
-            },
-        }
-        context['response'] = response
 
         for processor in self.response_proc:
             processor.process(context)
