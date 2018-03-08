@@ -6,11 +6,17 @@ pytestmark = pytest.mark.django_db(transaction=False)
 def test_posts(client):
     api = client.copy(prefix='/api/prefix/')
     admin = client.copy(prefix='/api/prefix', auth_token='admin-admin-1234')
+    user = client.copy(prefix='/api/prefix', auth_token='user-user-1234')
     assert api.get('posts').json() == []
 
     post = dict(title="Post title", body="Post content")
     resp = api.post('posts', post)
     assert resp.status_code == 403
+    assert not resp.has_header('WWW-Authenticate')
+
+    resp = user.post('posts', post)
+    assert resp.status_code == 401
+    assert resp.has_header('WWW-Authenticate')
 
     resp = admin.post('posts', post)
     assert resp.status_code == 201
