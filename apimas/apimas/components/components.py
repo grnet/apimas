@@ -8,6 +8,8 @@ from apimas.utils import normalize_path
 ProcessorConstruction = namedtuple(
     "ProcessorConstruction", ["constructors", "processor"])
 
+Null = object()
+
 
 class BaseProcessor(object):
     """
@@ -102,7 +104,9 @@ class BaseProcessor(object):
 
     def _write_dict(self, context, keys, data):
         for k, v in keys.iteritems():
-            value = data.get(k)
+            value = data.get(k, Null)
+            if value is Null:
+                continue
             self.save(context, v, value)
 
     def write(self, data, context):
@@ -140,8 +144,8 @@ class BaseProcessor(object):
             raise InvalidInput('Attribute \'WRITE_KEYS\' must be one of'
                                ' list, tuple or dict, not {!r}'.format(
                                     type(keys)))
-        assert len(data) == len(keys)
         if isinstance(data, (list, tuple)) and isinstance(keys, (list, tuple)):
+            assert len(data) == len(keys)
             return self._write_list(context, keys, data)
         if isinstance(data, dict) and isinstance(keys, dict):
             return self._write_dict(context, keys, data)
