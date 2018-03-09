@@ -136,10 +136,11 @@ spec_list = [
                 '1': 'apimas.components.auth.Authentication',
                 '2': 'apimas.components.auth.UserRetrieval',
                 '3': 'apimas.components.permissions.Permissions',
+                '4': 'apimas.components.impexp.ImportData',
             },
             'handler': 'apimas_django.handlers.ListHandler',
             'post': {
-                '1': 'apimas_django.processors.Filtering',
+                '1': 'apimas_django.filtering.Filtering',
                 '2': 'apimas_django.processors.InstanceToDict',
                 '3': 'apimas.components.impexp.ExportData',
             }

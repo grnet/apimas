@@ -147,6 +147,7 @@ class ImportExportData(BaseProcessor):
     specification to construct them accordingly.
     """
     def __init__(self, collection_loc, action_name, converter, on_collection):
+        self.on_collection = on_collection
         self.converter = converter if on_collection else converter.converter
 
 
@@ -185,12 +186,47 @@ class ImportDataProcessor(ImportExportData):
         'write_fields': 'permissions/write_fields',
     }
 
-    WRITE_KEYS = (
-        'imported/content',
-    )
+    WRITE_KEYS = {
+        'imported_content': 'imported/content',
+        'imported_filters': 'imported/filters',
+    }
+
+    def process_filters(self, filters, can_read_fields):
+        filter_data = {}
+        operators = {}
+        for param, value in filters.iteritems():
+            parts = param.rsplit('__', 1)
+            operator = parts[1] if len(parts) == 2 else None
+            path = parts[0].split('.')
+            docular.doc_set(operators, path, operator)
+            docular.doc_set(filter_data, path, value)
+
+        converter = self.converter
+        if self.on_collection:
+            converter = converter.converter
+
+        imported_filters = converter.import_data(
+            filter_data, can_read_fields, flat=True)
+        return docular.doc_merge(operators, imported_filters)
+
+    def process_parameters(self, context_data):
+        parameters = context_data['parameters']
+        filters = {}
+        for param, value in parameters.iteritems():
+            parts = param.split('__', 1)
+            if len(parts) != 2:
+                continue
+            if parts[0] == 'flt':
+                filters[parts[1]] = value
+
+        read_fields = context_data['read_fields']
+        imported_filters = self.process_filters(filters, read_fields)
+        return {'imported_filters': imported_filters}
 
     def process_write_data(self, context_data):
         write_data = context_data['write_data']
+        if not write_data:
+            return write_data
         can_write = context_data['can_write']
         if not can_write:
             raise AccessDeniedError(
@@ -201,7 +237,9 @@ class ImportDataProcessor(ImportExportData):
 
     def execute(self, context_data):
         imported_content = self.process_write_data(context_data)
-        return (imported_content,)
+        imported_data = self.process_parameters(context_data)
+        imported_data['imported_content'] = imported_content
+        return imported_data
 
 
 ImportData = ProcessorConstruction(
