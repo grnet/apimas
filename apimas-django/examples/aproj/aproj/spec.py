@@ -62,15 +62,17 @@ APP_CONFIG = {
                 "name": {".field.string": {}},
                 "founded": {".field.date": {}},
                 "active": {".field.boolean": {},
+                           '.flag.filterable': {},
                            'default': True},
                 "email": {".field.email": {}},
                 "institution_id": {".field.ref": {},
+                                   '.flag.filterable': {},
                                    "to": "api/prefix/institutions"},
                 "users": {
                     '.field.collection.django': {},
                     '.field.collection.*': {},
                     'model': 'anapp.models.User',
-                    'source': 'user_set',
+                    'source': 'users',
                     'bound': 'group',
                     'actions': {
                         '.action-template.django.list': {},
@@ -88,6 +90,7 @@ APP_CONFIG = {
                         'id': {'.field.serial': {},
                                '.field.*': {}},
                         'onoma': {'.field.string': {},
+                                  '.flag.filterable': {},
                                   'source': 'username',
                                      '.field.*': {}},
                         "variants": {
@@ -98,6 +101,7 @@ APP_CONFIG = {
                             "source": "name_variants",
                             "fields": {
                                 "en": {".field.string": {},
+                                       '.flag.filterable': {},
                                        '.field.*': {}},
                                 "el": {".field.string": {},
                                        '.field.*': {}},

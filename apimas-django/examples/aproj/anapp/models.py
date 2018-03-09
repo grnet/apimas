@@ -21,7 +21,7 @@ class Variants(models.Model):
 class User(models.Model):
     username = models.TextField()
     age = models.IntegerField()
-    group = models.ForeignKey(Group)
+    group = models.ForeignKey(Group, related_name='users')
     name_variants = models.ForeignKey(Variants, null=True)
 
 
