@@ -72,18 +72,18 @@ class DataConverter(object):
             assert callable(extractor), ('extractor must be a callable')
         self.extractor = extractor
 
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         """ Gets the python native value from a given value. """
         raise NotImplementedError('get_native_value() must be implemented')
 
-    def get_repr_value(self, value, permissions):
+    def get_repr_value(self, value, permissions, flat):
         """
         Gets the representative format of a value, ready to be easily
         serialized into a content type, e.g. JSON.
         """
         raise NotImplementedError('get_repr_value() must be implemented')
 
-    def export_data(self, value, permissions):
+    def export_data(self, value, permissions, flat=False):
         """
         Converts given value into a representative format.
         """
@@ -98,9 +98,9 @@ class DataConverter(object):
         if value is None:
             return None
 
-        return self.get_repr_value(value, permissions)
+        return self.get_repr_value(value, permissions, flat)
 
-    def import_data(self, value, permissions):
+    def import_data(self, value, permissions, flat=False):
         """
         Converts given value into a python native value.
         """
@@ -115,7 +115,7 @@ class DataConverter(object):
                 return None
             raise ValidationError("Field cannot be None")
 
-        return self.get_native_value(value, permissions)
+        return self.get_native_value(value, permissions, flat)
 
 
 class String(DataConverter):
@@ -127,18 +127,18 @@ class String(DataConverter):
 
         return value
 
-    def get_repr_value(self, value, permissions):
+    def get_repr_value(self, value, permissions, flat):
         return self._get_value(value)
 
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         return self._get_value(value)
 
 
 class UUID(DataConverter):
-    def get_repr_value(self, value, permissions):
+    def get_repr_value(self, value, permissions, flat):
         return str(value)
 
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         raise NotImplementedError('deserialize() is not meaningful for'
                                   ' \'UUID\' field')
 
@@ -148,17 +148,17 @@ class Email(String):
     EMAIL_REGEX = re.compile(
         r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
 
-    def _get_email(self, value, permissions):
-        value = super(Email, self).get_repr_value(value, permissions)
+    def _get_email(self, value, permissions, flat):
+        value = super(Email, self).get_repr_value(value, permissions, flat)
         if not self.EMAIL_REGEX.match(value):
             raise ValidationError('Field is not a valid email')
         return value
 
-    def get_repr_value(self, value, permissions):
-        return self._get_email(value, permissions)
+    def get_repr_value(self, value, permissions, flat):
+        return self._get_email(value, permissions, flat)
 
-    def get_native_value(self, value, permissions):
-        return self._get_email(value, permissions)
+    def get_native_value(self, value, permissions, flat):
+        return self._get_email(value, permissions, flat)
 
 
 class Serial(DataConverter):
@@ -168,12 +168,12 @@ class Serial(DataConverter):
     Deserialization is not meaningful for serials because the value is
     set automatically.
     """
-    def get_repr_value(self, value, permissions):
+    def get_repr_value(self, value, permissions, flat):
         if isinstance(value, str) and not value.isdigit():
             raise ValidationError('Field is not an integer')
         return int(value)
 
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         raise NotImplementedError('deserialize() is not meaningful for'
                                   ' \'serial\' field')
 
@@ -203,10 +203,10 @@ class Number(DataConverter):
 
         raise ValidationError('Field is not numeric.')
 
-    def get_repr_value(self, value, permissions):
+    def get_repr_value(self, value, permissions, flat):
         return self._get_value(value)
 
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         return self._get_value(value)
 
 
@@ -258,13 +258,13 @@ class Boolean(DataConverter):
         msg = 'Field is not boolean. {type!r} found instead.'
         raise ValidationError(msg.format(val=type(value)))
 
-    def get_repr_value(self, value, permissions):
+    def get_repr_value(self, value, permissions, flat):
         try:
             return self._get_bool_value(value)
         except ValidationError:
             return bool(value)
 
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         return self._get_bool_value(value)
 
 
@@ -293,7 +293,7 @@ class Date(DataConverter):
         self.date_format = date_format or self.DEFAULT_FORMAT
         super(Date, self).__init__(**kwargs)
 
-    def get_repr_value(self, value, permissions):
+    def get_repr_value(self, value, permissions, flat):
         if not isinstance(value, (date, datetime)):
             msg = ('Field cannot be serialized. It is not a date object.'
                    ' {type!r} found instead.')
@@ -306,7 +306,7 @@ class Date(DataConverter):
             raise ValidationError(
                 msg.format(format=self.date_format) + e.message)
 
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         try:
             return datetime.strptime(value, self.date_format)
         except ValueError as e:
@@ -352,14 +352,14 @@ class Choices(DataConverter):
                             for i, k in enumerate(self.allowed)}
         super(Choices, self).__init__(**kwargs)
 
-    def get_repr_value(self, value, permissions):
+    def get_repr_value(self, value, permissions, flat):
         value = self._values_map.get(value, value)
         if value not in self.displayed:
             msg = self.ERROR_MESSAGE.format(allowed=','.join(self.allowed))
             raise ValidationError(msg)
         return value
 
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         if value not in self.allowed:
             msg = self.ERROR_MESSAGE.format(allowed=','.join(self.allowed))
             raise ValidationError(msg)
@@ -392,19 +392,19 @@ class Identity(DataConverter):
         self.rel_url = utils.urljoin(root_url, to) if root_url else to
         super(Identity, self).__init__(**kwargs)
 
-    def get_repr_value(self, value, permissions):
+    def get_repr_value(self, value, permissions, flat):
         if isnumeric(value) \
             or isinstance(value, (str, unicode)) \
             or isinstance(value, uuid.UUID):
             return utils.urljoin(self.rel_url, str(value))
 
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         raise NotImplementedError(
             'get_native_value() is not meaningful for \'.identity\' field')
 
 
 class Ref(Identity):
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         try:
             return int(value)
         except:
@@ -424,10 +424,10 @@ class Ref(Identity):
 
 
 class File(DataConverter):
-    def get_repr_value(self, value, permissions):
+    def get_repr_value(self, value, permissions, flat):
         return value.name
 
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         return value
 
 
@@ -465,14 +465,14 @@ class Struct(DataConverter):
         self.schema = schema
         super(Struct, self).__init__(**kwargs)
 
-    def get_dict_values(self, value, permissions, importing):
+    def get_dict_values(self, value, permissions, flat, importing):
         data = {}
         for field_name, field_schema in self.schema.iteritems():
             field_permissions = permissions.get(field_name)
             field_value = value.get(field_name, Nothing)
             func = pick_converter(field_schema['converter'], importing)
             try:
-                computed_value = func(field_value, field_permissions)
+                computed_value = func(field_value, field_permissions, flat)
             except ValidationError as e:
                 msg = 'Cannot serialize field {field!r}. ' + e.message
                 raise ValidationError(msg.format(field=field_name))
@@ -482,13 +482,13 @@ class Struct(DataConverter):
 
         return data
 
-    def get_repr_value(self, value, permissions):
+    def get_repr_value(self, value, permissions, flat):
         if not isinstance(value, dict):
             raise ValidationError("Must be a dict")
 
-        return self.get_dict_values(value, permissions, importing=False)
+        return self.get_dict_values(value, permissions, flat, importing=False)
 
-    def get_native_value(self, value, permissions):
+    def get_native_value(self, value, permissions, flat):
         if not isinstance(value, dict):
             raise ValidationError("Must be a dict")
 
@@ -499,7 +499,7 @@ class Struct(DataConverter):
             raise AccessDeniedError(
                 "Writing fields %s is not allowed" % disallowed_keys)
 
-        return self.get_dict_values(value, permissions, importing=True)
+        return self.get_dict_values(value, permissions, flat, importing=True)
 
 
 class List(DataConverter):
@@ -524,15 +524,18 @@ class List(DataConverter):
         self.converter = converter
         super(List, self).__init__(**kwargs)
 
-    def get_list_elems(self, value, permissions, importing):
+    def get_list_elems(self, value, permissions, flat, importing):
+        func = pick_converter(self.converter, importing)
+        if flat:
+            return func(value, permissions, flat)
+
         if not isinstance(value, Iterable) or isinstance(value, Mapping):
             raise ValidationError('Given value is not a list-like object')
 
-        func = pick_converter(self.converter, importing)
-        return [func(elem, permissions) for elem in value]
+        return [func(elem, permissions, flat) for elem in value]
 
-    def get_repr_value(self, value, permissions):
-        return self.get_list_elems(value, permissions, importing=False)
+    def get_repr_value(self, value, permissions, flat):
+        return self.get_list_elems(value, permissions, flat, importing=False)
 
-    def get_native_value(self, value, permissions):
-        return self.get_list_elems(value, permissions, importing=True)
+    def get_native_value(self, value, permissions, flat):
+        return self.get_list_elems(value, permissions, flat, importing=True)
