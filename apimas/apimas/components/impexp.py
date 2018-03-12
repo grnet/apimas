@@ -189,6 +189,7 @@ class ImportDataProcessor(ImportExportData):
     WRITE_KEYS = {
         'imported_content': 'imported/content',
         'imported_filters': 'imported/filters',
+        'imported_ordering': 'imported/ordering',
     }
 
     def process_filters(self, filters, can_read_fields):
@@ -209,10 +210,34 @@ class ImportDataProcessor(ImportExportData):
             filter_data, can_read_fields, flat=True)
         return docular.doc_merge(operators, imported_filters)
 
+    def process_ordering(self, ordering_param, can_read_fields):
+        results = []
+        if not ordering_param:
+            return results
+        orderings = ordering_param.split(',')
+        for ordering in orderings:
+            if ordering.startswith('-'):
+                reverse = True
+                ordering = ordering[1:]
+            else:
+                reverse = False
+
+            path = ordering.split('.')
+            if not docular.doc_get(can_read_fields, path):
+                raise AccessDeniedError(
+                    "You do not have permission to order by this field")
+            results.append((path, reverse))
+        return results
+
     def process_parameters(self, context_data):
         parameters = context_data['parameters']
         filters = {}
+        ordering = None
         for param, value in parameters.iteritems():
+            if param == 'ordering':
+                ordering = value
+                continue
+
             parts = param.split('__', 1)
             if len(parts) != 2:
                 continue
@@ -221,7 +246,14 @@ class ImportDataProcessor(ImportExportData):
 
         read_fields = context_data['read_fields']
         imported_filters = self.process_filters(filters, read_fields)
-        return {'imported_filters': imported_filters}
+        imported_ordering = self.process_ordering(ordering, read_fields)
+        result = {}
+        if imported_filters:
+            result['imported_filters'] = imported_filters
+        if imported_ordering:
+            result['imported_ordering'] = imported_ordering
+
+        return result
 
     def process_write_data(self, context_data):
         write_data = context_data['write_data']

@@ -21,6 +21,7 @@ spec_list = [
     {'.flag.readonly': {}},
     {'.flag.nullable': {}},
     {'.flag.filterable': {}},
+    {'.flag.orderable': {}},
 
     {
         '.field.*': {},
@@ -141,8 +142,9 @@ spec_list = [
             'handler': 'apimas_django.handlers.ListHandler',
             'post': {
                 '1': 'apimas_django.filtering.Filtering',
-                '2': 'apimas_django.processors.InstanceToDict',
-                '3': 'apimas.components.impexp.ExportData',
+                '2': 'apimas_django.ordering.Ordering',
+                '3': 'apimas_django.processors.InstanceToDict',
+                '4': 'apimas.components.impexp.ExportData',
             }
         },
     },
