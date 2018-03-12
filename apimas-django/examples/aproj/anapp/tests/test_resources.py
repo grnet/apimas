@@ -1,4 +1,5 @@
 from apimas_django.test import *
+from anapp import models
 
 pytestmark = pytest.mark.django_db(transaction=False)
 
@@ -67,3 +68,27 @@ def test_groups(client):
 
     # method not allowed
     assert api.delete('groups/{}'.format(group1.get('id'))).status_code == 204
+
+
+def filter_dict(keys):
+    def f(d):
+        return {k: v for k, v in d.iteritems() if k in keys}
+    return f
+
+
+def test_orderable(client):
+    api = client.copy(prefix='/api/prefix/')
+    insts = [
+        {'name': 'bbb', 'active': True},
+        {'name': 'aaa', 'active': True},
+        {'name': 'ccc', 'active': False},
+    ]
+    for inst in insts:
+        models.Institution.objects.create(**inst)
+
+    resp = api.get('institutions', {'ordering': 'active,-name'})
+    body = resp.json()
+    cleaned = map(filter_dict(['name', 'active']), body)
+    assert cleaned[0] == insts[2]
+    assert cleaned[1] == insts[0]
+    assert cleaned[2] == insts[1]

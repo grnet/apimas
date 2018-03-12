@@ -3,6 +3,7 @@ from django.db import models
 
 class Institution(models.Model):
     name = models.TextField()
+    active = models.BooleanField()
 
 
 class Group(models.Model):

@@ -42,6 +42,9 @@ APP_CONFIG = {
                 "id": {".field.serial": {}},
                 "name": {".field.string": {},
                          '.flag.orderable': {}},
+                "active": {".field.boolean": {},
+                           "default": True,
+                           ".flag.orderable": {}},
             }
         },
         "groups": {
