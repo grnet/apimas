@@ -40,7 +40,8 @@ APP_CONFIG = {
             },
             "fields": {
                 "id": {".field.serial": {}},
-                "name": {".field.string": {}},
+                "name": {".field.string": {},
+                         '.flag.orderable': {}},
             }
         },
         "groups": {
@@ -91,8 +92,9 @@ APP_CONFIG = {
                                '.field.*': {}},
                         'onoma': {'.field.string': {},
                                   '.flag.filterable': {},
+                                  '.flag.orderable': {},
                                   'source': 'username',
-                                     '.field.*': {}},
+                                  '.field.*': {}},
                         "variants": {
                             ".field.struct": {},
                             '.field.*': {},
@@ -102,6 +104,7 @@ APP_CONFIG = {
                             "fields": {
                                 "en": {".field.string": {},
                                        '.flag.filterable': {},
+                                       '.flag.orderable': {},
                                        '.field.*': {}},
                                 "el": {".field.string": {},
                                        '.field.*': {}},
