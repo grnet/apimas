@@ -178,7 +178,7 @@ class FilteringProcessor(BaseProcessor):
             msg = 'A queryset is expected, {!r} found'
             raise InvalidInput(msg.format(type(queryset)))
 
-        for filter_path, (operator, value) in docular.doc_flatten(
+        for filter_path, (operator, value) in docular.doc_iter_leaves(
                 imported_filters):
             filter_obj, source = self.prepare_filter(filter_path)
             queryset = filter_obj.filter(queryset, source, operator, value)
