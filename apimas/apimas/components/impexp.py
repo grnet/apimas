@@ -193,6 +193,8 @@ class ImportDataProcessor(ImportExportData):
     }
 
     def process_filters(self, filters, can_read_fields):
+        if not filters:
+            return {}
         filter_data = {}
         operators = {}
         for param, value in filters.iteritems():
