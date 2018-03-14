@@ -262,7 +262,7 @@ class ImportDataProcessor(ImportExportData):
         can_write = context_data['can_write']
         if not can_write:
             raise AccessDeniedError(
-                'You do not have permission to do this action')
+                'You do not have permission to write to this resource')
 
         can_write_fields = context_data['write_fields']
         return self.converter.import_data(write_data, can_write_fields)
@@ -299,7 +299,7 @@ class ExportDataProcessor(ImportExportData):
         can_read = context_data['can_read']
         if not can_read:
             raise AccessDeniedError(
-                'You do not have permission to do this action')
+                'You do not have permission to read this resource')
 
         can_read_fields = context_data['read_fields']
         exported_data = self.converter.export_data(
