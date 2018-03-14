@@ -1,7 +1,7 @@
 import pytest
 import json
 
-from django.test.client import Client as DjangoClient
+from django.test.client import Client as DjangoClient, MULTIPART_CONTENT
 from django.conf import settings
 
 

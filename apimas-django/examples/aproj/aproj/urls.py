@@ -14,6 +14,8 @@ Including another URLconf
 """
 from django.conf.urls import include, url
 from django.contrib import admin
+from django.conf import settings
+from django.conf.urls.static import static
 
 from apimas_django import adapter
 from aproj.spec import APP_CONFIG, DEPLOY_CONFIG
@@ -27,3 +29,6 @@ urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
 ]
 urlpatterns.extend(api_urls)
+
+urls_media = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+urlpatterns.extend(urls_media)

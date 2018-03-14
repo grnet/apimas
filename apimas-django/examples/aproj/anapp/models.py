@@ -4,6 +4,7 @@ from django.db import models
 class Institution(models.Model):
     name = models.TextField()
     active = models.BooleanField()
+    logo = models.FileField(upload_to='logos/', null=True)
 
 
 class Group(models.Model):

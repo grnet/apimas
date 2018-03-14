@@ -35,6 +35,7 @@ APP_CONFIG = {
             "model": "anapp.models.Institution",
             "actions": {
                 '.action-template.django.list': {},
+                '.action-template.django.retrieve': {},
                 '.action-template.django.create': {},
                 '.action-template.django.partial_update': {},
                 '.action-template.django.update': {},
@@ -46,6 +47,9 @@ APP_CONFIG = {
                 "active": {".field.boolean": {},
                            "default": True,
                            ".flag.orderable": {}},
+                "logo": {'.field.file': {},
+                         '.flag.nullable': {},
+                         'default': {'=': None}},
             }
         },
         "groups": {

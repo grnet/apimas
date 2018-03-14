@@ -1,3 +1,4 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from apimas_django.test import *
 from anapp import models
 
@@ -33,6 +34,12 @@ def test_groups(client):
     resp = api.post('institutions', dict(name="inst1"))
     assert resp.status_code == 201
     inst = resp.json()
+    inst_id = inst['id']
+
+    resp = api.get('institutions/%s' % inst_id)
+    assert resp.status_code == 200
+    retr_inst = resp.json()
+    assert inst == retr_inst
 
     group_data = {
         'name': 'users',
@@ -114,3 +121,20 @@ def test_update(client):
     inst = resp.json()
     assert inst['name'] == 'bbb'
     assert inst['active'] == True  # default value
+
+
+def test_files(client):
+    api = client.copy(prefix='/api/prefix/')
+    models.Institution.objects.create(name='aaa', active=True)
+
+    resp = api.get('institutions/1')
+    assert resp.status_code == 200
+    assert resp.json()['logo'] is None
+
+    logo = SimpleUploadedFile('logo1.png', 'logodata')
+    resp = api.patch('institutions/1',
+                   {'name': 'bbb', 'logo': logo},
+                   content_type=MULTIPART_CONTENT)
+
+    assert resp.status_code == 200
+    assert resp.json()['logo'].startswith('logos/logo1')

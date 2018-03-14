@@ -115,6 +115,7 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.field.boolean': converter_obj(cnvs.Boolean),
     '.field.datetime': converter_obj(cnvs.DateTime),
     '.field.date': converter_obj(cnvs.Date),
+    '.field.file': converter_obj(cnvs.File),
 
     '.flag.*': no_constructor,
     '.flag.readonly': cerberus_flag('readonly'),

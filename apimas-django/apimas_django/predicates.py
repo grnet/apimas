@@ -54,6 +54,7 @@ spec_list = [
 
     {'.field.datetime': {}},
     {'.field.date': {}},
+    {'.field.file': {}},
 
     {'.meta': {'*': {}}},
 

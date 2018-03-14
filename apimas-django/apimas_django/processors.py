@@ -31,6 +31,14 @@ def construct_field(instance, loc):
     docular.doc_spec_set(instance, v)
 
 
+def construct_file(instance, loc, context):
+    docular.construct_last(context)
+    source = docular.doc_spec_get(instance.get('source', {}),
+                                  default=loc[-1])
+    v = {'source': source}
+    docular.doc_spec_set(instance, v)
+
+
 def construct_struct(instance, loc):
     source = docular.doc_spec_get(instance.get('source', {}),
                                   default=loc[-1])
@@ -57,6 +65,7 @@ def construct_action(instance, loc):
 INSTANCETODICT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
     {'.field.*': construct_field,
      '.field.struct': construct_struct,
+     '.field.file': construct_file,
      '.action': construct_action,
      '.field.collection.django': construct_collection,
     },

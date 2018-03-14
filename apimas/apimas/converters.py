@@ -425,6 +425,8 @@ class Ref(Identity):
 
 class File(DataConverter):
     def get_repr_value(self, value, permissions, flat):
+        if not value:
+            return None
         return value.name
 
     def get_native_value(self, value, permissions, flat):
