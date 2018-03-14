@@ -2,12 +2,10 @@
 
 RULES = [
 
-
+    ('api/prefix/institutions', 'retrieve', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'list', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'create', '*', '*', '*', '*'),
-    ('api/prefix/institutions', 'create_response', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'partial_update', '*', '*', '*', '*'),
-    ('api/prefix/institutions', 'partial_update_response', '*', '*', '*', '*'),
 
     ('api/prefix/groups', 'list', '*', '*', '*', '*'),
 #    ('api/prefix/groups', 'list', '*', 'users/username', '*', '*'),
@@ -15,8 +13,8 @@ RULES = [
 #    ('api/prefix/groups', 'list', '*', 'users/name_variants/el', '*', '*'),
 #    ('api/prefix/groups', 'list', '*', 'users/name_variants', '*', '*'),
 
+    ('api/prefix/groups', 'retrieve', '*', '*', '*', '*'),
     ('api/prefix/groups', 'partial_update', '*', '*', '*', '*'),
-    ('api/prefix/groups', 'partial_update_response', '*', '*', '*', '*'),
 
     ('api/prefix/groups', 'create', '*', 'users/name_variants', '*', '*'),
     ('api/prefix/groups', 'create', '*', 'users', '*', '*'),

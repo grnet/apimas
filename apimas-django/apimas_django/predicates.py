@@ -109,7 +109,7 @@ spec_list = [
             'status_code': 201,
             'content_type': 'application/json',
             'on_collection': False,
-            'read_permissions': 'create_response',
+            'read_permissions': 'retrieve',
             'url': '/',
             'pre': {
                 '1': 'apimas.components.auth.Authentication',
@@ -178,7 +178,7 @@ spec_list = [
             'status_code': 200,
             'content_type': 'application/json',
             'on_collection': False,
-            'read_permissions': 'partial_update_response',
+            'read_permissions': 'retrieve',
             'url': '/*/',
             'pre': {
                 '1': 'apimas.components.auth.Authentication',
