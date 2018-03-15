@@ -187,7 +187,31 @@ spec_list = [
                 '4': 'apimas.components.permissions.Permissions',
                 '5': 'apimas.components.impexp.ImportData',
             },
-            'handler': 'apimas_django.handlers.UpdateHandler',
+            'handler': 'apimas_django.handlers.PartialUpdateHandler',
+            'post': {
+                '1': 'apimas_django.processors.InstanceToDict',
+                '2': 'apimas.components.impexp.ExportData',
+            },
+        },
+    },
+
+    {
+        '.action-template.django.update': {},
+        'update': {
+            'method': 'PUT',
+            'status_code': 200,
+            'content_type': 'application/json',
+            'on_collection': False,
+            'read_permissions': 'retrieve',
+            'url': '/*/',
+            'pre': {
+                '1': 'apimas.components.auth.Authentication',
+                '2': 'apimas.components.auth.UserRetrieval',
+                '3': 'apimas_django.processors.ObjectRetrieval',
+                '4': 'apimas.components.permissions.Permissions',
+                '5': 'apimas.components.impexp.ImportData',
+            },
+            'handler': 'apimas_django.handlers.FullUpdateHandler',
             'post': {
                 '1': 'apimas_django.processors.InstanceToDict',
                 '2': 'apimas.components.impexp.ExportData',
@@ -218,29 +242,3 @@ PREDICATES = {}
 
 for spec in spec_list:
     docular.doc_compile_spec(spec, PREDICATES)
-
-
-# PREDICATES =  {
-#     '.action-template.django.update': {
-#         '.action-template.django.update': {},
-#         'update': {
-#             'method': 'PUT',
-#             'url': '/',
-#             'pre': [
-#                 'apimas.components.processors.Authentication',
-#                 'apimas_django.processors.UserRetrieval',
-#                 'apimas_django.processors.ObjectRetrieval',
-#                 'apimas_django.processors.Permissions',
-#                 'apimas.components.processors.DeSerialization',
-#                 'apimas.components.processors.CerberusValidation',
-#             ],
-#             'handler': 'apimas_django.handlers.UpdateHandler',
-#             'post': [
-#                 'apimas_django.processors.InstanceToDict',
-#                 'apimas.components.processors.Serialization',
-#             ]
-
-#         },
-#     },
-# }
-
