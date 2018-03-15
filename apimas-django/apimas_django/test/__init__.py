@@ -32,28 +32,36 @@ class Client(DjangoClient):
         self.auth_token = token
         self.defaults['HTTP_AUTHORIZATION'] = 'Token {}'.format(token)
 
+    def _encode_data(self, data, content_type):
+        req_data = None
+        if data:
+            if content_type == JSON:
+                # apimas override for common json requests
+                req_data = json.dumps(data)
+            else:
+                # multipart handling
+                req_data = super(Client, self)._encode_data(data, content_type)
+        return req_data
+
     def post(self, path, data=None, content_type=JSON, **kwargs):
-        if content_type == JSON and data:
-            data = json.dumps(data)
+        # DjangoClient calls _encode_data for post requests
         return super(Client, self).post(
+            path, data, content_type=content_type, **kwargs)
+
+    def put(self, path, data='', content_type=JSON, **kwargs):
+        data = self._encode_data(data, content_type)
+        return super(Client, self).put(
+            path, data, content_type=content_type, **kwargs)
+
+    def patch(self, path, data='', content_type=JSON, **kwargs):
+        data = self._encode_data(data, content_type)
+        return super(Client, self).patch(
             path, data, content_type=content_type, **kwargs)
 
     def options(self, path, data='', content_type=JSON, **kwargs):
         if content_type == JSON and data:
             data = json.dumps(data)
         return super(Client, self).options(
-            path, data, content_type=content_type, **kwargs)
-
-    def put(self, path, data='', content_type=JSON, **kwargs):
-        if content_type == JSON and data:
-            data = json.dumps(data)
-        return super(Client, self).put(
-            path, data, content_type=content_type, **kwargs)
-
-    def patch(self, path, data='', content_type=JSON, **kwargs):
-        if content_type == JSON and data:
-            data = json.dumps(data)
-        return super(Client, self).patch(
             path, data, content_type=content_type, **kwargs)
 
     def delete(self, path, data='', content_type=JSON, **kwargs):
