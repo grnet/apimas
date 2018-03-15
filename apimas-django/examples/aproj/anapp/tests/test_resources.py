@@ -92,3 +92,25 @@ def test_orderable(client):
     assert cleaned[0] == insts[2]
     assert cleaned[1] == insts[0]
     assert cleaned[2] == insts[1]
+
+
+def test_update(client):
+    api = client.copy(prefix='/api/prefix/')
+    models.Institution.objects.create(name='aaa', active=True)
+
+    data = {'active': False}
+    resp = api.put('institutions/1', data)
+    assert resp.status_code == 400
+    assert 'Field is required' in resp.content  # 'name' is required
+
+    resp = api.patch('institutions/1', data)
+    assert resp.status_code == 200
+    inst = resp.json()
+    assert inst['active'] == False
+
+    data = {'name': 'bbb'}
+    resp = api.put('institutions/1', data)
+    assert resp.status_code == 200
+    inst = resp.json()
+    assert inst['name'] == 'bbb'
+    assert inst['active'] == True  # default value

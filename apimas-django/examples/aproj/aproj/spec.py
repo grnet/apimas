@@ -37,6 +37,7 @@ APP_CONFIG = {
                 '.action-template.django.list': {},
                 '.action-template.django.create': {},
                 '.action-template.django.partial_update': {},
+                '.action-template.django.update': {},
             },
             "fields": {
                 "id": {".field.serial": {}},
