@@ -228,8 +228,8 @@ spec_list = [
             'on_collection': False,
             'url': '/*/',
             'pre': {
-                #'1': 'apimas.components.processors.Authentication',
-                #'2': 'apimas_django.processors.UserRetrieval',
+                '1': 'apimas.components.auth.Authentication',
+                '2': 'apimas.components.auth.UserRetrieval',
                 '3': 'apimas_django.processors.ObjectRetrieval',
                 '4': 'apimas.components.permissions.Permissions',
             },
