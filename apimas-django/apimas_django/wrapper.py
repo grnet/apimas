@@ -2,7 +2,7 @@ import json
 import re
 from django.conf import settings
 from django.http import HttpResponse
-from apimas.errors import ConflictError
+from apimas.errors import ConflictError, ValidationError
 
 
 HTTP_REGEX = re.compile(r'^HTTP_[a-zA-Z_]+$')
@@ -48,42 +48,6 @@ class DjangoWrapper(object):
                 request_headers[header] = request.META[header]
         return request_headers
 
-    def get_body(self, request):
-        """
-        Get the body from Django request object.
-
-        The body of the request can be JSON serializable based on its content
-        type. Otherwise, we get the content of request from the `request.POST`
-        attribute.
-
-        Args:
-            request: Django request object.
-
-        Returns:
-            dict: Dictionary with body of the request.
-        """
-        content_type = self.get_content_type(request, '')
-        content_type_parts = []
-
-        for part in content_type.split(';'):
-            if part.strip():
-                content_type_parts.append(part)
-
-        if 'application/json' in content_type_parts:
-            if not request.body:
-                return {}
-            body_unicode = request.body.decode(settings.DEFAULT_CHARSET)
-            return json.loads(body_unicode)
-        else:
-            # `request.POST` is a multival dict so we create
-            # a python native dict.
-            return {k: v for k, v in request.POST.iteritems()}
-
-    def get_files(self, request):
-        """ Get files of the Django request object. """
-        # `request.FILES` is a multival dict so we create a new one.
-        return {k: v for k, v in request.FILES.iteritems()}
-
     def get_query_params(self, request):
         """ Get query parameters of the Django request object. """
         return request.GET
@@ -122,29 +86,52 @@ class DjangoWrapper(object):
             response[k] = v
         return response
 
-    def _load_form_data(self, request):
-        """
-        Load form data, (data and files) in there is a multipart/form-data
-        request in request method except for POST.
-        """
-        content_type = self.get_content_type(request)
-        if not content_type:
-            return
-        if request.method != 'POST' and content_type.startswith(
-                'multipart/form-data;'):
-            data, files = request.parse_file_upload(request.META, request)
-            request.POST.update(data)
-            request.FILES.update(files)
+    def load_application_json_body(self, body):
+        if not body:
+            return {}
+        body_unicode = body.decode(settings.DEFAULT_CHARSET)
+        try:
+            return json.loads(body_unicode)
+        except Exception as e:
+            raise ValidationError(e)
+
+    def split_content_type_parts(self, content_type):
+        content_type_parts = []
+        for part in content_type.split(';'):
+            if part.strip():
+                content_type_parts.append(part)
+        return content_type_parts
+
+    def get_body_and_files(self, request):
+        content_type = self.get_content_type(request, '')
+        content_type_parts = self.split_content_type_parts(content_type)
+
+        if 'multipart/form-data' in content_type_parts:
+            if request.method == 'POST':
+                post_data, files_data = request.POST, request.FILES
+            else:
+                post_data, files_data = request.parse_file_upload(
+                    request.META, request)
+            return post_data.dict(), files_data.dict()
+
+        elif 'application/json' in content_type_parts:
+            loaded_body = self.load_application_json_body(request.body)
+            files = request.FILES
+            assert not files
+            return loaded_body, files.dict()
+
+        else:
+            # we currently don't support any other type of input
+            assert not request.body
+            return {}, {}
 
     def _get_apimas_request(self, request, **kwargs):
         """
         Creates an APIMAS request object based on the initial django request.
         """
-        self._load_form_data(request)
         params = self.get_query_params(request)
-        body = self.get_body(request)
         headers = self.get_headers(request)
-        files = self.get_files(request)
+        body, files = self.get_body_and_files(request)
         # Merge data and the files of the request.
         data = dict(body, **files)
         meta = {
