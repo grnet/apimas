@@ -1,7 +1,11 @@
 import pytest
+import json
 
 from django.test.client import Client as DjangoClient
 from django.conf import settings
+
+
+JSON = 'application/json'
 
 
 class Client(DjangoClient):
@@ -27,6 +31,36 @@ class Client(DjangoClient):
     def auth(self, token):
         self.auth_token = token
         self.defaults['HTTP_AUTHORIZATION'] = 'Token {}'.format(token)
+
+    def post(self, path, data=None, content_type=JSON, **kwargs):
+        if content_type == JSON and data:
+            data = json.dumps(data)
+        return super(Client, self).post(
+            path, data, content_type=content_type, **kwargs)
+
+    def options(self, path, data='', content_type=JSON, **kwargs):
+        if content_type == JSON and data:
+            data = json.dumps(data)
+        return super(Client, self).options(
+            path, data, content_type=content_type, **kwargs)
+
+    def put(self, path, data='', content_type=JSON, **kwargs):
+        if content_type == JSON and data:
+            data = json.dumps(data)
+        return super(Client, self).put(
+            path, data, content_type=content_type, **kwargs)
+
+    def patch(self, path, data='', content_type=JSON, **kwargs):
+        if content_type == JSON and data:
+            data = json.dumps(data)
+        return super(Client, self).patch(
+            path, data, content_type=content_type, **kwargs)
+
+    def delete(self, path, data='', content_type=JSON, **kwargs):
+        if content_type == JSON and data:
+            data = json.dumps(data)
+        return super(Client, self).delete(
+            path, data, content_type=content_type, **kwargs)
 
     def generic(self, *args, **kwargs):
         method = args[0]
