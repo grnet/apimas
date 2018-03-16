@@ -74,7 +74,6 @@ CERBERUS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.flag.*': no_constructor,
     '.flag.readonly': cerberus_flag('readonly'),
     '.flag.nullable': cerberus_flag('nullable'),
-    '.meta': no_constructor,
     '.string': construct_string,
 }, default=no_constructor)
 

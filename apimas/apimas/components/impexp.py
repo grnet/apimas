@@ -7,10 +7,6 @@ from apimas.components import BaseProcessor, ProcessorConstruction
 
 Null = object()
 
-def get_meta(top_spec, loc, key):
-    return docular.doc_spec_get(
-        docular.doc_inherit2(top_spec, loc, ('.meta', key)))
-
 FIELD_ARGS = ['default']
 
 
@@ -120,7 +116,6 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.flag.readonly': cerberus_flag('readonly'),
     '.flag.writeonly': cerberus_flag('writeonly'),
     '.flag.nullable': cerberus_flag('nullable'),
-    '.meta': no_constructor,
     '.string': construct_string,
 }, default=no_constructor)
 

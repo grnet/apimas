@@ -51,9 +51,6 @@ spec_list = [
     {'.field.date': {}},
     {'.field.file': {}},
 
-    {'.meta': {'*': {}}},
-
-
     {
         '.field.struct': {},
         'fields': {'*': {'.field.*': {}}},
@@ -85,12 +82,10 @@ spec_list = [
     {
         '.apimas_app': {},
         ':*': {},
-        '.meta': {},
         'endpoints': {
             '*': {
                 ".endpoint": {},
                 ':*': {},
-                ".meta": {},
                 'collections': {
                     "*": {'.field.collection.*': {}},
                 }

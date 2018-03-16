@@ -245,7 +245,7 @@ def mk_action_view(
     method = method.upper()
 
     top_spec = context['top_spec']
-    artifacts = docular.doc_spec_get(docular.doc_get(top_spec, ('.meta', 'artifacts')))
+    artifacts = docular.doc_spec_get(top_spec, ':artifacts')
     pre_proc = [make_processor(proc, loc, action_name, artifacts) for proc in pre_proc]
     post_proc = [make_processor(proc, loc, action_name, artifacts) for proc in post_proc]
     handler = make_processor(handler, loc, action_name, artifacts)
@@ -349,7 +349,7 @@ def construct_views(spec):
     processors = collect_processors(spec)
     print "FOUND PROCESSORS:", processors
     artifacts = construct_processors(processors, spec)
-    spec['.meta']['artifacts'] = {'=': artifacts}
+    spec[':artifacts'] = {'=': artifacts}
     docular.doc_spec_construct(spec, PREDICATES, REGISTERED_CONSTRUCTORS)
     return docular.doc_spec_get(spec)
 
