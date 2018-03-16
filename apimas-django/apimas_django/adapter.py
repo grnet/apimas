@@ -200,7 +200,7 @@ def make_processor(processor, collection_loc, action_name, artifacts):
 def mk_url_prefix(loc):
     endpoint_prefix = loc[1]
     segments = []
-    collections = loc[2:]
+    collections = loc[3:]
     for i, name in enumerate(reversed(collections)):
         position, is_fields = divmod(i, 2)
         if not is_fields:
@@ -254,7 +254,8 @@ def endpoint_constructor(instance):
     print "On endpoint_constructor"
     views = {name:
              mk_django_urls(docular.doc_spec_get(collection_spec))
-             for name, collection_spec in docular.doc_spec_iter(instance)}
+             for name, collection_spec in docular.doc_spec_iter(
+                     instance['collections'])}
     docular.doc_spec_set(instance, views)
 
 

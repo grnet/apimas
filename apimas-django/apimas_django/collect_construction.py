@@ -34,7 +34,8 @@ def collection_constructor(instance):
 
 def endpoint_constructor(instance):
     v = set()
-    for name, collection_processors in docular.doc_spec_iter_values(instance):
+    for name, collection_processors in docular.doc_spec_iter_values(
+            instance['collections']):
         if collection_processors:
             v.update(collection_processors)
     docular.doc_spec_set(instance, v)

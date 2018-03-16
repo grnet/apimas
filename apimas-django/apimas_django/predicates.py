@@ -94,7 +94,9 @@ spec_list = [
             '*': {
                 ".endpoint": {},
                 ".meta": {},
-                "*": {'.field.collection.*': {}},
+                'collections': {
+                    "*": {'.field.collection.*': {}},
+                }
             }
         },
     },
