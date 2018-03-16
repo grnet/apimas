@@ -90,10 +90,12 @@ spec_list = [
     {
         '.apimas_app': {},
         '.meta': {},
-        '*': {
-            ".endpoint": {},
-            ".meta": {},
-            "*": {'.field.collection.*': {}},
+        'endpoints': {
+            '*': {
+                ".endpoint": {},
+                ".meta": {},
+                "*": {'.field.collection.*': {}},
+            }
         },
     },
 

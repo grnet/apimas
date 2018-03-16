@@ -198,9 +198,9 @@ def make_processor(processor, collection_loc, action_name, artifacts):
 
 
 def mk_url_prefix(loc):
-    endpoint_prefix = loc[0]
+    endpoint_prefix = loc[1]
     segments = []
-    collections = loc[1:]
+    collections = loc[2:]
     for i, name in enumerate(reversed(collections)):
         position, is_fields = divmod(i, 2)
         if not is_fields:
@@ -272,7 +272,8 @@ def mk_django_urls(action_urls):
 def apimas_app_constructor(instance):
     print "On apimas_constructor"
     urlpatterns = []
-    for endpoint, endpoint_patterns in docular.doc_spec_iter(instance):
+    for endpoint, endpoint_patterns in docular.doc_spec_iter(
+            instance['endpoints']):
         endpoint_patterns = docular.doc_spec_get(endpoint_patterns)
         for collection, collection_patterns in endpoint_patterns.iteritems():
             urlpatterns.extend(collection_patterns)

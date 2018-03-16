@@ -59,10 +59,10 @@ def get_matched_allowed_fields(matches):
 
 
 def mk_collection_path(loc):
-    endpoint_prefix = loc[0]
+    endpoint_prefix = loc[1]
 
     segments = []
-    collections = loc[1:]
+    collections = loc[2:]
     for i, name in enumerate(reversed(collections)):
         position, is_fields = divmod(i, 2)
         if not is_fields:

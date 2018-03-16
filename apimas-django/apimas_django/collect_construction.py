@@ -42,7 +42,8 @@ def endpoint_constructor(instance):
 
 def app_constructor(instance):
     v = set()
-    for name, endpoint_processors in docular.doc_spec_iter_values(instance):
+    for name, endpoint_processors in docular.doc_spec_iter_values(
+            instance['endpoints']):
         if endpoint_processors:
             v.update(endpoint_processors)
     docular.doc_spec_set(instance, v)
