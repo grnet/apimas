@@ -98,8 +98,6 @@ def make_fields_spec(instance):
 
 def collection_constructor(instance, loc, top_spec):
     value = {}
-    value['permission_rules'] = docular.doc_spec_get(
-        docular.doc_inherit2(top_spec, loc, ('.meta', 'permission_rules')))
     value['collection_path'] = mk_collection_path(loc)
     value['fields_spec'] = make_fields_spec(instance)
     docular.doc_spec_set(instance, value)

@@ -89,15 +89,7 @@ class UserRetrievalProcessor(BaseProcessor):
         self.write((user,), context)
 
 
-def construct_user_retrieval_args_from_collection(instance, loc):
-    user_resolver = docular.doc_spec_get(
-        docular.doc_get(instance, ("auth", "user_resolver")))
-    value = dict(user_resolver=user_resolver)
-    docular.doc_spec_set(instance, value)
-
-
 USER_RETRIEVAL_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
-    '.field.collection.*': construct_user_retrieval_args_from_collection
 }, default=impexp.no_constructor)
 
 
@@ -105,17 +97,7 @@ UserRetrieval = ProcessorConstruction(
     USER_RETRIEVAL_CONSTRUCTORS, UserRetrievalProcessor)
 
 
-def construct_authenticator_args_from_collection(instance, loc):
-    authenticator = docular.doc_spec_get(
-        docular.doc_get(instance, ("auth", "authenticator")))
-    verifier = docular.doc_spec_get(
-        docular.doc_get(instance, ("auth", "verifier")))
-    value = dict(authenticator=authenticator, verifier=verifier)
-    docular.doc_spec_set(instance, value)
-
-
 AUTHENTICATE_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
-    '.field.collection.*': construct_authenticator_args_from_collection
 }, default=impexp.no_constructor)
 
 Authentication = ProcessorConstruction(

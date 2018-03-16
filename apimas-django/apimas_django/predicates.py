@@ -6,16 +6,9 @@ spec_list = [
     {'.integer': {}},
     {'.float': {}},
 
-    {'.handler': {}, '.string': {}},
-
-    {
-        '.auth': {},
-        'auth': {
-            'authenticator': {'.string': {}},
-            'verifier': {'.string': {}},
-            'user_resolver': {'.string': {}},
-        }
-    },
+    {'.processor.*': {},
+     'module_path': {'.string': {}},
+     ':*': {}},
 
     {'.flag.*': {}},
     {'.flag.readonly': {}},
@@ -40,9 +33,11 @@ spec_list = [
     {'.field.float': {}},
 
     {'.field.ref': {},
+     ':root_url': {'.string': {}},
      'to': {'.string': {}}},
 
     {'.field.identity': {},
+     ':root_url': {'.string': {}},
      'to': {'.string': {}}},
 
     {'.field.uuid': {}},
@@ -66,7 +61,7 @@ spec_list = [
 
     {
         '.field.collection.*': {},
-        '.auth': {},
+        ':*': {},
         'actions': {
             '.action-template.*': {},
             '*': {
@@ -78,9 +73,9 @@ spec_list = [
                 'read_permissions': {'.string': {}},
                 'write_permissions': {'.string': {}},
                 'url': {'.string': {}},
-                'handler': {".handler": {}},
-                'pre': {"*": {".handler": {}}},
-                'post': {"*": {".handler": {}}},
+                'handler': {".processor": {}},
+                'pre': {"*": {".processor": {}}},
+                'post': {"*": {".processor": {}}},
             }
         },
         'fields': {'*': {".field.*": {}}},
@@ -89,10 +84,12 @@ spec_list = [
 
     {
         '.apimas_app': {},
+        ':*': {},
         '.meta': {},
         'endpoints': {
             '*': {
                 ".endpoint": {},
+                ':*': {},
                 ".meta": {},
                 'collections': {
                     "*": {'.field.collection.*': {}},
@@ -108,6 +105,85 @@ spec_list = [
     },
 
     {
+        '.processor.permissions': {},
+        'module_path': 'apimas.components.permissions.Permissions',
+        ':permission_rules': {'.string': {}},
+    },
+
+    {
+        '.processor.authentication': {},
+        'module_path': 'apimas.components.auth.Authentication',
+        ':authenticator': {'.string': {}},
+        ':verifier': {'.string': {}},
+    },
+
+    {
+        '.processor.user_retrieval': {},
+        'module_path': 'apimas.components.auth.UserRetrieval',
+        ':user_resolver': {'.string': {}},
+    },
+
+    {
+        '.processor.import_data': {},
+        'module_path': 'apimas.components.impexp.ImportData',
+    },
+
+    {
+        '.processor.instance_to_dict': {},
+        'module_path': 'apimas_django.processors.InstanceToDict',
+    },
+
+    {
+        '.processor.export_data': {},
+        'module_path': 'apimas.components.impexp.ExportData',
+    },
+
+    {
+        '.processor.filtering': {},
+        'module_path': 'apimas_django.filtering.Filtering',
+    },
+
+    {
+        '.processor.ordering': {},
+        'module_path': 'apimas_django.ordering.Ordering',
+    },
+
+    {
+        '.processor.object_retrieval': {},
+        'module_path': 'apimas_django.processors.ObjectRetrieval',
+    },
+
+    {
+        '.processor.create': {},
+        'module_path': 'apimas_django.handlers.CreateHandler',
+    },
+
+    {
+        '.processor.list': {},
+        'module_path': 'apimas_django.handlers.ListHandler',
+    },
+
+    {
+        '.processor.retrieve': {},
+        'module_path': 'apimas_django.handlers.RetrieveHandler',
+    },
+
+    {
+        '.processor.partial_update': {},
+        'module_path': 'apimas_django.handlers.PartialUpdateHandler',
+    },
+
+    {
+        '.processor.full_update': {},
+        'module_path': 'apimas_django.handlers.FullUpdateHandler',
+    },
+
+    {
+        '.processor.delete': {},
+        'module_path': 'apimas_django.handlers.DeleteHandler',
+    },
+
+    {
         '.action-template.django.create': {},
         'create': {
             'method': 'POST',
@@ -117,15 +193,15 @@ spec_list = [
             'read_permissions': 'retrieve',
             'url': '/',
             'pre': {
-                '1': 'apimas.components.auth.Authentication',
-                '2': 'apimas.components.auth.UserRetrieval',
-                '3': 'apimas.components.permissions.Permissions',
-                '4': 'apimas.components.impexp.ImportData',
+                '1': {'.processor.authentication': {}},
+                '2': {'.processor.user_retrieval': {}},
+                '3': {'.processor.permissions': {}},
+                '4': {'.processor.import_data': {}},
             },
-            'handler': 'apimas_django.handlers.CreateHandler',
+            'handler': {'.processor.create': {}},
             'post': {
-                '1': 'apimas_django.processors.InstanceToDict',
-                '2': 'apimas.components.impexp.ExportData'
+                '1': {'.processor.instance_to_dict': {}},
+                '2': {'.processor.export_data': {}},
             },
         },
     },
@@ -139,17 +215,17 @@ spec_list = [
             'on_collection': True,
             'url': '/',
             'pre': {
-                '1': 'apimas.components.auth.Authentication',
-                '2': 'apimas.components.auth.UserRetrieval',
-                '3': 'apimas.components.permissions.Permissions',
-                '4': 'apimas.components.impexp.ImportData',
+                '1': {'.processor.authentication': {}},
+                '2': {'.processor.user_retrieval': {}},
+                '3': {'.processor.permissions': {}},
+                '4': {'.processor.import_data': {}},
             },
-            'handler': 'apimas_django.handlers.ListHandler',
+            'handler': {'.processor.list': {}},
             'post': {
-                '1': 'apimas_django.filtering.Filtering',
-                '2': 'apimas_django.ordering.Ordering',
-                '3': 'apimas_django.processors.InstanceToDict',
-                '4': 'apimas.components.impexp.ExportData',
+                '1': {'.processor.filtering': {}},
+                '2': {'.processor.ordering': {}},
+                '3': {'.processor.instance_to_dict': {}},
+                '4': {'.processor.export_data': {}},
             }
         },
     },
@@ -163,15 +239,15 @@ spec_list = [
             'on_collection': False,
             'url': '/*/',
             'pre': {
-                '1': 'apimas.components.auth.Authentication',
-                '2': 'apimas.components.auth.UserRetrieval',
-                '3': 'apimas_django.processors.ObjectRetrieval',
-                '4': 'apimas.components.permissions.Permissions',
+                '1': {'.processor.authentication': {}},
+                '2': {'.processor.user_retrieval': {}},
+                '3': {'.processor.object_retrieval': {}},
+                '4': {'.processor.permissions': {}},
             },
-            'handler': 'apimas_django.handlers.RetrieveHandler',
+            'handler': {'.processor.retrieve': {}},
             'post': {
-                '1': 'apimas_django.processors.InstanceToDict',
-                '2': 'apimas.components.impexp.ExportData',
+                '1': {'.processor.instance_to_dict': {}},
+                '2': {'.processor.export_data': {}},
             }
         },
     },
@@ -186,16 +262,16 @@ spec_list = [
             'read_permissions': 'retrieve',
             'url': '/*/',
             'pre': {
-                '1': 'apimas.components.auth.Authentication',
-                '2': 'apimas.components.auth.UserRetrieval',
-                '3': 'apimas_django.processors.ObjectRetrieval',
-                '4': 'apimas.components.permissions.Permissions',
-                '5': 'apimas.components.impexp.ImportData',
+                '1': {'.processor.authentication': {}},
+                '2': {'.processor.user_retrieval': {}},
+                '3': {'.processor.object_retrieval': {}},
+                '4': {'.processor.permissions': {}},
+                '5': {'.processor.import_data': {}},
             },
-            'handler': 'apimas_django.handlers.PartialUpdateHandler',
+            'handler': {'.processor.partial_update': {}},
             'post': {
-                '1': 'apimas_django.processors.InstanceToDict',
-                '2': 'apimas.components.impexp.ExportData',
+                '1': {'.processor.instance_to_dict': {}},
+                '2': {'.processor.export_data': {}},
             },
         },
     },
@@ -210,16 +286,16 @@ spec_list = [
             'read_permissions': 'retrieve',
             'url': '/*/',
             'pre': {
-                '1': 'apimas.components.auth.Authentication',
-                '2': 'apimas.components.auth.UserRetrieval',
-                '3': 'apimas_django.processors.ObjectRetrieval',
-                '4': 'apimas.components.permissions.Permissions',
-                '5': 'apimas.components.impexp.ImportData',
+                '1': {'.processor.authentication': {}},
+                '2': {'.processor.user_retrieval': {}},
+                '3': {'.processor.object_retrieval': {}},
+                '4': {'.processor.permissions': {}},
+                '5': {'.processor.import_data': {}},
             },
-            'handler': 'apimas_django.handlers.FullUpdateHandler',
+            'handler': {'.processor.full_update': {}},
             'post': {
-                '1': 'apimas_django.processors.InstanceToDict',
-                '2': 'apimas.components.impexp.ExportData',
+                '1': {'.processor.instance_to_dict': {}},
+                '2': {'.processor.export_data': {}},
             },
         },
     },
@@ -233,12 +309,12 @@ spec_list = [
             'on_collection': False,
             'url': '/*/',
             'pre': {
-                '1': 'apimas.components.auth.Authentication',
-                '2': 'apimas.components.auth.UserRetrieval',
-                '3': 'apimas_django.processors.ObjectRetrieval',
-                '4': 'apimas.components.permissions.Permissions',
+                '1': {'.processor.authentication': {}},
+                '2': {'.processor.user_retrieval': {}},
+                '3': {'.processor.object_retrieval': {}},
+                '4': {'.processor.permissions': {}},
             },
-            'handler': 'apimas_django.handlers.DeleteHandler',
+            'handler': {'.processor.delete': {}},
         },
     }
 ]

@@ -185,15 +185,21 @@ def construct_processors(processors, spec):
     return artifacts
 
 
-def make_processor(processor, collection_loc, action_name, artifacts):
+def make_processor(processor_data, collection_loc, action_name, artifacts):
+    processor = processor_data['module_path']
+    config = processor_data['config']
     proc_spec, cls = artifacts[processor]
+
     collection_subspec = docular.doc_get(proc_spec, collection_loc)
     collection_values = docular.doc_spec_get(collection_subspec) or {}
+
     action_loc = collection_loc + ('actions', action_name)
     action_subspec = docular.doc_get(proc_spec, action_loc)
     action_values = docular.doc_spec_get(action_subspec) or {}
+
     arguments = dict(collection_values)
     arguments.update(action_values)
+    arguments.update(config)
     return cls(collection_loc, action_name, **arguments)
 
 
@@ -248,6 +254,18 @@ def mk_action_view(
         collection_path, action_url, action_name, status_code, content_type,
         handler, request_proc=pre_proc, response_proc=post_proc)
     return urlpattern, method, apimas_action
+
+
+def processor_constructor(instance, config):
+    value = {}
+    value['module_path'] = docular.doc_spec_get(instance['module_path'])
+    config_values = {}
+    for conf_key, conf_doc in config.iteritems():
+        if conf_key[-1] == '*':
+            continue
+        config_values[conf_key[1:]] = docular.doc_spec_get(conf_doc)
+    value['config'] = config_values
+    docular.doc_spec_set(instance, value)
 
 
 def endpoint_constructor(instance):
@@ -310,6 +328,7 @@ _CONSTRUCTORS = {
     '.boolean': construct_boolean,
     '.field.collection.django': collection_django_constructor,
     '.endpoint': endpoint_constructor,
+    '.processor': processor_constructor,
     '.string': construct_string,
 }
 

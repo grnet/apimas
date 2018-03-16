@@ -15,15 +15,14 @@ FIELD_ARGS = ['default']
 
 
 def converter_obj(cls, dependencies=None, extra_args=None):
-    def constructor(context, instance, loc, top_spec):
+    def constructor(context, instance, loc, top_spec, config):
         docular.construct_last(context)
         predicate = context['predicate']
 
         kwargs = docular.doc_spec_get(instance, default={}).get('args', {})
 
         for key in dependencies or []:
-            kwargs[key] = get_meta(top_spec, loc, key)
-
+            kwargs[key] = docular.doc_spec_get(config[':'+key])
 
         extra_check = extra_args or []
         for field_arg in FIELD_ARGS + extra_check:
@@ -61,7 +60,7 @@ def construct_string(instance, loc):
         instance['='] = str(instance['='])
 
 
-def list_constructor(context, instance, loc, top_spec):
+def list_constructor(context, instance, loc, top_spec, config):
     predicate = context['predicate']
 
     value = docular.doc_spec_get(instance, default={})
@@ -74,10 +73,10 @@ def list_constructor(context, instance, loc, top_spec):
 
     docular.doc_spec_set(instance, value)
     converter_obj(cnvs.List, dependencies=None)(
-        context, instance, loc, top_spec)
+        context, instance, loc, top_spec, config)
 
 
-def field_struct_constructor(context, instance, loc, top_spec):
+def field_struct_constructor(context, instance, loc, top_spec, config):
     value = docular.doc_spec_get(instance, default={})
     args = value.get('args', {})
 
@@ -87,7 +86,7 @@ def field_struct_constructor(context, instance, loc, top_spec):
 
     docular.doc_spec_set(instance, value)
     converter_obj(cnvs.Struct, dependencies=None)(
-        context, instance, loc, top_spec)
+        context, instance, loc, top_spec, config)
 
 
 def construct_action(instance):

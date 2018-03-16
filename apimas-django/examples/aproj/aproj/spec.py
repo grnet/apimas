@@ -1,20 +1,20 @@
 DEPLOY_CONFIG = {
-    ".meta": {"root_url": "http://127.0.0.1:8000/"},
+    ":root_url": "http://127.0.0.1:8000/",
 }
 
 APP_CONFIG = {
     ".apimas_app": {},
-    ".meta": {"permission_rules": "anapp.rules.get_rules"},
+    ":permission_rules": "anapp.rules.get_rules",
     'endpoints': {
         "api/prefix": {
             "collections": {
                 "posts": {
                     ".field.collection.django": {},
-                    "auth": {
-                        "authenticator": "apimas.auth.TokenAuthentication",
-                        "verifier": "anapp.auth.token_verifier",
-                        "user_resolver": "anapp.auth.user_resolver"
-                    },
+
+                    ":authenticator": "apimas.auth.TokenAuthentication",
+                    ":verifier": "anapp.auth.token_verifier",
+                    ":user_resolver": "anapp.auth.user_resolver",
+
                     "model": "anapp.models.Post",
                     "actions": {
                         '.action-template.django.list': {},

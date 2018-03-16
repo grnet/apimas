@@ -7,6 +7,11 @@ def no_constructor(instance):
     pass
 
 
+def processor_constructor(instance):
+    module_path = docular.doc_spec_get(instance['module_path'])
+    docular.doc_spec_set(instance, module_path)
+
+
 def action_constructor(instance):
     v = set()
     preprocessors = dict(docular.doc_spec_iter_values(instance.get('pre', {}))).values()
@@ -52,6 +57,7 @@ def app_constructor(instance):
 
 COLLECT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
     {'.action': action_constructor,
+     '.processor': processor_constructor,
      '.field.collection.*': collection_constructor,
      '.endpoint': endpoint_constructor,
      '.apimas_app': app_constructor,
