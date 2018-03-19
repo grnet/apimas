@@ -21,9 +21,8 @@ class DjangoWrapper(object):
     It is initialized with a dict of actions which are mapped to the
     same url pattern but they use a different HTTP method.
     """
-    def __init__(self, actions, meta):
+    def __init__(self, actions):
         self.actions = actions
-        self.meta = meta
 
     def get_headers(self, request):
         """
@@ -140,7 +139,7 @@ class DjangoWrapper(object):
             'headers': headers,
             'kwargs': kwargs,
         }
-        meta.update(self.meta)
+
         return {
             'content': data,
             'native': request,

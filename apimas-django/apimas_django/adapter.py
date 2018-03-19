@@ -280,7 +280,7 @@ def endpoint_constructor(instance):
 def mk_django_urls(action_urls):
     urls = []
     for urlpattern, method_actions in action_urls.iteritems():
-        django_view = DjangoWrapper(method_actions, {})
+        django_view = DjangoWrapper(method_actions)
         methods = method_actions.keys()
         http_methods = require_http_methods(methods)
         django_view = csrf_exempt(http_methods(django_view))
