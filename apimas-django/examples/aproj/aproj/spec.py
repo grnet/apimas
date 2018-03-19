@@ -48,6 +48,19 @@ APP_CONFIG = {
                         "active": {".field.boolean": {},
                                    "default": True,
                                    ".flag.orderable": {}},
+                        "category": {".field.choices": {},
+                                     "allowed": {
+                                         '=': ["Institution", "Research"]},
+                                     "displayed": {
+                                     '=': ["Institution", "Research Center"]},
+                                     "default": "Research"},
+                        "category_raw": {
+                            ".field.choices": {},
+                            ".flag.readonly": {},
+                            "source": "category",
+                            "allowed": {
+                                '=': ["Institution", "Research"]},
+                        },
                         "logo": {'.field.file': {},
                                  '.flag.nullable': {},
                                  'default': {'=': None}},

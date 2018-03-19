@@ -341,27 +341,29 @@ class Choices(DataConverter):
         >>> field.serialize('foo')
         'foo_displayed'
     """
-    ERROR_MESSAGE = 'Given value must be one of [{allowed!s}]'
+    ERROR_MESSAGE = 'Given value must be one of [{values!s}]'
 
     def __init__(self, allowed, displayed=None, **kwargs):
         self.allowed = allowed
         self.displayed = displayed or allowed
 
         assert len(self.allowed) == len(self.displayed)
-        self._values_map = {k: displayed[i]
-                            for i, k in enumerate(self.allowed)}
+        self.to_native = dict(zip(self.displayed, self.allowed))
+        self.from_native = dict(zip(self.allowed, self.displayed))
         super(Choices, self).__init__(**kwargs)
 
     def get_repr_value(self, value, permissions, flat):
-        value = self._values_map.get(value, value)
-        if value not in self.displayed:
-            msg = self.ERROR_MESSAGE.format(allowed=','.join(self.allowed))
+        try:
+            return self.from_native[value]
+        except KeyError:
+            msg = self.ERROR_MESSAGE.format(values=','.join(self.allowed))
             raise ValidationError(msg)
-        return value
 
     def get_native_value(self, value, permissions, flat):
-        if value not in self.allowed:
-            msg = self.ERROR_MESSAGE.format(allowed=','.join(self.allowed))
+        try:
+            return self.to_native[value]
+        except KeyError:
+            msg = self.ERROR_MESSAGE.format(values=','.join(self.displayed))
             raise ValidationError(msg)
         return value
 

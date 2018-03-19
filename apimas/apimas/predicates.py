@@ -51,6 +51,10 @@ spec_list = [
     {'.field.date': {}},
     {'.field.file': {}},
 
+    {'.field.choices': {},
+     'allowed': {},
+     'displayed': {}},
+
     {
         '.field.struct': {},
         'fields': {'*': {'.field.*': {}}},

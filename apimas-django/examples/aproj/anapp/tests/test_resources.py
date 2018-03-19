@@ -123,6 +123,29 @@ def test_update(client):
     assert inst['active'] == True  # default value
 
 
+def test_choices(client):
+    api = client.copy(prefix='/api/prefix/')
+
+    data = {'name': 'inst1', 'category': 'other'}
+    resp = api.post('institutions', data)
+    assert resp.status_code == 400
+
+    data = {'name': 'inst1', 'category': 'Research'}
+    resp = api.post('institutions', data)
+    assert resp.status_code == 400
+
+    data = {'name': 'inst1', 'category': 'Research Center'}
+    resp = api.post('institutions', data)
+    assert resp.status_code == 201
+    inst = resp.json()
+    inst_id = inst['id']
+    assert inst['category'] == 'Research Center'
+    assert inst['category_raw'] == 'Research'
+
+    inst1 = models.Institution.objects.get(id=inst_id)
+    assert inst1.category == 'Research'
+
+
 def test_files(client):
     api = client.copy(prefix='/api/prefix/')
     models.Institution.objects.create(name='aaa', active=True)

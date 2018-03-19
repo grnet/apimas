@@ -111,6 +111,8 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.field.datetime': converter_obj(cnvs.DateTime),
     '.field.date': converter_obj(cnvs.Date),
     '.field.file': converter_obj(cnvs.File),
+    '.field.choices': converter_obj(
+        cnvs.Choices, extra_args=['allowed', 'displayed']),
 
     '.flag.*': no_constructor,
     '.flag.readonly': cerberus_flag('readonly'),
@@ -122,9 +124,6 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     # _CONSTRUCTORS = {
     #     'ref':        Object(cnvs.Ref, kwargs_spec=True, kwargs_instance=True,
     #                          last=True, post_hook=_post_hook),
-    #     'choices':    Object(cnvs.Choices, kwargs_spec=True,
-    #                          kwargs_instance=True, last=True,
-    #                          post_hook=_post_hook),
     #     'file':       Object(cnvs.File, kwargs_spec=True, kwargs_instance=True,
     #                          last=True, post_hook=_post_hook),
     #     'readonly':   Flag('readonly'),

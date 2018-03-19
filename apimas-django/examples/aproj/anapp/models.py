@@ -1,9 +1,15 @@
 from django.db import models
 
+INSTITUTION_CATEGORIES = [
+    ["Institution", "Institution"],
+    ["Research", "Research Center"]
+]
 
 class Institution(models.Model):
     name = models.TextField()
     active = models.BooleanField()
+    category = models.CharField(
+        choices=INSTITUTION_CATEGORIES, max_length=100, default='Research')
     logo = models.FileField(upload_to='logos/', null=True)
 
 
