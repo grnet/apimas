@@ -10,7 +10,7 @@ from apimas.tabmatch import Tabmatch
 from apimas.errors import (InvalidInput, ConflictError, AdapterError,
                            InvalidSpec)
 from apimas.adapters.actions import ApimasAction
-from apimas_django.wrapper import DjangoWrapper
+from apimas_django.wrapper import django_views
 from apimas_django.testing import TestCase
 from apimas_django.predicates import PREDICATES
 from apimas_django.collect_construction import collect_processors
@@ -280,7 +280,7 @@ def endpoint_constructor(instance):
 def mk_django_urls(action_urls):
     urls = []
     for urlpattern, method_actions in action_urls.iteritems():
-        django_view = DjangoWrapper(method_actions)
+        django_view = django_views(method_actions)
         methods = method_actions.keys()
         http_methods = require_http_methods(methods)
         django_view = csrf_exempt(http_methods(django_view))
