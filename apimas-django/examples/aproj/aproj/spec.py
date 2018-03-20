@@ -40,6 +40,7 @@ APP_CONFIG = {
                         '.action-template.django.create': {},
                         '.action-template.django.partial_update': {},
                         '.action-template.django.update': {},
+                        '.action-template.django.delete': {},
                     },
                     "fields": {
                         "id": {".field.serial": {}},

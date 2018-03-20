@@ -7,6 +7,7 @@ RULES = [
     ('api/prefix/institutions', 'create', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'partial_update', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'update', '*', '*', '*', '*'),
+    ('api/prefix/institutions', 'delete', '*', '*', '*', '*'),
 
     ('api/prefix/groups', 'list', '*', '*', '*', '*'),
 #    ('api/prefix/groups', 'list', '*', 'users/username', '*', '*'),

@@ -1,9 +1,9 @@
-from django.db.models import Model
+from django.db.models import Model, ProtectedError
 from django.db.models.query import QuerySet
 from apimas import utils
 from apimas_django import utils as django_utils
 from apimas.components import BaseProcessor, ProcessorConstruction
-from apimas.errors import ValidationError
+from apimas.errors import ValidationError, AccessDeniedError
 import docular
 
 
@@ -349,7 +349,7 @@ def delete_subcollection(key, spec):
     assert bound_name is not None
     flt = {bound_name: key}
     print "DELETING for", flt
-    model.objects.filter(**flt).delete()
+    delete_queryset(model.objects.filter(**flt))
 
 
 def update_subcollections(spec, data, full, instance):
@@ -410,12 +410,26 @@ def update_resource(name, spec, data, full, instance):
 
     if data is None:
         print "DELETING instance", instance
-        instance.delete()
+        delete_instance(instance)
         return None
 
     update_subcollections(spec, data, full, instance)
     precreated = update_substructs(spec, data, full, instance)
     return do_update(spec, data, instance, full, precreated)
+
+
+def delete_instance(instance):
+    try:
+        instance.delete()
+    except ProtectedError:
+        raise AccessDeniedError('Deleting this resource is forbidden')
+
+
+def delete_queryset(queryset):
+    try:
+        queryset.delete()
+    except ProtectedError:
+        raise AccessDeniedError('Deleting these resources is forbidden')
 
 
 class CreateHandlerProcessor(DjangoBaseHandler):
@@ -563,7 +577,7 @@ class DeleteHandlerProcessor(RetrieveHandlerProcessor):
     def execute(self, context_data):
         """ Deletes an existing model instance. """
         (instance,) = RetrieveHandlerProcessor.execute(self, context_data)
-        instance.delete()
+        delete_instance(instance)
         return None
 
 

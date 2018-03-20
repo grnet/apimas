@@ -18,7 +18,8 @@ class Group(models.Model):
     founded = models.DateField()
     active = models.BooleanField()
     email = models.CharField(max_length=100)
-    institution = models.ForeignKey(Institution, null=True)
+    institution = models.ForeignKey(
+        Institution, null=True, on_delete=models.PROTECT)
 
 
 class Variants(models.Model):

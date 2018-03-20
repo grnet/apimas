@@ -162,6 +162,29 @@ def test_update(client):
     assert inst['active'] == True  # default value
 
 
+def test_delete(client):
+    api = client.copy(prefix='/api/prefix/')
+    inst1 = models.Institution.objects.create(name='inst1', active=True)
+    inst2 = models.Institution.objects.create(name='inst2', active=True)
+    gr = models.Group.objects.create(
+        name='gr1', founded=datetime.now(), active=True,
+        email='group1@example.com', institution=inst2)
+
+    resp = api.get('institutions')
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+    resp = api.delete('institutions/%s/' % inst1.id)
+    assert resp.status_code == 204
+
+    resp = api.delete('institutions/%s/' % inst2.id)
+    assert resp.status_code == 403
+
+    resp = api.get('institutions')
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+
 def test_choices(client):
     api = client.copy(prefix='/api/prefix/')
 
