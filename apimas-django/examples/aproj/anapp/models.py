@@ -10,7 +10,7 @@ class Institution(models.Model):
     active = models.BooleanField()
     category = models.CharField(
         choices=INSTITUTION_CATEGORIES, max_length=100, default='Research')
-    logo = models.FileField(upload_to='logos/', null=True)
+    logo = models.FileField(upload_to='logos/')
 
 
 class Group(models.Model):

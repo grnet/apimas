@@ -214,7 +214,7 @@ def test_files(client):
 
     resp = api.get('institutions/1')
     assert resp.status_code == 200
-    assert resp.json()['logo'] is None
+    assert resp.json()['logo'] == ''
 
     logo = SimpleUploadedFile('logo1.png', 'logodata')
     resp = api.patch('institutions/1',

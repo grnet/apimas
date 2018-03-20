@@ -63,8 +63,7 @@ APP_CONFIG = {
                                 '=': ["Institution", "Research"]},
                         },
                         "logo": {'.field.file': {},
-                                 '.flag.nullable': {},
-                                 'default': {'=': None}},
+                                 'default': ''},
                     }
                 },
                 "groups": {
