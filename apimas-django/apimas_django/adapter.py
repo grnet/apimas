@@ -260,10 +260,8 @@ def processor_constructor(instance, config):
     value = {}
     value['module_path'] = docular.doc_spec_get(instance['module_path'])
     config_values = {}
-    for conf_key, conf_doc in config.iteritems():
-        if conf_key[-1] == '*':
-            continue
-        config_values[conf_key[1:]] = docular.doc_spec_get(conf_doc)
+    for conf_key, conf_value in docular.doc_spec_iter_values(config):
+        config_values[conf_key[1:]] = conf_value
     value['config'] = config_values
     docular.doc_spec_set(instance, value)
 
