@@ -15,6 +15,7 @@ spec_list = [
     {'.flag.nullable': {}},
     {'.flag.filterable': {}},
     {'.flag.orderable': {}},
+    {'.flag.searchable': {}},
 
     {
         '.field.*': {},

@@ -184,11 +184,10 @@ class ImportDataProcessor(ImportExportData):
         'imported_content': 'imported/content',
         'imported_filters': 'imported/filters',
         'imported_ordering': 'imported/ordering',
+        'imported_search': 'imported/search',
     }
 
     def process_filters(self, filters, can_read_fields):
-        if not filters:
-            return {}
         filter_data = {}
         operators = {}
         for param, value in filters.iteritems():
@@ -208,8 +207,6 @@ class ImportDataProcessor(ImportExportData):
 
     def process_ordering(self, ordering_param, can_read_fields):
         results = []
-        if not ordering_param:
-            return results
         orderings = ordering_param.split(',')
         for ordering in orderings:
             if ordering.startswith('-'):
@@ -225,13 +222,21 @@ class ImportDataProcessor(ImportExportData):
             results.append((path, reverse))
         return results
 
+    def process_search(self, search_value):
+        return cnvs.String().import_data(search_value, permissions=True)
+
     def process_parameters(self, context_data):
         parameters = context_data['parameters']
         filters = {}
         ordering = None
+        search = None
         for param, value in parameters.iteritems():
             if param == 'ordering':
                 ordering = value
+                continue
+
+            if param == 'search':
+                search = value
                 continue
 
             parts = param.split('__', 1)
@@ -241,13 +246,15 @@ class ImportDataProcessor(ImportExportData):
                 filters[parts[1]] = value
 
         read_fields = context_data['read_fields']
-        imported_filters = self.process_filters(filters, read_fields)
-        imported_ordering = self.process_ordering(ordering, read_fields)
         result = {}
-        if imported_filters:
-            result['imported_filters'] = imported_filters
-        if imported_ordering:
-            result['imported_ordering'] = imported_ordering
+        if filters:
+            result['imported_filters'] = self.process_filters(
+                filters, read_fields)
+        if ordering:
+            result['imported_ordering'] = self.process_ordering(
+                ordering, read_fields)
+        if search:
+            result['imported_search'] = self.process_search(search)
 
         return result
 

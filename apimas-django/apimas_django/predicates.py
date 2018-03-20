@@ -24,6 +24,11 @@ spec_list = [
     },
 
     {
+        '.processor.search': {},
+        'module_path': 'apimas_django.search.Search',
+    },
+
+    {
         '.processor.object_retrieval': {},
         'module_path': 'apimas_django.processors.ObjectRetrieval',
     },
@@ -98,9 +103,10 @@ spec_list = [
             'handler': {'.processor.list': {}},
             'post': {
                 '1': {'.processor.filtering': {}},
-                '2': {'.processor.ordering': {}},
-                '3': {'.processor.instance_to_dict': {}},
-                '4': {'.processor.export_data': {}},
+                '2': {'.processor.search': {}},
+                '3': {'.processor.ordering': {}},
+                '4': {'.processor.instance_to_dict': {}},
+                '5': {'.processor.export_data': {}},
             }
         },
     },

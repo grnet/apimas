@@ -1,6 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from apimas_django.test import *
 from anapp import models
+from datetime import datetime
 
 pytestmark = pytest.mark.django_db(transaction=False)
 
@@ -99,6 +100,44 @@ def test_orderable(client):
     assert cleaned[0] == insts[2]
     assert cleaned[1] == insts[0]
     assert cleaned[2] == insts[1]
+
+
+def test_search(client):
+    api = client.copy(prefix='/api/prefix/')
+    inst = models.Institution.objects.create(name='inst1', active=True)
+    gr = models.Group.objects.create(
+        name='gr1', founded=datetime.now(), active=True,
+        email='group1@example.com', institution=inst)
+
+    data = {'onoma': 'Georgios', 'age': 22,
+            'variants': {'en': 'George', 'el': 'Giorgos'}}
+    resp = api.post('groups/%s/users' % gr.id, data)
+    assert resp.status_code == 201
+
+    data = {'onoma': 'Georgia', 'age': 22,
+            'variants': {'en': 'Georgia', 'el': 'Giorgia'}}
+    resp = api.post('groups/%s/users' % gr.id, data)
+    assert resp.status_code == 201
+
+    resp = api.get('groups/%s/users' % gr.id, {'search': 'nonex'})
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+    resp = api.get('groups/%s/users' % gr.id, {'search': 'Georg'})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+    resp = api.get('groups/%s/users' % gr.id, {'search': 'Georgios'})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    resp = api.get('groups/%s/users' % gr.id, {'search': 'Giorgos'})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    resp = api.get('groups', {'search': 'Georg'})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
 
 
 def test_update(client):

@@ -107,6 +107,7 @@ APP_CONFIG = {
                                 'id': {'.field.serial': {}},
                                 'onoma': {'.field.string': {},
                                           '.flag.filterable': {},
+                                          '.flag.searchable': {},
                                           '.flag.orderable': {},
                                           'source': 'username'},
                                 "variants": {
@@ -116,9 +117,11 @@ APP_CONFIG = {
                                     "source": "name_variants",
                                     "fields": {
                                         "en": {".field.string": {},
+                                               '.flag.searchable': {},
                                                '.flag.filterable': {},
                                                '.flag.orderable': {}},
-                                        "el": {".field.string": {}},
+                                        "el": {".field.string": {},
+                                               '.flag.searchable': {}},
                                     },
                                 },
                                 'age': {'.field.integer': {}},
