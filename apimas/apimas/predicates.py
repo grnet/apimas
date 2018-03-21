@@ -124,6 +124,7 @@ spec_list = [
     {
         '.processor.import_data': {},
         'module_path': 'apimas.components.impexp.ImportData',
+        ':filter_compat': {'.boolean': {}},
     },
 
     {

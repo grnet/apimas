@@ -1,7 +1,7 @@
 import docular
 from apimas import converters as cnvs
 from apimas import documents as doc
-from apimas.errors import AccessDeniedError
+from apimas.errors import AccessDeniedError, ValidationError
 from apimas.components import BaseProcessor, ProcessorConstruction
 
 
@@ -187,13 +187,23 @@ class ImportDataProcessor(ImportExportData):
         'imported_search': 'imported/search',
     }
 
-    def process_filters(self, filters, can_read_fields):
+    def __init__(self, collection_loc, action_name, filter_compat=False,
+                 **kwargs):
+        self.filter_compat = filter_compat
+        ImportExportData.__init__(self, collection_loc, action_name, **kwargs)
+
+    def process_filters(self, filters, can_read_fields, compat=False):
         filter_data = {}
         operators = {}
         for param, value in filters.iteritems():
-            parts = param.rsplit('__', 1)
-            operator = parts[1] if len(parts) == 2 else None
-            path = parts[0].split('.')
+            if compat:
+                path = param.split('__')
+                operator = None
+            else:
+                parts = param.rsplit('__', 1)
+                operator = parts[1] if len(parts) == 2 else None
+                path = parts[0].split('.')
+
             docular.doc_set(operators, path, operator)
             docular.doc_set(filter_data, path, value)
 
@@ -239,17 +249,24 @@ class ImportDataProcessor(ImportExportData):
                 search = value
                 continue
 
-            parts = param.split('__', 1)
-            if len(parts) != 2:
-                continue
-            if parts[0] == 'flt':
-                filters[parts[1]] = value
+            if self.filter_compat:
+                filters[param] = value
+            else:
+                parts = param.split('__', 1)
+                if len(parts) != 2:
+                    raise ValidationError(
+                        "Unrecognized parameter '%s'" % param)
+                if parts[0] == 'flt':
+                    filters[parts[1]] = value
+                else:
+                    raise ValidationError(
+                        "Unrecognized parameter '%s'" % param)
 
         read_fields = context_data['read_fields']
         result = {}
         if filters:
             result['imported_filters'] = self.process_filters(
-                filters, read_fields)
+                filters, read_fields, self.filter_compat)
         if ordering:
             result['imported_ordering'] = self.process_ordering(
                 ordering, read_fields)

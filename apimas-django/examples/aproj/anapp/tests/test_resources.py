@@ -102,6 +102,83 @@ def test_orderable(client):
     assert cleaned[2] == insts[1]
 
 
+def test_filter(client):
+    api = client.copy(prefix='/api/prefix/')
+    inst = models.Institution.objects.create(name='inst1', active=True)
+    gr = models.Group.objects.create(
+        name='gr1', founded=datetime.now(), active=True,
+        email='group1@example.com', institution=inst)
+
+    gr2 = models.Group.objects.create(
+        name='gr2', founded=datetime.now(), active=False,
+        email='group2@example.com', institution=inst)
+
+    data = {'onoma': 'Georgios', 'age': 22,
+            'variants': {'en': 'George', 'el': 'Giorgos'}}
+    resp = api.post('groups/%s/users' % gr.id, data)
+    assert resp.status_code == 201
+
+    data = {'onoma': 'Georgia', 'age': 22,
+            'variants': {'en': 'Georgia', 'el': 'Giorgia'}}
+    resp = api.post('groups/%s/users' % gr.id, data)
+    assert resp.status_code == 201
+
+    data = {'onoma': 'Konstantinos', 'age': 33,
+            'variants': {'en': 'Constantine', 'el': 'Kostas'}}
+    resp = api.post('groups/%s/users' % gr.id, data)
+    assert resp.status_code == 201
+
+    resp = api.get('groups', {'institution_id': 1})
+    assert resp.status_code == 400
+    assert 'Unrecognized parameter' in resp.json()['details']
+
+    resp = api.get('groups', {'flt__institution_id': 1})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+    resp = api.get('groups', {'flt__active': True, 'flt__institution_id': 1})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    resp = api.get('groups', {'flt__active': True, 'flt__institution_id': 2})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 0
+
+    resp = api.get('groups', {'flt__users.onoma': 'Georg'})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 0
+
+    resp = api.get('groups', {'flt__users.onoma__startswith': 'Georg'})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    # Using filter_compat = True
+    users_path = 'groups/%s/users' % gr.id
+
+    resp = api.get(users_path, {'flt__onoma': 'Georg'})
+    assert resp.status_code == 403
+
+    resp = api.get(users_path, {'onoma': 'Georg'})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 0
+
+    resp = api.get(users_path, {'onoma': 'Georgios'})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    resp = api.get(users_path, {'age': 22, 'variants__en': 'George'})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    resp = api.get(users_path, {'age': 22})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+    resp = api.get(users_path)
+    assert resp.status_code == 200
+    assert len(resp.json()) == 3
+
+
 def test_search(client):
     api = client.copy(prefix='/api/prefix/')
     inst = models.Institution.objects.create(name='inst1', active=True)

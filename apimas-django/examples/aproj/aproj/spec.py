@@ -109,6 +109,7 @@ APP_CONFIG = {
                                            "to": "api/prefix/institutions"},
                         "users": {
                             '.field.collection.django': {},
+                            ':filter_compat': True,
                             'model': 'anapp.models.User',
                             'source': 'users',
                             'bound': 'group',
@@ -140,7 +141,8 @@ APP_CONFIG = {
                                                '.flag.searchable': {}},
                                     },
                                 },
-                                'age': {'.field.integer': {}},
+                                'age': {'.field.integer': {},
+                                        '.flag.filterable': {}},
 
                         #         'emails': {
                         #             '.field.collection.django': {},
