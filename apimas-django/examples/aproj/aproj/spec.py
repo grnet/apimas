@@ -104,6 +104,10 @@ GROUPS = {
         "institution_id": {".field.ref": {},
                            '.flag.filterable': {},
                            "to": "api/prefix/institutions"},
+        'institution': {
+            '.field.struct': {},
+            '.flag.readonly': {},
+            'fields': INSTITUTIONS['fields']},
         "users": {
             '.field.collection.django': {},
             ':filter_compat': True,

@@ -323,14 +323,15 @@ def create_substructs(spec, data):
         subspec['model'] = struct_model
         subdata = data.get(subname, Nothing)
         struct_instance = create_resource(subname, subspec, subdata)
-        created[subsource] = struct_instance
+        if struct_instance is not Nothing:
+            created[subsource] = struct_instance
     return created
 
 
 def create_resource(name, spec, data, key=None):
     data = check_write_flags(name, spec, data)
     if data is Nothing:
-        raise ValidationError("'%s': Nothing to create" % name)
+        return Nothing
 
     if data is None:
         return None
@@ -375,7 +376,8 @@ def update_substructs(spec, data, full, instance):
         subinstance = getattr(instance, subsource)
         if subinstance is None:
             struct_instance = create_resource(subname, subspec, subdata)
-            created[subsource] = struct_instance
+            if struct_instance is not Nothing:
+                created[subsource] = struct_instance
         else:
             struct_instance = update_resource(
                 subname, subspec, subdata, full, subinstance)

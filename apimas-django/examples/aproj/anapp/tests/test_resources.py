@@ -217,6 +217,71 @@ def test_search(client):
     assert len(resp.json()) == 1
 
 
+def test_subelements(client):
+    api = client.copy(prefix='/api/prefix/')
+    inst_obj = models.Institution.objects.create(name='inst', active=True)
+    inst_id = inst_obj.id
+
+    resp = api.get('institutions/%s' % inst_id)
+    assert resp.status_code == 200
+    inst = resp.json()
+
+    data = {
+        'name': 'users',
+        'founded': '2014-12-31',
+        'active': True,
+        'institution_id': inst_id,
+        'institution': {'name': 'one'},
+        'email': 'email@example.com',
+        'users': [{'onoma': 'Georgios', 'age': 22,
+                   'variants': {'el': 'Giorgos', 'en': 'George'}}],
+    }
+    resp = api.post('groups', data)
+    assert resp.status_code == 400
+    assert 'readonly' in resp.json()['details']
+
+    data.pop('institution')
+    resp = api.post('groups', data)
+    assert resp.status_code == 201
+    body = resp.json()
+    group_id = body['id']
+    assert body['institution'] == inst
+    users = body['users']
+    assert len(users) == 1
+    assert users[0]['onoma'] == 'Georgios'
+    user_id = users[0]['id']
+
+    data = {
+        'email': 'other@example.com',
+        'users': [{'onoma': 'Georgios', 'age': 22,
+                   'variants': {'el': 'Giorgos', 'en': 'George'}}],
+    }
+
+    group_path = 'groups/%s' % group_id
+    resp = api.patch(group_path, data)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body['email'] == 'other@example.com'
+    users = body['users']
+    assert len(users) == 1
+    assert users[0]['onoma'] == 'Georgios'
+    new_user_id = users[0]['id']
+    assert new_user_id > user_id
+    assert not models.User.objects.filter(id=user_id).exists()
+
+    name_variants_id = models.User.objects.get(id=new_user_id).name_variants_id
+    user_path = group_path + '/users/%s' % new_user_id
+    data = {'onoma': 'Georgia', 'variants': {'el': 'Giorgia', 'en': 'Georgia'}}
+    resp = api.patch(user_path, data)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body['variants']['el'] == 'Giorgia'
+    new_name_variants_id = models.User.objects.get(
+        id=new_user_id).name_variants_id
+
+    assert name_variants_id == new_name_variants_id
+
+
 def test_update(client):
     api = client.copy(prefix='/api/prefix/')
     models.Institution.objects.create(name='aaa', active=True)
