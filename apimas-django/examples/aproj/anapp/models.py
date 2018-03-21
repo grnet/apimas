@@ -42,3 +42,8 @@ class Email(models.Model):
 class Post(models.Model):
     title = models.TextField()
     body = models.TextField()
+
+
+class Nulltest(models.Model):
+    fdef = models.IntegerField(null=True)
+    fnodef = models.IntegerField(null=True)

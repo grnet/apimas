@@ -12,7 +12,11 @@ spec_list = [
 
     {'.flag.*': {}},
     {'.flag.readonly': {}},
-    {'.flag.nullable': {}},
+    {'.flag.nullable.*': {}},
+
+    {'.flag.nullable.default': {},
+     'default': {'=': None}},
+
     {'.flag.filterable': {}},
     {'.flag.orderable': {}},
     {'.flag.searchable': {}},

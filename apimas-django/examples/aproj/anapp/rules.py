@@ -40,14 +40,14 @@ RULES = [
     ('api/prefix/groups/users', 'partial_update_response', '*', '*', '*', '*'),
     ('api/prefix/groups/users', 'delete', '*', '*', '*', '*'),
 
-    ('*', 'retrieve', '*', 'url', '*', '*'),
-    ('*', 'retrieve', '*', 'name', '*', '*'),
-    ('*', 'create', '*', '*', '*', '*'),
-
     ('api/prefix/posts', 'list', '*', '*', '*', '*'),
     ('api/prefix/posts', 'create', 'admin', '*', '*', '*'),
     ('api/prefix/posts', 'create_response', 'admin', '*', '*', '*'),
     ('api/prefix/posts', 'retrieve', '*', '*', '*', '*'),
+
+    ('api/prefix/nulltest', 'create', '*', '*', '*', '*'),
+    ('api/prefix/nulltest', 'retrieve', '*', '*', '*', '*'),
+
 ]
 
 def get_rules():

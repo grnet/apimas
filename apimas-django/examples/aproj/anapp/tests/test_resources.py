@@ -223,3 +223,23 @@ def test_files(client):
 
     assert resp.status_code == 200
     assert resp.json()['logo'].startswith('logos/logo1')
+
+
+def test_nullable(client):
+    api = client.copy(prefix='/api/prefix/')
+    data = {}
+    resp = api.post('nulltest', data)
+    assert resp.status_code == 400
+    assert 'fnodef' in resp.json()['details']
+
+    data = {'fdef': 4}
+    resp = api.post('nulltest', data)
+    assert resp.status_code == 400
+    assert 'fnodef' in resp.json()['details']
+
+    data = {'fnodef': 4}
+    resp = api.post('nulltest', data)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body['fdef'] is None
+    assert body['fnodef'] == 4

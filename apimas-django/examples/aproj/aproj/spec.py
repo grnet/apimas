@@ -31,6 +31,22 @@ APP_CONFIG = {
                         "body": {".field.string": {}}
                     }
                 },
+                'nulltest': {
+                    '.field.collection.django': {},
+                    'model': 'anapp.models.Nulltest',
+                    "actions": {
+                        '.action-template.django.list': {},
+                        '.action-template.django.create': {},
+                        '.action-template.django.retrieve': {},
+                    },
+                    'fields': {
+                        "id": {".field.serial": {}},
+                        'fdef': {'.field.integer': {},
+                                 '.flag.nullable.default': {}},
+                        'fnodef': {'.field.integer': {},
+                                   '.flag.nullable': {}},
+                    },
+                },
                 "institutions": {
                     ".field.collection.django": {},
                     "model": "anapp.models.Institution",
