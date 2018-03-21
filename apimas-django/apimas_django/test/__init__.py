@@ -33,15 +33,12 @@ class Client(DjangoClient):
         self.defaults['HTTP_AUTHORIZATION'] = 'Token {}'.format(token)
 
     def _encode_data(self, data, content_type):
-        req_data = None
-        if data:
-            if content_type == JSON:
-                # apimas override for common json requests
-                req_data = json.dumps(data)
-            else:
-                # multipart handling
-                req_data = super(Client, self)._encode_data(data, content_type)
-        return req_data
+        if content_type == JSON:
+            # apimas override for common json requests
+            return json.dumps(data)
+        else:
+            # multipart handling
+            return super(Client, self)._encode_data(data, content_type)
 
     def post(self, path, data=None, content_type=JSON, **kwargs):
         # DjangoClient calls _encode_data for post requests
