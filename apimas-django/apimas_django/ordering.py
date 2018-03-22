@@ -102,6 +102,9 @@ class OrderingProcessor(BaseProcessor):
             source = self.get_ordering_source(ordering_path)
             orderings.append('%s%s' % ('-' if reverse else '', source))
 
+        # Ensure we always have a total order
+        orderings.append('pk')
+
         if orderings:
             queryset = queryset.order_by(*orderings)
         return (queryset,)

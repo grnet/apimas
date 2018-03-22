@@ -8,6 +8,7 @@ POSTS = {
     ":authenticator": "apimas.auth.TokenAuthentication",
     ":verifier": "anapp.auth.token_verifier",
     ":user_resolver": "anapp.auth.user_resolver",
+    ":pagination_default_limit": 5,
 
     "model": "anapp.models.Post",
     "actions": {

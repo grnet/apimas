@@ -167,6 +167,10 @@ def path_exists(doc, path):
     return not feed
 
 
+def import_integer(value):
+    return cnvs.Integer().import_data(value, permissions=True)
+
+
 class ImportDataProcessor(ImportExportData):
     """
     Processor responsible for the deserialization of data.
@@ -185,6 +189,7 @@ class ImportDataProcessor(ImportExportData):
         'imported_filters': 'imported/filters',
         'imported_ordering': 'imported/ordering',
         'imported_search': 'imported/search',
+        'imported_pagination': 'imported/pagination',
     }
 
     def __init__(self, collection_loc, action_name, filter_compat=False,
@@ -240,6 +245,8 @@ class ImportDataProcessor(ImportExportData):
         filters = {}
         ordering = None
         search = None
+        pagination_offset = None
+        pagination_limit = None
         for param, value in parameters.iteritems():
             if param == 'ordering':
                 ordering = value
@@ -247,6 +254,14 @@ class ImportDataProcessor(ImportExportData):
 
             if param == 'search':
                 search = value
+                continue
+
+            if param == 'offset':
+                pagination_offset = import_integer(value)
+                continue
+
+            if param == 'limit':
+                pagination_limit = import_integer(value)
                 continue
 
             if self.filter_compat:
@@ -272,6 +287,9 @@ class ImportDataProcessor(ImportExportData):
                 ordering, read_fields)
         if search:
             result['imported_search'] = self.process_search(search)
+        if pagination_offset is not None or pagination_limit is not None:
+            result['imported_pagination'] = (
+                pagination_offset, pagination_limit)
 
         return result
 

@@ -385,3 +385,65 @@ def test_nullable(client):
     body = resp.json()
     assert body['fdef'] is None
     assert body['fnodef'] == 4
+
+
+def test_pagination(client):
+    api = client.copy(prefix='/api/prefix/')
+    for i in range(1, 21):
+        name = 'inst%s' % (i % 10)
+        active = i % 2
+        models.Institution.objects.create(name=name, active=active)
+
+    resp = api.get('institutions', {'limit': 10, 'offset': 0})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 10
+    assert [inst['id'] for inst in body] == range(1, 11)
+
+    resp = api.get('institutions', {'limit': 10})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 10
+    assert [inst['id'] for inst in body] == range(1, 11)
+
+    resp = api.get('institutions', {'offset': 0})
+    assert resp.status_code == 400
+
+    resp = api.get('institutions', {'limit': 10, 'offset': 10})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 10
+    assert [inst['id'] for inst in body] == range(11, 21)
+
+    resp = api.get('institutions', {'limit': 10, 'offset': 15})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 5
+    assert [inst['id'] for inst in body] == range(16, 21)
+
+    resp = api.get('institutions',
+                   {'limit': 10, 'offset': 0, 'ordering': 'active'})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 10
+    assert [inst['id'] for inst in body] == range(2, 21, 2)
+
+
+def test_pagination_default_limit(client):
+    api = client.copy(prefix='/api/prefix/')
+    for i in range(1, 21):
+        title = 'title%s' % (i % 10)
+        body = 'body'
+        models.Post.objects.create(title=title, body=body)
+
+    resp = api.get('posts', {'limit': 10, 'offset': 0})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 10
+    assert [inst['id'] for inst in body] == range(1, 11)
+
+    resp = api.get('posts', {'offset': 0})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 5
+    assert [inst['id'] for inst in body] == range(1, 6)

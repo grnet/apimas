@@ -29,6 +29,12 @@ spec_list = [
     },
 
     {
+        '.processor.pagination': {},
+        'module_path': 'apimas_django.pagination.Pagination',
+        ':pagination_default_limit': {'.integer': {}},
+    },
+
+    {
         '.processor.object_retrieval': {},
         'module_path': 'apimas_django.processors.ObjectRetrieval',
     },
@@ -105,8 +111,9 @@ spec_list = [
                 '1': {'.processor.filtering': {}},
                 '2': {'.processor.search': {}},
                 '3': {'.processor.ordering': {}},
-                '4': {'.processor.instance_to_dict': {}},
-                '5': {'.processor.export_data': {}},
+                '4': {'.processor.pagination': {}},
+                '5': {'.processor.instance_to_dict': {}},
+                '6': {'.processor.export_data': {}},
             }
         },
     },
