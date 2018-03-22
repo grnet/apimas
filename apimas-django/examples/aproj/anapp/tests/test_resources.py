@@ -2,8 +2,17 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from apimas_django.test import *
 from anapp import models
 from datetime import datetime
+import uuid
 
 pytestmark = pytest.mark.django_db(transaction=False)
+
+
+def is_uuid(value):
+    try:
+        uuid.UUID(value)
+        return True
+    except:
+        return False
 
 
 def test_posts(client):
@@ -325,6 +334,43 @@ def test_delete(client):
     resp = api.get('institutions')
     assert resp.status_code == 200
     assert len(resp.json()) == 1
+
+
+def test_ref(client):
+    api = client.copy(prefix='/api/prefix/')
+
+    data = {'name': 'inst1', 'category': 'Research Center'}
+    resp = api.post('institutions', data)
+    assert resp.status_code == 201
+    inst = resp.json()
+    inst_id = inst['id']
+    assert isinstance(inst_id, int)
+
+    data = {
+        'name': 'group1',
+        'founded': '2014-12-31',
+        'active': True,
+        'institution_id': inst_id,
+        'email': 'group1@example.com',
+    }
+    resp = api.post('groups', data)
+    assert resp.status_code == 201
+    group = resp.json()
+    group_id = group['id']
+    assert is_uuid(group_id)
+    group_url = group['url']
+
+    data = {'name': 'name', 'group_id': group_id}
+    resp = api.post('features', data)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body['group_id'] == group_url
+
+    data = {'name': 'another', 'group_id': group_url}
+    resp = api.post('features', data)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body['group_id'] == group_url
 
 
 def test_choices(client):

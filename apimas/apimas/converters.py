@@ -407,21 +407,23 @@ class Identity(DataConverter):
 
 class Ref(Identity):
     def get_native_value(self, value, permissions, flat):
-        try:
-            return int(value)
-        except:
-            pass
+        if isinstance(value, numbers.Number):
+            return str(value)
 
         parsed_value = urlparse(value)
         parsed_url = urlparse(self.rel_url)
         _, match, suffix = parsed_value.path.partition(parsed_url.path)
+        if not match:
+            return value
+
         issame = (parsed_value.scheme == parsed_url.scheme and
                   parsed_value.netloc == parsed_url.netloc)
-        if not match or not suffix and not issame:
+        if not suffix and not issame:
             msg = ('Given URL {!r} does not correspond to the collection'
                    ' of {!r}')
             raise ValidationError(msg.format(
                 value, self.rel_url))
+
         return suffix.split(self.TRAILING_SLASH, 1)[0]
 
 

@@ -91,7 +91,8 @@ GROUPS = {
         '.action-template.django.delete': {},
     },
     "fields": {
-        "id": {".field.serial": {}},
+        "id": {".field.uuid": {},
+               '.flag.readonly': {}},
         "url": {".field.identity": {},
                 '.flag.readonly': True,
                 "to": "api/prefix/groups",
@@ -150,6 +151,22 @@ GROUPS = {
     }
 }
 
+FEATURES = {
+    ".field.collection.django": {},
+    "model": "anapp.models.Feature",
+    "actions": {
+        '.action-template.django.retrieve': {},
+        '.action-template.django.create': {},
+    },
+    "fields": {
+        "id": {".field.serial": {}},
+        "name": {".field.string": {},
+                 '.flag.orderable': {}},
+        "group_id": {'.field.ref': {},
+                     'to': 'api/prefix/groups'}
+    }
+}
+
 APP_CONFIG = {
     ".apimas_app": {},
     ":permission_rules": "anapp.rules.get_rules",
@@ -159,7 +176,8 @@ APP_CONFIG = {
                 "posts": POSTS,
                 'nulltest': NULLTEST,
                 "institutions": INSTITUTIONS,
-                "groups":GROUPS,
+                "groups": GROUPS,
+                "features": FEATURES,
             },
         },
     },

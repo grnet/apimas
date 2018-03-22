@@ -48,6 +48,8 @@ RULES = [
     ('api/prefix/nulltest', 'create', '*', '*', '*', '*'),
     ('api/prefix/nulltest', 'retrieve', '*', '*', '*', '*'),
 
+    ('api/prefix/features', 'create', '*', '*', '*', '*'),
+    ('api/prefix/features', 'retrieve', '*', '*', '*', '*'),
 ]
 
 def get_rules():

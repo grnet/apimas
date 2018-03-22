@@ -1,4 +1,5 @@
 from django.db import models
+import uuid
 
 INSTITUTION_CATEGORIES = [
     ["Institution", "Institution"],
@@ -14,12 +15,18 @@ class Institution(models.Model):
 
 
 class Group(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     name = models.TextField()
     founded = models.DateField()
     active = models.BooleanField()
     email = models.CharField(max_length=100)
     institution = models.ForeignKey(
         Institution, null=True, on_delete=models.PROTECT)
+
+
+class Feature(models.Model):
+    name = models.CharField(max_length=100)
+    group = models.ForeignKey(Group)
 
 
 class Variants(models.Model):
