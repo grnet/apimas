@@ -171,21 +171,14 @@ def import_integer(value):
     return cnvs.Integer().import_data(value, permissions=True)
 
 
-class ImportDataProcessor(ImportExportData):
-    """
-    Processor responsible for the deserialization of data.
-    """
+class ImportParamsProcessor(ImportExportData):
     READ_KEYS = {
-        'write_data': 'request/content',
         'parameters': 'request/meta/params',
         'can_read': 'permissions/can_read',
         'read_fields': 'permissions/read_fields',
-        'can_write': 'permissions/write_fields',
-        'write_fields': 'permissions/write_fields',
     }
 
     WRITE_KEYS = {
-        'imported_content': 'imported/content',
         'imported_filters': 'imported/filters',
         'imported_ordering': 'imported/ordering',
         'imported_search': 'imported/search',
@@ -293,6 +286,25 @@ class ImportDataProcessor(ImportExportData):
 
         return result
 
+    def execute(self, context_data):
+        return self.process_parameters(context_data)
+
+
+ImportParams = ProcessorConstruction(
+    IMPORTEXPORT_CONSTRUCTORS, ImportParamsProcessor)
+
+
+class ImportWriteDataProcessor(ImportExportData):
+    READ_KEYS = {
+        'write_data': 'request/content',
+        'can_write': 'permissions/write_fields',
+        'write_fields': 'permissions/write_fields',
+    }
+
+    WRITE_KEYS = {
+        'imported_content': 'imported/content',
+    }
+
     def process_write_data(self, context_data):
         write_data = context_data['write_data']
         if not write_data:
@@ -306,14 +318,11 @@ class ImportDataProcessor(ImportExportData):
         return self.converter.import_data(write_data, can_write_fields)
 
     def execute(self, context_data):
-        imported_content = self.process_write_data(context_data)
-        imported_data = self.process_parameters(context_data)
-        imported_data['imported_content'] = imported_content
-        return imported_data
+        return {'imported_content': self.process_write_data(context_data)}
 
 
-ImportData = ProcessorConstruction(
-    IMPORTEXPORT_CONSTRUCTORS, ImportDataProcessor)
+ImportWriteData = ProcessorConstruction(
+    IMPORTEXPORT_CONSTRUCTORS, ImportWriteDataProcessor)
 
 
 class ExportDataProcessor(ImportExportData):
@@ -335,13 +344,11 @@ class ExportDataProcessor(ImportExportData):
         if export_data is None:
             return None
         can_read = context_data['can_read']
-        if not can_read:
-            raise AccessDeniedError(
-                'You do not have permission to read this resource')
-
         can_read_fields = context_data['read_fields']
         exported_data = self.converter.export_data(
             export_data, can_read_fields)
+        if exported_data is cnvs.Nothing:
+            return None
         return (exported_data,)
 
 

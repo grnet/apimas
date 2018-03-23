@@ -145,12 +145,12 @@ class PermissionsProcessor(BaseProcessor):
         'instance': 'backend/instance',
     }
 
-    WRITE_KEYS = (
-        'permissions/can_read',
-        'permissions/read_fields',
-        'permissions/can_write',
-        'permissions/write_fields',
-    )
+    WRITE_KEYS = {
+        'can_read': 'permissions/can_read',
+        'read_fields': 'permissions/read_fields',
+        'can_write': 'permissions/can_write',
+        'write_fields': 'permissions/write_fields',
+    }
 
     COLUMNS = ('collection', 'action', 'role', 'field', 'state', 'comment')
 
@@ -158,7 +158,8 @@ class PermissionsProcessor(BaseProcessor):
 
     def __init__(self, collection_loc, action_name,
                  permission_rules, collection_path, fields_spec,
-                 read_permissions, write_permissions, permissions_namespace):
+                 read_permissions, write_permissions, permissions_namespace,
+                 permissions_mode, permissions_strict):
 
         rules_funcname = permission_rules
         rules = utils.import_object(rules_funcname)() if rules_funcname \
@@ -170,6 +171,11 @@ class PermissionsProcessor(BaseProcessor):
         self.read_permissions_tag = read_permissions
         self.write_permissions_tag = write_permissions
         self.namespace = permissions_namespace
+        mode = permissions_mode
+        self.check_read = mode is None or mode == 'read'
+        self.check_write = mode is None or mode == 'write'
+
+        self.strict = permissions_strict is None or permissions_strict
 
         self.tab_rules = self.init_tab_rules(rules)
 
@@ -282,21 +288,35 @@ class PermissionsProcessor(BaseProcessor):
         user = context_data.get('user')
         instance = context_data.get('instance')
 
-        can_read, read_fields = self.compute_permissions(
-            self.collection_path, self.read_permissions_tag,
-            user, instance, context)
-        if self.write_permissions_tag == self.read_permissions_tag:
-            can_write, write_fields = can_read, read_fields
-        else:
-            can_write, write_fields = self.compute_permissions(
-                self.collection_path, self.write_permissions_tag,
+        result = {}
+        if self.check_read:
+            can_read, read_fields = self.compute_permissions(
+                self.collection_path, self.read_permissions_tag,
                 user, instance, context)
 
-        if not can_read and not can_write:
-            raise AccessDeniedError(
-                'You do not have permission to do this action')
+            if self.strict and not can_read:
+                raise AccessDeniedError(
+                    'You do not have read permissions')
 
-        result = (can_read, read_fields, can_write, write_fields)
+            result['can_read'] = can_read
+            result['read_fields'] = read_fields
+
+        if self.check_write:
+            if self.check_read and \
+               self.write_permissions_tag == self.read_permissions_tag:
+                can_write, write_fields = can_read, read_fields
+            else:
+                can_write, write_fields = self.compute_permissions(
+                    self.collection_path, self.write_permissions_tag,
+                    user, instance, context)
+
+            if self.strict and not can_write:
+                raise AccessDeniedError(
+                    'You do not have read permissions')
+
+            result['can_write'] = can_write
+            result['write_fields'] = write_fields
+
         self.write(result, context)
 
 

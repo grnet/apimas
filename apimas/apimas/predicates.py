@@ -103,9 +103,27 @@ spec_list = [
     },
 
     {
-        '.processor.permissions': {},
+        '.processor.permissions.*': {},
         'module_path': 'apimas.components.permissions.Permissions',
         ':permission_rules': {'.string': {}},
+        ':permissions_namespace': {'.string': {}},
+        ':permissions_mode': {'.string': {}},
+        ':permissions_strict': {'.boolean': {}},
+    },
+
+    {
+        '.processor.permissions.write': {},
+        ':permissions_mode': 'write',
+    },
+
+    {
+        '.processor.permissions.read.*': {},
+        ':permissions_mode': 'read',
+    },
+
+    {
+        '.processor.permissions.read.nonstrict': {},
+        ':permissions_strict': False,
     },
 
     {
@@ -122,8 +140,13 @@ spec_list = [
     },
 
     {
-        '.processor.import_data': {},
-        'module_path': 'apimas.components.impexp.ImportData',
+        '.processor.import_write_data': {},
+        'module_path': 'apimas.components.impexp.ImportWriteData',
+    },
+
+    {
+        '.processor.import_params': {},
+        'module_path': 'apimas.components.impexp.ImportParams',
         ':filter_compat': {'.boolean': {}},
     },
 
