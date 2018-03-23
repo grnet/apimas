@@ -19,7 +19,7 @@ POSTS = {
     "fields": {
         "id": {".field.serial": {}},
         "url": {".field.identity": {},
-                '.flag.readonly': True,
+                '.flag.readonly': {},
                 "to": "api/prefix/groups",
                 "source": "id"},
         "title": {".field.string": {}},
@@ -94,7 +94,7 @@ GROUPS = {
         "id": {".field.uuid": {},
                '.flag.readonly': {}},
         "url": {".field.identity": {},
-                '.flag.readonly': True,
+                '.flag.readonly': {},
                 "to": "api/prefix/groups",
                 "source": "id"},
         "name": {".field.string": {}},
