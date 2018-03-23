@@ -3,34 +3,41 @@ from urlparse import urljoin as urlparse_urljoin
 import docular as doc
 
 
-def import_object(obj_path):
-    if obj_path is None:
-        raise ImportError('Cannot import NoneType object')
-    module_name, obj_name = obj_path.rsplit('.', 1)
-    mod = get_package_module(module_name, raise_exception=True)
-    obj = getattr(mod, obj_name, None)
-    if not obj:
-        raise ImportError('Cannot import object {!r} from {!r}'.format(
-            obj_name, module_name))
+def import_object(path):
+    splits = path.rsplit('.', 1)
+    if len(splits) != 2:
+        raise ImportError("Malformed path")
+
+    module_name, obj_name = splits
+    module, trail = get_module(module_name)
+    trail.append(obj_name)
+    return import_prefixed_object(module, trail)
+
+
+def get_module(module_name):
+    trail = []
+    name = module_name
+    while True:
+        try:
+            mod = importlib.import_module(name)
+            return mod, list(reversed(trail))
+        except ImportError:
+            splits = module_name.rsplit('.', 1)
+            if len(splits) != 2:
+                raise
+            name = splits[0]
+            trail.append(splits[1])
+
+
+def import_prefixed_object(module, obj_elems):
+    obj = module
+    for elem in obj_elems:
+        try:
+            obj = getattr(obj, elem)
+        except AttributeError:
+            raise ImportError('Cannot import object {!r} from {!r}'.format(
+                obj_elems, module))
     return obj
-
-
-def get_package_module(module_name, raise_exception=False):
-    """
-    This function loads programtically the desired module which is located in
-    the default package. In case, it can't find such a module, it returns
-    `None`.
-
-    :param module_name: Name of module inside the package.
-
-    :returns: The module object if it exists; `None` otherwise.
-    """
-    try:
-        return importlib.import_module(module_name)
-    except ImportError:
-        if raise_exception:
-            raise
-        return None
 
 
 def get_structural_elements(instance):

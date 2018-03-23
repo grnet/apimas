@@ -1,3 +1,5 @@
+import copy
+
 DEPLOY_CONFIG = {
     ":root_url": "http://127.0.0.1:8000/",
 }
@@ -5,6 +7,7 @@ DEPLOY_CONFIG = {
 POSTS = {
     ".field.collection.django": {},
 
+    ':permissions_namespace': 'anapp.models.Post',
     ":authenticator": "apimas.auth.TokenAuthentication",
     ":verifier": "anapp.auth.token_verifier",
     ":user_resolver": "anapp.auth.user_resolver",
@@ -15,6 +18,7 @@ POSTS = {
         '.action-template.django.list': {},
         '.action-template.django.create': {},
         '.action-template.django.retrieve': {},
+        '.action-template.django.partial_update': {},
     },
     "fields": {
         "id": {".field.serial": {}},
@@ -23,9 +27,14 @@ POSTS = {
                 "to": "api/prefix/groups",
                 "source": "id"},
         "title": {".field.string": {}},
-        "body": {".field.string": {}}
+        "body": {".field.string": {}},
+        "status": {".field.string": {},
+                   "default": "posted"},
     }
 }
+
+POSTS2 = copy.deepcopy(POSTS)
+POSTS2[':permissions_namespace'] = 'anapp.models'
 
 NULLTEST = {
     '.field.collection.django': {},
@@ -174,6 +183,7 @@ APP_CONFIG = {
         "api/prefix": {
             "collections": {
                 "posts": POSTS,
+                "posts2": POSTS2,
                 'nulltest': NULLTEST,
                 "institutions": INSTITUTIONS,
                 "groups": GROUPS,

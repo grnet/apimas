@@ -226,7 +226,7 @@ class ObjectRetrievalProcessor(handlers.DjangoBaseHandler):
     }
 
     WRITE_KEYS = (
-        'backend/instance',
+        'backend/content',
     )
 
     def execute(self, context_data):

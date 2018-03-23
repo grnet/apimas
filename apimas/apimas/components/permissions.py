@@ -80,8 +80,6 @@ def action_constructor(instance, loc):
         instance['read_permissions']) or action_name
     value['write_permissions'] = docular.doc_spec_get(
         instance['write_permissions']) or action_name
-    value['permissions_namespace'] = docular.doc_get(
-        instance, 'permissions_namespace')
     docular.doc_spec_set(instance, value)
 
 
@@ -142,7 +140,7 @@ class PermissionsProcessor(BaseProcessor):
 
     READ_KEYS = {
         'user': 'auth/user',
-        'instance': 'backend/instance',
+        'instance': 'backend/content',
     }
 
     WRITE_KEYS = {

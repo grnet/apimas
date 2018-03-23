@@ -15,7 +15,7 @@ def is_uuid(value):
         return False
 
 
-def test_posts(client):
+def test_permissions(client):
     api = client.copy(prefix='/api/prefix/')
     admin = client.copy(prefix='/api/prefix', auth_token='admin-admin-1234')
     user = client.copy(prefix='/api/prefix', auth_token='user-user-1234')
@@ -27,11 +27,38 @@ def test_posts(client):
     assert not resp.has_header('WWW-Authenticate')
 
     resp = user.post('posts', post)
-    assert resp.status_code == 401
-    assert resp.has_header('WWW-Authenticate')
+    assert resp.status_code == 403
+    # assert resp.has_header('WWW-Authenticate')
 
     resp = admin.post('posts', post)
     assert resp.status_code == 201
+    body = resp.json()
+    post1_id = body['id']
+    assert body['status'] == 'posted'
+    assert set(body.keys()) == set(['id', 'url', 'title', 'body', 'status'])
+
+    post['status'] = 'deleted'
+    resp = admin.post('posts', post)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body is None
+    post2_id = post1_id + 1
+
+    resp = user.get('posts/%s' % post1_id)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert set(body.keys()) == set(['id', 'title', 'status'])
+
+    resp = user.get('posts2/%s' % post1_id)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert set(body.keys()) == set(['id', 'url', 'title', 'body', 'status'])
+
+    resp = user.get('posts/%s' % post2_id)
+    assert resp.status_code == 403
+
+    resp = user.get('posts2/%s' % post2_id)
+    assert resp.status_code == 403
 
 
 def test_groups(client):

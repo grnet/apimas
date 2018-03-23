@@ -42,8 +42,12 @@ RULES = [
 
     ('api/prefix/posts', 'list', '*', '*', '*', '*'),
     ('api/prefix/posts', 'create', 'admin', '*', '*', '*'),
-    ('api/prefix/posts', 'create_response', 'admin', '*', '*', '*'),
-    ('api/prefix/posts', 'retrieve', '*', '*', '*', '*'),
+    ('api/prefix/posts', 'retrieve', 'admin', '*', 'is_posted', '*'),
+    ('api/prefix/posts', 'retrieve', 'user', 'id', 'is_posted', '*'),
+    ('api/prefix/posts', 'retrieve', 'user', 'title', 'is_posted', '*'),
+    ('api/prefix/posts', 'retrieve', 'user', 'status', 'is_posted', '*'),
+
+    ('api/prefix/posts2', 'retrieve', 'user', '*', 'Post.is_posted', '*'),
 
     ('api/prefix/nulltest', 'create', '*', '*', '*', '*'),
     ('api/prefix/nulltest', 'retrieve', '*', '*', '*', '*'),

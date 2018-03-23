@@ -514,7 +514,7 @@ def get_model_instance(spec, pk, kwargs):
 
 class RetrieveHandlerProcessor(DjangoBaseHandler):
     READ_KEYS = {
-        'instance': 'backend/instance',
+        'instance': 'backend/content',
     }
     READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     REQUIRED_KEYS = {
@@ -540,7 +540,7 @@ RetrieveHandler = _django_base_construction(RetrieveHandlerProcessor)
 class PartialUpdateHandlerProcessor(DjangoBaseHandler):
     full = False
     READ_KEYS = {
-        'instance': 'backend/instance',
+        'instance': 'backend/content',
     }
     READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     REQUIRED_KEYS = {

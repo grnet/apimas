@@ -49,6 +49,10 @@ class Email(models.Model):
 class Post(models.Model):
     title = models.TextField()
     body = models.TextField()
+    status = models.CharField(max_length=100)
+
+    def is_posted(self, row, context):
+        return self.status == 'posted'
 
 
 class Nulltest(models.Model):
