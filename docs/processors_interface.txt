@@ -1,3 +1,28 @@
+Keys
+----
+
+request/*  # Including request/view
+auth/identity
+auth/user
+permissions/can_read|write
+permissions/read|write_fields  # On the API level
+permissions/read|write_filter  # On the backend level
+permissions/read|write_state_checks  # On the backend level
+imported/content  # Checked allowed write fields
+imported/params*  # For list action
+backend/instance  # For retrieve and update, applying permission filter and checks
+backend/input  # After checking flags and applying defaults on imported
+backend/extra  # Extra data to write based on any of the above
+backend/unfiltered_response  # As provided by the handler
+backend/filtered_response  # After applying permission filter
+backend/checked_response  # After applying permission checks (queryset is evaluated)
+exportable/content  # Backend objects translated to plain dicts
+response/content  # After filtering read fields
+
+
+Processors
+----------
+
 Authentication:
 in: request/meta/headers
 out: auth/identity
@@ -6,53 +31,116 @@ UserRetrieval:
 in: auth/identity
 out: auth/user
 
-ObjectRetrieval:
-in: request/meta/kwargs/pk
-out: backend/instance
-
-Permissions:
+ReadPermissions:
 in: auth/user
-    backend/instance if not on_collection
+    request/view
 out: permissions/can_read
      permissions/read_fields
-     permissions/can_write
-     permissions/write_fields
-(Fail if it cannot write nor read)
+     permissions/read_filter
+     permissions/read_state_checks
 
-ImportData:
+WritePermissions:
+in: auth/user
+    view
+out: permissions/can_write
+     permissions/write_fields
+     permissions/write_filter
+     permissions/write_state_checks
+
+ImportWriteData:
 in: request/content
-    request/meta/params
-    permissions/can_read
-    permissions/read_fields
     permissions/can_write
     permissions/write_fields
-
 out: imported/content
-     imported/filter_params
-     imported/order_params
-     imported/request_params
 
-(Note: by default content is checked for write, (get) params for read; can be
-overridden in the action spec. Params are interpreted based on the scheme:
-"field__operation=value".)
+ImportParams:
+in: request/meta/params
+    permissions/can_read
+    permissions/read_fields
+out: imported/filters
+     imported/ordering
+     imported/search
+     imported/pagination
 
 ObjectRetrieval:
 in: request/meta/kwargs/pk
+    permissions/read_filter
+    permissions/read_state_checks
 out: backend/instance
 
-Handler:
-in: imported/content
-    backend/instance
-    request/meta/kwargs
-out: backend/content
+ObjectRetrievalForUpdate:
+in: request/meta/kwargs/pk
+    permissions/write_state_checks
+    permissions/write_filter
+out: backend/instance
 
-Filtering:
-in: backend/content
-    imported/filter_params
-out: backend/content
+CheckFlagsAndDefault
+in: imported/content
+    backend/instance  # in case of update
+out: backend/input
+
+LogicalChecks
+in: backend/input  # or imported/content
+    backend/instance  # in case of update
+out: ok
+
+ExtraData
+in: backend/input
+    backend/instance  # in case of update
+    auth/user  # or any other needed value
+out: backend/extra
+
+CreateHandler:
+in: backend/input
+    backend/extra
+out: backend/unfiltered_response
+
+UpdateHandler:
+in: backend/input
+    backend/extra
+    backend/instance
+out: backend/unfiltered_response
+
+ListHandler:
+in: request/meta/kwargs  # just to check scope
+out: backend/unfiltered_response
+
+RetrieveHandler:
+in: backend/instance
+out: backend/unfiltered_response  # just forward
+
+PermissionResponseFiltering
+in: backend/unfiltered_response  # in all but list, this is an instance
+    permissions/read_filter
+out: backend/filtered_response
+
+ListFiltering:
+in: backend/filtered_response
+    imported/filters
+out: backend/filtered_response
+
+ListSearching:
+in: backend/filtered_response
+    imported/search
+out: backend/filtered_response
+
+ListOrdering:
+in: backend/filtered_response
+    imported/ordering
+out: backend/filtered_response
+
+ListPagination:
+in: backend/filtered_response
+    imported/pagination
+out: backend/filtered_response
+
+PermissionResponseCheck
+in: backend/filtered_response
+    permissions/read_state_checks
+out: backend/checked_response
 
 InstanceToDict:
-in: backend/content
+in: backend/checked_response
 out: exportable/content
 
 ExportData:
