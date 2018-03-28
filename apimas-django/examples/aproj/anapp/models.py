@@ -1,3 +1,4 @@
+
 from django.db import models
 import uuid
 
@@ -51,8 +52,9 @@ class Post(models.Model):
     body = models.TextField()
     status = models.CharField(max_length=100)
 
-    def is_posted(self, row, context):
-        return self.status == 'posted'
+
+def is_posted(context):
+    return models.Q(status='posted')
 
 
 class Nulltest(models.Model):

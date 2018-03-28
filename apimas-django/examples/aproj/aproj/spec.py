@@ -7,7 +7,7 @@ DEPLOY_CONFIG = {
 POSTS = {
     ".field.collection.django": {},
 
-    ':permissions_namespace': 'anapp.models.Post',
+    ':permissions_namespace': 'anapp.models',
     ":authenticator": "apimas.auth.TokenAuthentication",
     ":verifier": "anapp.auth.token_verifier",
     ":user_resolver": "anapp.auth.user_resolver",
@@ -34,7 +34,7 @@ POSTS = {
 }
 
 POSTS2 = copy.deepcopy(POSTS)
-POSTS2[':permissions_namespace'] = 'anapp.models'
+POSTS2[':permissions_namespace'] = 'anapp'
 
 NULLTEST = {
     '.field.collection.django': {},

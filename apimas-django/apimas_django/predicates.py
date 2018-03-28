@@ -52,6 +52,23 @@ spec_list = [
     },
 
     {
+        '.processor.response_filtering_resource.*': {},
+        'module_path': 'apimas_django.permissions.FilterResourceResponse',
+        ':filter_resource_strict': {'.boolean': {}},
+    },
+
+    {
+        '.processor.response_filtering_resource.strict': {},
+        'module_path': 'apimas_django.permissions.FilterResourceResponse',
+        ':filter_resource_strict': True,
+    },
+
+    {
+        '.processor.response_filtering_collection': {},
+        'module_path': 'apimas_django.permissions.FilterCollectionResponse',
+    },
+
+    {
         '.processor.create': {},
         'module_path': 'apimas_django.handlers.CreateHandler',
     },
@@ -95,8 +112,9 @@ spec_list = [
             'handler': {'.processor.create': {}},
             'post': {
                 '1': {'.processor.permissions.read.nonstrict': {}},
-                '2': {'.processor.instance_to_dict': {}},
-                '3': {'.processor.export_data': {}},
+                '2': {'.processor.response_filtering_resource': {}},
+                '3': {'.processor.instance_to_dict': {}},
+                '4': {'.processor.export_data': {}},
             },
         },
     },
@@ -117,12 +135,13 @@ spec_list = [
             },
             'handler': {'.processor.list': {}},
             'post': {
-                '1': {'.processor.filtering': {}},
-                '2': {'.processor.search': {}},
-                '3': {'.processor.ordering': {}},
-                '4': {'.processor.pagination': {}},
-                '5': {'.processor.instance_to_dict': {}},
-                '6': {'.processor.export_data': {}},
+                '1': {'.processor.response_filtering_collection': {}},
+                '2': {'.processor.filtering': {}},
+                '3': {'.processor.search': {}},
+                '4': {'.processor.ordering': {}},
+                '5': {'.processor.pagination': {}},
+                '6': {'.processor.instance_to_dict': {}},
+                '7': {'.processor.export_data': {}},
             }
         },
     },
@@ -143,8 +162,9 @@ spec_list = [
             },
             'handler': {'.processor.retrieve': {}},
             'post': {
-                '1': {'.processor.instance_to_dict': {}},
-                '2': {'.processor.export_data': {}},
+                '1': {'.processor.response_filtering_resource.strict': {}},
+                '2': {'.processor.instance_to_dict': {}},
+                '3': {'.processor.export_data': {}},
             }
         },
     },
@@ -169,8 +189,9 @@ spec_list = [
             'handler': {'.processor.update': {}},
             'post': {
                 '1': {'.processor.permissions.read.nonstrict': {}},
-                '2': {'.processor.instance_to_dict': {}},
-                '3': {'.processor.export_data': {}},
+                '2': {'.processor.response_filtering_resource': {}},
+                '3': {'.processor.instance_to_dict': {}},
+                '4': {'.processor.export_data': {}},
             },
         },
     },
@@ -195,8 +216,9 @@ spec_list = [
             'handler': {'.processor.update': {}},
             'post': {
                 '1': {'.processor.permissions.read.nonstrict': {}},
-                '2': {'.processor.instance_to_dict': {}},
-                '3': {'.processor.export_data': {}},
+                '2': {'.processor.response_filtering_resource': {}},
+                '3': {'.processor.instance_to_dict': {}},
+                '4': {'.processor.export_data': {}},
             },
         },
     },

@@ -44,6 +44,24 @@ def test_permissions(client):
     assert body is None
     post2_id = post1_id + 1
 
+    post = dict(title="Post title 3", body="Post content")
+    resp = admin.post('posts', post)
+    assert resp.status_code == 201
+    post3_id = resp.json()['id']
+    assert post3_id != post2_id
+
+    resp = admin.get('posts')
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+    resp = admin.patch('posts/%s' % post3_id, {'status': 'deleted'})
+    assert resp.status_code == 200
+    assert resp.json() is None
+
+    resp = admin.get('posts')
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
     resp = user.get('posts/%s' % post1_id)
     assert resp.status_code == 200
     body = resp.json()
@@ -55,10 +73,10 @@ def test_permissions(client):
     assert set(body.keys()) == set(['id', 'url', 'title', 'body', 'status'])
 
     resp = user.get('posts/%s' % post2_id)
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
     resp = user.get('posts2/%s' % post2_id)
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 def test_groups(client):

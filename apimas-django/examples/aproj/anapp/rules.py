@@ -21,12 +21,14 @@ RULES = [
     ('api/prefix/groups/users', 'partial_update', '*', '*', '*', '*', '*'),
     ('api/prefix/groups/users', 'delete', '*', '*', '*', '*', '*'),
 
-    ('api/prefix/posts', 'list', '*', '*', '*', '*', '*'),
+    ('api/prefix/posts', 'list', 'anonymous', '*', '*', '*', '*'),
+    ('api/prefix/posts', 'list', 'admin', 'is_posted', '*', '*', '*'),
     ('api/prefix/posts', 'create', 'admin', '*', '*', '*', '*'),
+    ('api/prefix/posts', 'partial_update', 'admin', '*', '*', '*', '*'),
     ('api/prefix/posts', 'retrieve', 'admin', 'is_posted', '*', '*', '*'),
     ('api/prefix/posts', 'retrieve', 'user', 'is_posted', '*', 'id,title,status', '*'),
 
-    ('api/prefix/posts2', 'retrieve', 'user', 'Post.is_posted', '*', '*', '*'),
+    ('api/prefix/posts2', 'retrieve', 'user', 'models.is_posted', '*', '*', '*'),
 
     ('api/prefix/nulltest', 'create', '*', '*', '*', '*', '*'),
     ('api/prefix/nulltest', 'retrieve', '*', '*', '*', '*', '*'),

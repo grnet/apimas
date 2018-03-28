@@ -441,10 +441,12 @@ class ListHandlerProcessor(DjangoBaseHandler):
 ListHandler = _django_base_construction(ListHandlerProcessor)
 
 
-def get_model_instance(spec, pk, kwargs):
+def get_model_instance(spec, pk, kwargs, filters=None):
     model = spec['model']
-    flts = get_bound_filters(spec['bounds'], kwargs)
-    objects = model.objects.filter(**flts)
+    bound_filters = get_bound_filters(spec['bounds'], kwargs)
+    objects = model.objects.filter(**bound_filters)
+    if filters:
+        objects = objects.filter(*filters)
     objects = prefetch_related(objects, spec['subcollections'])
     objects = select_related(objects, spec['substructs'])
     return django_utils.get_instance(objects, pk)

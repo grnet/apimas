@@ -196,8 +196,7 @@ class InstanceToDictProcessor(BaseProcessor):
         """
         instance = processor_data['instance']
         if instance is None:
-            self.write(None, context)
-            return
+            return (None,)
 
         if instance and (not isinstance(instance, Model) and not
                        isinstance(instance, QuerySet)):
