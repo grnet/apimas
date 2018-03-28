@@ -62,15 +62,8 @@ out: imported/filters
      imported/search
      imported/pagination
 
-ObjectRetrieval:
-in: request/meta/kwargs/pk
-    permissions/read_filter
-    permissions/read_state_checks
-out: backend/instance
-
 ObjectRetrievalForUpdate:
 in: request/meta/kwargs/pk
-    permissions/write_state_checks
     permissions/write_filter
 out: backend/instance
 
@@ -78,6 +71,12 @@ CheckFlagsAndDefault
 in: imported/content
     backend/instance  # in case of update
 out: backend/input
+
+ApplyWriteStateChecks
+in: backend/input
+    backend/instance  # in case of update
+    permissions/write_state_checks
+out: ok
 
 LogicalChecks
 in: backend/input  # or imported/content
@@ -106,8 +105,8 @@ in: request/meta/kwargs  # just to check scope
 out: backend/unfiltered_response
 
 RetrieveHandler:
-in: backend/instance
-out: backend/unfiltered_response  # just forward
+in: request/meta/kwargs/pk
+out: backend/unfiltered_response
 
 PermissionResponseFiltering
 in: backend/unfiltered_response  # in all but list, this is an instance
