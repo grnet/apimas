@@ -40,6 +40,18 @@ spec_list = [
     },
 
     {
+        '.processor.load_data.*': {},
+        'module_path': 'apimas_django.loaddata.LoadData',
+        ':loaddata_full': {'.boolean': {}},
+    },
+
+    {
+        '.processor.load_data.partial': {},
+        'module_path': 'apimas_django.loaddata.LoadData',
+        ':loaddata_full': False,
+    },
+
+    {
         '.processor.create': {},
         'module_path': 'apimas_django.handlers.CreateHandler',
     },
@@ -55,13 +67,8 @@ spec_list = [
     },
 
     {
-        '.processor.partial_update': {},
-        'module_path': 'apimas_django.handlers.PartialUpdateHandler',
-    },
-
-    {
-        '.processor.full_update': {},
-        'module_path': 'apimas_django.handlers.FullUpdateHandler',
+        '.processor.update': {},
+        'module_path': 'apimas_django.handlers.UpdateHandler',
     },
 
     {
@@ -83,6 +90,7 @@ spec_list = [
                 '2': {'.processor.user_retrieval': {}},
                 '3': {'.processor.permissions.write': {}},
                 '4': {'.processor.import_write_data': {}},
+                '5': {'.processor.load_data': {}},
             },
             'handler': {'.processor.create': {}},
             'post': {
@@ -156,8 +164,9 @@ spec_list = [
                 '3': {'.processor.object_retrieval': {}},
                 '4': {'.processor.permissions.write': {}},
                 '5': {'.processor.import_write_data': {}},
+                '6': {'.processor.load_data.partial': {}},
             },
-            'handler': {'.processor.partial_update': {}},
+            'handler': {'.processor.update': {}},
             'post': {
                 '1': {'.processor.permissions.read.nonstrict': {}},
                 '2': {'.processor.instance_to_dict': {}},
@@ -181,8 +190,9 @@ spec_list = [
                 '3': {'.processor.object_retrieval': {}},
                 '4': {'.processor.permissions.write': {}},
                 '5': {'.processor.import_write_data': {}},
+                '6': {'.processor.load_data': {}},
             },
-            'handler': {'.processor.full_update': {}},
+            'handler': {'.processor.update': {}},
             'post': {
                 '1': {'.processor.permissions.read.nonstrict': {}},
                 '2': {'.processor.instance_to_dict': {}},

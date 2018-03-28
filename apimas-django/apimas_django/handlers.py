@@ -187,7 +187,7 @@ class DjangoBaseHandler(BaseProcessor):
     READ_KEYS = {
         'kwargs': 'request/meta/kwargs',
         'pk': 'request/meta/kwargs/pk',
-        'data': 'imported/content',
+        'data': 'backend/input',
     }
 
     WRITE_KEYS = (
@@ -205,77 +205,15 @@ class DjangoBaseHandler(BaseProcessor):
         # self.bounds = value['bounds']
 
 
-def check_write_flags(name, spec, value):
-    flags = spec.get('flags', [])
-    default = spec.get('default', Nothing)
-
-    if 'readonly' in flags:
-        if value is not Nothing:
-            raise ValidationError("'%s': Field is readonly" % name)
-        return Nothing
-
-    if value is Nothing:
-        value = default
-
-    if value is Nothing:
-        raise ValidationError("'%s': Field is required" % name)
-
-    if value is None and 'nullable' not in flags:
-        raise ValidationError("'%s': Field is not nullable" % name)
-
-    return value
-
-
-def check_update_flags(name, spec, value, full, instance):
-    flags = spec.get('flags', [])
-    default = spec.get('default', Nothing)
-
-    if 'readonly' in flags:
-        if value is not Nothing:
-            raise ValidationError("'%s': Field is readonly" % name)
-        return Nothing
-
-    if full and value is Nothing:
-        value = default
-
-    if full and value is Nothing:
-        raise ValidationError("'%s': Field is required" % name)
-
-    if value is None and 'nullable' not in flags:
-        raise ValidationError("'%s': Field is not nullable" % name)
-
-    if value is not Nothing and 'writeonce' in flags and instance is not None:
-        source = spec['source']
-        stored_value = getattr(instance, source)
-        if value != stored_value:
-            raise ValidationError("'%s': Field is writeonce" % name)
-
-    return value
-
-
-def get_write_fields(subspecs, data):
+def get_fields(subspecs, data):
     create_args = {}
     for field_name, field_spec in subspecs.iteritems():
-        value = data.get(field_name, Nothing)
-        value = check_write_flags(field_name, field_spec, value)
         source = field_spec['source']
+        value = data.get(source, Nothing)
         if value is not Nothing:
             create_args[source] = value
 
     return create_args
-
-
-def get_update_fields(subspecs, data, full, instance):
-    update_args = {}
-    for field_name, field_spec in subspecs.iteritems():
-        value = data.get(field_name, Nothing)
-        value = check_update_flags(
-            field_name, field_spec, value, full, instance)
-        source = field_spec['source']
-        if value is not Nothing:
-            update_args[source] = value
-
-    return update_args
 
 
 def get_bound_name(spec):
@@ -297,7 +235,7 @@ def do_create(key, spec, data, precreated=None):
         assert key
         create_args[bound_name] = key
 
-    create_args.update(get_write_fields(spec['subfields'], data))
+    create_args.update(get_fields(spec['subfields'], data))
 
     print "CREATE_ARGS", create_args
     return model.objects.create(**create_args)
@@ -306,7 +244,8 @@ def do_create(key, spec, data, precreated=None):
 def defer_create_subcollections(spec, data):
     deferred = []
     for subname, subspec in spec['subcollections'].iteritems():
-        subdata = data.get(subname, Nothing)
+        subsource = subspec['source']
+        subdata = data.get(subsource, Nothing)
         if subdata is Nothing:
             continue
         deferred.extend((subname, subspec, elem) for elem in subdata)
@@ -321,7 +260,7 @@ def create_substructs(spec, data):
         field = model._meta.get_field(subsource)
         struct_model = field.related_model
         subspec['model'] = struct_model
-        subdata = data.get(subname, Nothing)
+        subdata = data.get(subsource, Nothing)
         struct_instance = create_resource(subname, subspec, subdata)
         if struct_instance is not Nothing:
             created[subsource] = struct_instance
@@ -329,7 +268,6 @@ def create_substructs(spec, data):
 
 
 def create_resource(name, spec, data, key=None):
-    data = check_write_flags(name, spec, data)
     if data is Nothing:
         return Nothing
 
@@ -353,10 +291,10 @@ def delete_subcollection(key, spec):
     delete_queryset(model.objects.filter(**flt))
 
 
-def update_subcollections(spec, data, full, instance):
+def update_subcollections(spec, data, instance):
     for subname, subspec in spec['subcollections'].iteritems():
-        subdata = data.get(subname, Nothing)
-        subdata = check_update_flags(subname, spec, subdata, full, instance)
+        subsource = subspec['source']
+        subdata = data.get(subsource, Nothing)
         if subdata is Nothing:
             continue
         delete_subcollection(instance.id, subspec)
@@ -364,7 +302,7 @@ def update_subcollections(spec, data, full, instance):
             create_resource(subname, subspec, elem, key=instance.id)
 
 
-def update_substructs(spec, data, full, instance):
+def update_substructs(spec, data, instance):
     created = {}
     model = spec['model']
     for subname, subspec in spec['substructs'].iteritems():
@@ -372,7 +310,7 @@ def update_substructs(spec, data, full, instance):
         field = model._meta.get_field(subsource)
         struct_model = field.related_model
         subspec['model'] = struct_model
-        subdata = data.get(subname, Nothing)
+        subdata = data.get(subsource, Nothing)
         subinstance = getattr(instance, subsource)
         if subinstance is None:
             struct_instance = create_resource(subname, subspec, subdata)
@@ -380,20 +318,19 @@ def update_substructs(spec, data, full, instance):
                 created[subsource] = struct_instance
         else:
             struct_instance = update_resource(
-                subname, subspec, subdata, full, subinstance)
+                subname, subspec, subdata, subinstance)
             if struct_instance is None:
                 created[subsource] = None
     return created
 
 
-def do_update(spec, data, instance, full, precreated=None):
+def do_update(spec, data, instance, precreated=None):
     update_args = {}
     if precreated:
         update_args.update(precreated)
 
     model = spec['model']
-    update_args.update(
-        get_update_fields(spec['subfields'], data, full, instance))
+    update_args.update(get_fields(spec['subfields'], data))
 
     print "UPDATE ARGS", update_args
     for key, value in update_args.iteritems():
@@ -402,22 +339,18 @@ def do_update(spec, data, instance, full, precreated=None):
     return instance
 
 
-def update_resource(name, spec, data, full, instance):
-    data = check_update_flags(name, spec, data, full, instance)
+def update_resource(name, spec, data, instance):
     if data is Nothing:
-        if full:
-            raise ValidationError("'%s': Nothing to create" % name)
-        else:
-            return Nothing
+        return Nothing
 
     if data is None:
         print "DELETING instance", instance
         delete_instance(instance)
         return None
 
-    update_subcollections(spec, data, full, instance)
-    precreated = update_substructs(spec, data, full, instance)
-    return do_update(spec, data, instance, full, precreated)
+    update_subcollections(spec, data, instance)
+    precreated = update_substructs(spec, data, instance)
+    return do_update(spec, data, instance, precreated)
 
 
 def delete_instance(instance):
@@ -439,6 +372,11 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         'data',
     }
 
+    WRITE_KEYS = (
+        'backend/content',
+        'backend/instance',  # to enable read permissions in response
+    )
+
     def execute(self, context_data):
         """ Creates a new django model instance. """
 
@@ -447,7 +385,7 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         key = kwargs.get('id0')
         instance = create_resource(
             self.collection_name, self.spec, data, key=key)
-        return (instance,)
+        return (instance, instance)
 
 
 CreateHandler = _django_base_construction(CreateHandlerProcessor)
@@ -514,7 +452,7 @@ def get_model_instance(spec, pk, kwargs):
 
 class RetrieveHandlerProcessor(DjangoBaseHandler):
     READ_KEYS = {
-        'instance': 'backend/content',
+        'instance': 'backend/instance',
     }
     READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     REQUIRED_KEYS = {
@@ -537,10 +475,9 @@ class RetrieveHandlerProcessor(DjangoBaseHandler):
 RetrieveHandler = _django_base_construction(RetrieveHandlerProcessor)
 
 
-class PartialUpdateHandlerProcessor(DjangoBaseHandler):
-    full = False
+class UpdateHandlerProcessor(DjangoBaseHandler):
     READ_KEYS = {
-        'instance': 'backend/content',
+        'instance': 'backend/instance',
     }
     READ_KEYS.update(DjangoBaseHandler.READ_KEYS)
     REQUIRED_KEYS = {
@@ -560,19 +497,12 @@ class PartialUpdateHandlerProcessor(DjangoBaseHandler):
             instance = get_model_instance(self.spec, pk, kwargs)
 
         update_resource(
-            self.collection_name, self.spec, data, self.full, instance)
+            self.collection_name, self.spec, data, instance)
         instance = get_model_instance(self.spec, pk, kwargs)
         return (instance,)
 
 
-PartialUpdateHandler = _django_base_construction(PartialUpdateHandlerProcessor)
-
-
-class FullUpdateHandlerProcessor(PartialUpdateHandlerProcessor):
-    full = True
-
-
-FullUpdateHandler = _django_base_construction(FullUpdateHandlerProcessor)
+UpdateHandler = _django_base_construction(UpdateHandlerProcessor)
 
 
 class DeleteHandlerProcessor(RetrieveHandlerProcessor):

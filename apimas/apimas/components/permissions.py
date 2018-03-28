@@ -140,7 +140,7 @@ class PermissionsProcessor(BaseProcessor):
 
     READ_KEYS = {
         'user': 'auth/user',
-        'instance': 'backend/content',
+        'instance': 'backend/instance',
     }
 
     WRITE_KEYS = {
