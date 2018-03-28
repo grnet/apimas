@@ -45,16 +45,14 @@ def expand_paths(matched_fields, fields_spec):
     return expanded
 
 
-def get_matched_allowed_fields(matches):
-    """
-    Checks which fields are allowed to be modified or viewed based on
-    matches.
-    """
+def get_matched_allowed_fields(match):
+    if isinstance(match.fields, doc.AnyPattern):
+        return doc.ANY
+
+    fields = match.fields.split(',')
     allowed_keys = set()
-    for row in matches:
-        if isinstance(row.field, doc.AnyPattern):
-            return doc.ANY
-        allowed_keys.add(tuple(row.field.split(FIELD_SEPARATOR)))
+    for field in fields:
+        allowed_keys.add(tuple(field.split(FIELD_SEPARATOR)))
     return allowed_keys
 
 
@@ -114,45 +112,22 @@ PERMISSIONS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
 
 
 class PermissionsProcessor(BaseProcessor):
-    """
-    This processor handles the permissions in an application.
-
-    Permissions are expressed with a set of rules. Each rule consists of:
-
-        - `collection`: The name of the collection to which the rule is
-          applied.
-        - `action`: The name of the action for which the rule is valid.
-        - `role`: The role of the user (entity who performs the request)
-          who is authorized to make request calls.
-        - `field`: The set of fields that are allowed to be handled in this
-          request (either for writing or retrieval).
-        - `state`: The state of the collection which **must** be valid when
-          the request is performed.
-
-    When a request is performed, we know about the collection, action, role,
-    and field columns. This processor provides hooks to check the validity of
-    the last column, i.e. `state`.
-
-    Also, this processor saves which fields are allowed to be modified or
-    viewed inside request context for later use from other processors.
-
-    """
-
     READ_KEYS = {
-        'user': 'auth/user',
-        'instance': 'backend/instance',
+        'role': 'auth/role',
     }
 
     WRITE_KEYS = {
-        'can_read': 'permissions/can_read',
-        'read_fields': 'permissions/read_fields',
-        'can_write': 'permissions/can_write',
-        'write_fields': 'permissions/write_fields',
+        'read': 'permissions/read',  # /enabled, /filter, /check, /fields
+        'write': 'permissions/write',  # /enabled, /filter, /check, /fields
     }
 
-    COLUMNS = ('collection', 'action', 'role', 'field', 'state', 'comment')
-
-    ANONYMOUS_ROLES = ['anonymous']
+    COLUMNS = ('collection',
+               'action',
+               'role',
+               'filter',
+               'check',
+               'fields',
+               'comment')
 
     def __init__(self, collection_loc, action_name,
                  permission_rules, collection_path, fields_spec,
@@ -202,118 +177,93 @@ class PermissionsProcessor(BaseProcessor):
             map((lambda x: tab_rules.Row(*x)), rules))
         return tab_rules
 
-    def _get_pattern_set(self, collection, action, user):
+    def _get_pattern_set(self, collection, action, role):
         """
         Get all patterns set from request's context.
 
         Specifically, get groups to which user belongs, and action of request.
         """
-        if user is None:
-            roles = self.ANONYMOUS_ROLES
-        else:
-            roles = getattr(user, 'apimas_roles', None)
-            assert roles is not None, (
-                'Cannot find property `apimas_roles` on `user` object')
         return [
                 [collection],
                 [action],
-                roles,
+                [role],
+                [doc.ANY],
                 [doc.ANY],
                 [doc.ANY],
                 [doc.ANY],
         ]
 
-    def check_state_conditions(self, matches, context, instance=None):
-        """
-        For the states that match to the pattern sets, this function checks
-        which states are statisfied.
+    def load_object(self, name):
+        if isinstance(name, doc.AnyPattern):
+            return None
+        prefix = '%s.' % self.namespace if self.namespace else ''
+        full_name = prefix + name
+        func = utils.import_object(full_name)
+        if not callable(func):
+            raise InvalidInput("Given object is not callable")
+        return func
 
-        Subsequently, it returns a dictionary which maps each state with
-        its satisfiability (`True` or `False`).
-        """
-        state_conditions = {}
-        for row in matches:
-            # Initialize all states as False.
-            if isinstance(row.state, doc.AnyPattern):
-                state_conditions[row.state] = True
-                continue
-
-            # Avoid re-evaluation of state conditions.
-            if row.state in state_conditions:
-                continue
-            state_conditions[row.state] = False
-
-            prefix = '%s.' % self.namespace if self.namespace else ''
-            state_funcname = prefix + row.state
-            func = utils.import_object(state_funcname)
-
-            if callable(func):
-                kwargs = {'row': row, 'context': context}
-                access_ok = (
-                    func(instance, **kwargs)
-                    if instance is not None
-                    else func(**kwargs)
-                )
-                state_conditions[row.state] = access_ok
-        return state_conditions
-
-    def compute_permissions(
-            self, collection, action_tag, user, instance, context):
-        pattern_set = self._get_pattern_set(collection, action_tag, user)
-        expand_columns = {'field', 'state'}
+    def compute_permissions(self, collection, action_tag, role, context):
+        pattern_set = self._get_pattern_set(collection, action_tag, role)
+        expand_columns = {'filter', 'check', 'fields'}
         matches = list(self.tab_rules.multimatch(
             pattern_set, expand=expand_columns))
         if not matches:
-            return False, []
+            return {
+                'enabled': False,
+                'filter': None,
+                'check': None,
+                'fields': [],
+            }
 
-        # We check which matching states are valid, and then we get the
-        # subset of rules which match the valid states. If the subset is
-        # empty, then the permission is not granted.
-        state_conditions = self.check_state_conditions(
-            matches, context, instance=instance)
-        matches = filter((lambda x: state_conditions[x.state]), matches)
-        if not matches:
-            return False, []
+        if len(matches) > 1:
+            raise InvalidInput("Multiple rules found!")
+
+        match = matches[0]
+        matched_filter = self.load_object(match.filter)
+        matched_check = self.load_object(match.check)
 
         # As a final step, we save in the context the list of fields that
         # are allowed to be read or written.
-        allowed_fields = get_matched_allowed_fields(matches)
+        allowed_fields = get_matched_allowed_fields(match)
         expanded_fields = expand_paths(allowed_fields, self.fields_spec)
-        return True, expanded_fields
+        return {
+            'enabled': True,
+            'filter': matched_filter,
+            'check': matched_check,
+            'fields': expanded_fields,
+        }
 
     def process(self, context):
         context_data = self.read(context)
-        user = context_data.get('user')
-        instance = context_data.get('instance')
+        role = context_data.get('role')
 
         result = {}
         if self.check_read:
-            can_read, read_fields = self.compute_permissions(
+            read_permissions = self.compute_permissions(
                 self.collection_path, self.read_permissions_tag,
-                user, instance, context)
+                role, context)
 
-            if self.strict and not can_read:
+            if self.strict and not read_permissions['enabled']:
                 raise AccessDeniedError(
                     'You do not have read permissions')
 
-            result['can_read'] = can_read
-            result['read_fields'] = read_fields
+            result['read'] = read_permissions
 
         if self.check_write:
             if self.check_read and \
                self.write_permissions_tag == self.read_permissions_tag:
-                can_write, write_fields = can_read, read_fields
+                write_permissions = read_permissions
             else:
-                can_write, write_fields = self.compute_permissions(
+                write_permissions = self.compute_permissions(
                     self.collection_path, self.write_permissions_tag,
-                    user, instance, context)
+                    role, context)
 
-            if self.strict and not can_write:
+            if self.strict and not write_permissions['enabled']:
                 raise AccessDeniedError(
-                    'You do not have read permissions')
+                    'You do not have write permissions')
 
-            result['can_write'] = can_write
-            result['write_fields'] = write_fields
+            result['write'] = write_permissions
 
         self.write(result, context)
 

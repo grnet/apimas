@@ -1,59 +1,38 @@
-# COLUMNS = ('collection', 'action', 'role', 'field', 'state', 'comment')
+# COLUMNS = ('collection', 'action', 'role', 'filter', 'check' 'fields', 'comment')
 
 RULES = [
 
-    ('api/prefix/institutions', 'retrieve', '*', '*', '*', '*'),
-    ('api/prefix/institutions', 'list', '*', '*', '*', '*'),
-    ('api/prefix/institutions', 'create', '*', '*', '*', '*'),
-    ('api/prefix/institutions', 'partial_update', '*', '*', '*', '*'),
-    ('api/prefix/institutions', 'update', '*', '*', '*', '*'),
-    ('api/prefix/institutions', 'delete', '*', '*', '*', '*'),
+    ('api/prefix/institutions', 'retrieve', '*', '*', '*', '*', '*'),
+    ('api/prefix/institutions', 'list', '*', '*', '*', '*', '*'),
+    ('api/prefix/institutions', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/institutions', 'partial_update', '*', '*', '*', '*', '*'),
+    ('api/prefix/institutions', 'update', '*', '*', '*', '*', '*'),
+    ('api/prefix/institutions', 'delete', '*', '*', '*', '*', '*'),
 
-    ('api/prefix/groups', 'list', '*', '*', '*', '*'),
-#    ('api/prefix/groups', 'list', '*', 'users/username', '*', '*'),
-#    ('api/prefix/groups', 'list', '*', 'users', '*', '*'),
-#    ('api/prefix/groups', 'list', '*', 'users/name_variants/el', '*', '*'),
-#    ('api/prefix/groups', 'list', '*', 'users/name_variants', '*', '*'),
+    ('api/prefix/groups', 'list', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups', 'retrieve', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups', 'partial_update', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups', 'delete', '*', '*', '*', '*', '*'),
 
-    ('api/prefix/groups', 'retrieve', '*', '*', '*', '*'),
-    ('api/prefix/groups', 'partial_update', '*', '*', '*', '*'),
+    ('api/prefix/groups/users', 'list', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups/users', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups/users', 'retrieve', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups/users', 'partial_update', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups/users', 'delete', '*', '*', '*', '*', '*'),
 
-    ('api/prefix/groups', 'create', '*', 'users/name_variants', '*', '*'),
-    ('api/prefix/groups', 'create', '*', 'users', '*', '*'),
-    ('api/prefix/groups', 'create', '*', 'name', '*', '*'),
+    ('api/prefix/posts', 'list', '*', '*', '*', '*', '*'),
+    ('api/prefix/posts', 'create', 'admin', '*', '*', '*', '*'),
+    ('api/prefix/posts', 'retrieve', 'admin', 'is_posted', '*', '*', '*'),
+    ('api/prefix/posts', 'retrieve', 'user', 'is_posted', '*', 'id,title,status', '*'),
 
-    ('api/prefix/groups', 'create', '*', '*', '*', '*'),
+    ('api/prefix/posts2', 'retrieve', 'user', 'Post.is_posted', '*', '*', '*'),
 
-    ('api/prefix/groups', 'retrieve', '*', '*', '*', '*'),
-    ('api/prefix/groups', 'delete', '*', '*', '*', '*'),
+    ('api/prefix/nulltest', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/nulltest', 'retrieve', '*', '*', '*', '*', '*'),
 
-    ('api/prefix/groups', 'create_response', '*', '*', '*', '*'),
-    ('api/prefix/groups', 'create_response', '*', 'url', '*', '*'),
-    ('api/prefix/groups', 'create_response', '*', 'users/username', '*', '*'),
-    ('api/prefix/groups', 'create_response', '*', 'users/age', '*', '*'),
-
-    ('api/prefix/groups/users', 'list', '*', '*', '*', '*'),
-    ('api/prefix/groups/users', 'create', '*', '*', '*', '*'),
-    ('api/prefix/groups/users', 'create_response', '*', '*', '*', '*'),
-    ('api/prefix/groups/users', 'retrieve', '*', '*', '*', '*'),
-    ('api/prefix/groups/users', 'partial_update', '*', '*', '*', '*'),
-    ('api/prefix/groups/users', 'partial_update_response', '*', '*', '*', '*'),
-    ('api/prefix/groups/users', 'delete', '*', '*', '*', '*'),
-
-    ('api/prefix/posts', 'list', '*', '*', '*', '*'),
-    ('api/prefix/posts', 'create', 'admin', '*', '*', '*'),
-    ('api/prefix/posts', 'retrieve', 'admin', '*', 'is_posted', '*'),
-    ('api/prefix/posts', 'retrieve', 'user', 'id', 'is_posted', '*'),
-    ('api/prefix/posts', 'retrieve', 'user', 'title', 'is_posted', '*'),
-    ('api/prefix/posts', 'retrieve', 'user', 'status', 'is_posted', '*'),
-
-    ('api/prefix/posts2', 'retrieve', 'user', '*', 'Post.is_posted', '*'),
-
-    ('api/prefix/nulltest', 'create', '*', '*', '*', '*'),
-    ('api/prefix/nulltest', 'retrieve', '*', '*', '*', '*'),
-
-    ('api/prefix/features', 'create', '*', '*', '*', '*'),
-    ('api/prefix/features', 'retrieve', '*', '*', '*', '*'),
+    ('api/prefix/features', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/features', 'retrieve', '*', '*', '*', '*', '*'),
 ]
 
 def get_rules():

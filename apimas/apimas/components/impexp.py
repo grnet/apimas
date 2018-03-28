@@ -174,8 +174,8 @@ def import_integer(value):
 class ImportParamsProcessor(ImportExportData):
     READ_KEYS = {
         'parameters': 'request/meta/params',
-        'can_read': 'permissions/can_read',
-        'read_fields': 'permissions/read_fields',
+        'can_read': 'permissions/read/enabled',
+        'read_fields': 'permissions/read/fields',
     }
 
     WRITE_KEYS = {
@@ -297,8 +297,8 @@ ImportParams = ProcessorConstruction(
 class ImportWriteDataProcessor(ImportExportData):
     READ_KEYS = {
         'write_data': 'request/content',
-        'can_write': 'permissions/write_fields',
-        'write_fields': 'permissions/write_fields',
+        'can_write': 'permissions/write/enabled',
+        'write_fields': 'permissions/write/fields',
     }
 
     WRITE_KEYS = {
@@ -331,8 +331,8 @@ class ExportDataProcessor(ImportExportData):
     """
     READ_KEYS = {
         'export_data': 'exportable/content',
-        'can_read': 'permissions/can_read',
-        'read_fields': 'permissions/read_fields',
+        'can_read': 'permissions/read/enabled',
+        'read_fields': 'permissions/read/fields',
     }
 
     WRITE_KEYS = (

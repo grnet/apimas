@@ -34,29 +34,29 @@ out: auth/user
 ReadPermissions:
 in: auth/user
     request/view
-out: permissions/can_read
-     permissions/read_fields
-     permissions/read_filter
-     permissions/read_state_checks
+out: permissions/read/enabled
+     permissions/read/fields
+     permissions/read/filter
+     permissions/read/check
 
 WritePermissions:
 in: auth/user
     view
-out: permissions/can_write
-     permissions/write_fields
-     permissions/write_filter
-     permissions/write_state_checks
+out: permissions/write/enabled
+     permissions/write/fields
+     permissions/write/filter
+     permissions/write/check
 
 ImportWriteData:
 in: request/content
-    permissions/can_write
-    permissions/write_fields
+    permissions/write/enabled
+    permissions/write/fields
 out: imported/content
 
 ImportParams:
 in: request/meta/params
-    permissions/can_read
-    permissions/read_fields
+    permissions/read/enabled
+    permissions/read/fields
 out: imported/filters
      imported/ordering
      imported/search
@@ -64,7 +64,7 @@ out: imported/filters
 
 ObjectRetrievalForUpdate:
 in: request/meta/kwargs/pk
-    permissions/write_filter
+    permissions/write/filter
 out: backend/instance
 
 CheckFlagsAndDefault
@@ -75,7 +75,7 @@ out: backend/input
 ApplyWriteStateChecks
 in: backend/input
     backend/instance  # in case of update
-    permissions/write_state_checks
+    permissions/write/check
 out: ok
 
 LogicalChecks
@@ -110,7 +110,7 @@ out: backend/unfiltered_response
 
 PermissionResponseFiltering
 in: backend/unfiltered_response  # in all but list, this is an instance
-    permissions/read_filter
+    permissions/read/filter
 out: backend/filtered_response
 
 ListFiltering:
@@ -135,7 +135,7 @@ out: backend/filtered_response
 
 PermissionResponseCheck
 in: backend/filtered_response
-    permissions/read_state_checks
+    permissions/read/check
 out: backend/checked_response
 
 InstanceToDict:
@@ -144,6 +144,6 @@ out: exportable/content
 
 ExportData:
 in: exportable/content
-    permissions/can_read
-    permissions/read_fields
+    permissions/read/enabled
+    permissions/read/fields
 out: response/content

@@ -61,12 +61,17 @@ class UserRetrievalProcessor(BaseProcessor):
     """
 
     READ_KEYS = {
-        'identity': 'auth/identity'
+        'headers': 'request/meta/headers',
+        'identity': 'auth/identity',
     }
 
     WRITE_KEYS = (
         'auth/user',
+        'auth/role',
     )
+
+    ANONYMOUS_ROLE = 'anonymous'
+    ROLE_HEADER = 'USER_ROLE'
 
     def __init__(self, collection, action, user_resolver=None):
         if user_resolver:
@@ -77,6 +82,7 @@ class UserRetrievalProcessor(BaseProcessor):
 
     def process(self, context):
         data = self.read(context)
+        headers = data.get('headers')
         identity = data.get('identity')
 
         if not identity:
@@ -86,7 +92,23 @@ class UserRetrievalProcessor(BaseProcessor):
                 raise Exception("No user_resolver set")
             user = self.user_resolver(identity, context)
 
-        self.write((user,), context)
+        if user is None:
+            role = self.ANONYMOUS_ROLE
+        else:
+            role = headers.get(self.ROLE_HEADER)
+
+        if role != self.ANONYMOUS_ROLE:
+            user_roles = getattr(user, 'apimas_roles', None)
+            assert user_roles is not None, (
+                'Cannot find property `apimas_roles` on `user` object')
+            if role is not None:
+                if role not in user_roles:
+                    raise UnauthorizedError(
+                        "User does not have role '%s'" % role)
+            else:
+                role = user_roles[0]
+
+        self.write((user, role), context)
 
 
 USER_RETRIEVAL_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
