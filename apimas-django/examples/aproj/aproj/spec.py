@@ -19,6 +19,7 @@ POSTS = {
         '.action-template.django.create': {},
         '.action-template.django.retrieve': {},
         '.action-template.django.partial_update': {},
+        '.action-template.django.delete': {},
     },
     "fields": {
         "id": {".field.serial": {}},
@@ -29,7 +30,7 @@ POSTS = {
         "title": {".field.string": {}},
         "body": {".field.string": {}},
         "status": {".field.string": {},
-                   "default": "posted"},
+                   "default": "pending"},
     }
 }
 

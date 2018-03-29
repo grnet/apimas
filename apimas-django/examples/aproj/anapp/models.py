@@ -57,6 +57,18 @@ def is_posted(context):
     return models.Q(status='posted')
 
 
+def is_pending(context):
+    return models.Q(status='pending')
+
+
+def is_hidden(context):
+    return models.Q(status='hidden')
+
+
+def non_hidden(context):
+    return ~models.Q(status='hidden')
+
+
 class Nulltest(models.Model):
     fdef = models.IntegerField(null=True)
     fnodef = models.IntegerField(null=True)
