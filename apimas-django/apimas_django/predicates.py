@@ -35,8 +35,8 @@ spec_list = [
     },
 
     {
-        '.processor.object_retrieval': {},
-        'module_path': 'apimas_django.processors.ObjectRetrieval',
+        '.processor.object_retrieval_for_update': {},
+        'module_path': 'apimas_django.processors.ObjectRetrievalForUpdate',
     },
 
     {
@@ -157,8 +157,7 @@ spec_list = [
             'pre': {
                 '1': {'.processor.authentication': {}},
                 '2': {'.processor.user_retrieval': {}},
-                '3': {'.processor.object_retrieval': {}},
-                '4': {'.processor.permissions.read': {}},
+                '3': {'.processor.permissions.read': {}},
             },
             'handler': {'.processor.retrieve': {}},
             'post': {
@@ -181,9 +180,9 @@ spec_list = [
             'pre': {
                 '1': {'.processor.authentication': {}},
                 '2': {'.processor.user_retrieval': {}},
-                '3': {'.processor.object_retrieval': {}},
-                '4': {'.processor.permissions.write': {}},
-                '5': {'.processor.import_write_data': {}},
+                '3': {'.processor.permissions.write': {}},
+                '4': {'.processor.import_write_data': {}},
+                '5': {'.processor.object_retrieval_for_update': {}},
                 '6': {'.processor.load_data.partial': {}},
             },
             'handler': {'.processor.update': {}},
@@ -208,9 +207,9 @@ spec_list = [
             'pre': {
                 '1': {'.processor.authentication': {}},
                 '2': {'.processor.user_retrieval': {}},
-                '3': {'.processor.object_retrieval': {}},
-                '4': {'.processor.permissions.write': {}},
-                '5': {'.processor.import_write_data': {}},
+                '3': {'.processor.permissions.write': {}},
+                '4': {'.processor.import_write_data': {}},
+                '5': {'.processor.object_retrieval_for_update': {}},
                 '6': {'.processor.load_data': {}},
             },
             'handler': {'.processor.update': {}},
@@ -234,8 +233,8 @@ spec_list = [
             'pre': {
                 '1': {'.processor.authentication': {}},
                 '2': {'.processor.user_retrieval': {}},
-                '3': {'.processor.object_retrieval': {}},
-                '4': {'.processor.permissions.write': {}},
+                '3': {'.processor.permissions.write': {}},
+                '4': {'.processor.object_retrieval_for_update': {}},
             },
             'handler': {'.processor.delete': {}},
         },

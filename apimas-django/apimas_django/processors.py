@@ -216,20 +216,29 @@ InstanceToDict = ProcessorConstruction(
     INSTANCETODICT_CONSTRUCTORS, InstanceToDictProcessor)
 
 
-class ObjectRetrievalProcessor(handlers.DjangoBaseHandler):
+class ObjectRetrievalForUpdateProcessor(handlers.DjangoBaseHandler):
     READ_KEYS = {
         'kwargs': 'request/meta/kwargs',
         'pk': 'request/meta/kwargs/pk',
+        'write_filter': 'permissions/write/filter',
     }
 
     WRITE_KEYS = (
         'backend/instance',
     )
 
-    def execute(self, context_data):
+    def process(self, context):
+        context_data = self.read(context)
         pk = context_data['pk']
         kwargs = context_data['kwargs']
-        instance = handlers.get_model_instance(self.spec, pk, kwargs)
-        return (instance,)
+        write_filter = context_data['write_filter']
+        filters = []
+        if write_filter is not None:
+            filters.append(write_filter(context))
 
-ObjectRetrieval = handlers._django_base_construction(ObjectRetrievalProcessor)
+        instance = handlers.get_model_instance(self.spec, pk, kwargs, filters)
+        self.write((instance,), context)
+
+
+ObjectRetrievalForUpdate = handlers._django_base_construction(
+    ObjectRetrievalForUpdateProcessor)
