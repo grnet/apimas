@@ -74,6 +74,18 @@ spec_list = [
     },
 
     {
+        '.processor.read_permission_check.*': {},
+        'module_path': 'apimas_django.permissions.ReadPermissionCheck',
+        ':read_check_strict': {'.boolean': {}},
+    },
+
+    {
+        '.processor.read_permission_check.strict': {},
+        'module_path': 'apimas_django.permissions.ReadPermissionCheck',
+        ':read_check_strict': True,
+    },
+
+    {
         '.processor.create': {},
         'module_path': 'apimas_django.handlers.CreateHandler',
     },
@@ -119,8 +131,9 @@ spec_list = [
             'post': {
                 '1': {'.processor.permissions.read.nonstrict': {}},
                 '2': {'.processor.response_filtering_resource': {}},
-                '3': {'.processor.instance_to_dict': {}},
-                '4': {'.processor.export_data': {}},
+                '3': {'.processor.read_permission_check': {}},
+                '4': {'.processor.instance_to_dict': {}},
+                '5': {'.processor.export_data': {}},
             },
         },
     },
@@ -146,8 +159,9 @@ spec_list = [
                 '3': {'.processor.search': {}},
                 '4': {'.processor.ordering': {}},
                 '5': {'.processor.pagination': {}},
-                '6': {'.processor.instance_to_dict': {}},
-                '7': {'.processor.export_data': {}},
+                '6': {'.processor.read_permission_check': {}},
+                '7': {'.processor.instance_to_dict': {}},
+                '8': {'.processor.export_data': {}},
             }
         },
     },
@@ -168,8 +182,9 @@ spec_list = [
             'handler': {'.processor.retrieve': {}},
             'post': {
                 '1': {'.processor.response_filtering_resource.strict': {}},
-                '2': {'.processor.instance_to_dict': {}},
-                '3': {'.processor.export_data': {}},
+                '2': {'.processor.read_permission_check.strict': {}},
+                '3': {'.processor.instance_to_dict': {}},
+                '4': {'.processor.export_data': {}},
             }
         },
     },
@@ -196,8 +211,9 @@ spec_list = [
             'post': {
                 '1': {'.processor.permissions.read.nonstrict': {}},
                 '2': {'.processor.response_filtering_resource': {}},
-                '3': {'.processor.instance_to_dict': {}},
-                '4': {'.processor.export_data': {}},
+                '3': {'.processor.read_permission_check': {}},
+                '4': {'.processor.instance_to_dict': {}},
+                '5': {'.processor.export_data': {}},
             },
         },
     },
@@ -224,8 +240,9 @@ spec_list = [
             'post': {
                 '1': {'.processor.permissions.read.nonstrict': {}},
                 '2': {'.processor.response_filtering_resource': {}},
-                '3': {'.processor.instance_to_dict': {}},
-                '4': {'.processor.export_data': {}},
+                '3': {'.processor.read_permission_check': {}},
+                '4': {'.processor.instance_to_dict': {}},
+                '5': {'.processor.export_data': {}},
             },
         },
     },

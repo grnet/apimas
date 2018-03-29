@@ -199,8 +199,9 @@ class InstanceToDictProcessor(BaseProcessor):
             return (None,)
 
         if instance and (not isinstance(instance, Model) and not
-                       isinstance(instance, QuerySet)):
-            msg = 'A model instance or a queryset is expected. {!r} found.'
+                         isinstance(instance, QuerySet) and not
+                         isinstance(instance, list)):
+            msg = 'Unexpected type {!r} found.'
             raise InvalidInput(msg.format(type(instance)))
 
         if not self.on_collection:

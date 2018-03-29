@@ -22,7 +22,7 @@ RULES = [
     ('api/prefix/groups/users', 'delete', '*', '*', '*', '*', '*'),
 
     ('api/prefix/posts', 'list', 'admin', '*', '*', '*', '*'),
-    ('api/prefix/posts', 'list', 'user', 'non_hidden', '*', '*', '*'),
+    ('api/prefix/posts', 'list', 'user', 'non_hidden', 'censor_all', '*', '*'),
 
     ('api/prefix/posts', 'create', 'admin', '*', '*', '*', '*'),
     ('api/prefix/posts', 'create', 'user', '*', 'create_check', '*', '*'),
@@ -33,7 +33,7 @@ RULES = [
     ('api/prefix/posts', 'delete', 'admin', 'is_hidden', '*', '*', '*'),
 
     ('api/prefix/posts', 'retrieve', 'admin', '*', '*', '*', '*'),
-    ('api/prefix/posts', 'retrieve', 'user', 'non_hidden', '*', '*', '*'),
+    ('api/prefix/posts', 'retrieve', 'user', 'non_hidden', 'censor_one', '*', '*'),
     ('api/prefix/posts', 'retrieve', 'anonymous', 'is_posted', '*', 'id,title,status', '*'),
 
     ('api/prefix/posts2', 'retrieve', '*', 'checks.is_posted', '*', '*', '*'),

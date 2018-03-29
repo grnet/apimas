@@ -22,6 +22,24 @@ def update_check(backend_input, instance, context):
         raise ValidationError("Transition not allowed")
 
 
+def censor_one(instance, context):
+    auth_user = context['auth']['user']
+    username = auth_user.username
+
+    if username in instance.body:
+        return None
+    return instance
+
+
+def censor_all(unchecked_response, context):
+    response = []
+    for instance in unchecked_response:
+        instance = censor_one(instance, context)
+        if instance is not None:
+            response.append(instance)
+    return response
+
+
 def is_posted(context):
     return Q(status='posted')
 

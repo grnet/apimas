@@ -122,3 +122,39 @@ NO_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
 
 WritePermissionCheck = ProcessorConstruction(
     NO_CONSTRUCTORS, WritePermissionCheckProcessor)
+
+
+class ReadPermissionCheckProcessor(BaseProcessor):
+    READ_KEYS = {
+        'unchecked': 'backend/content',
+        'read_check': 'permissions/read/check',
+    }
+
+    WRITE_KEYS = (
+        'backend/content',
+    )
+
+    def __init__(self, collection_loc, action_name, read_check_strict):
+        self.collection_loc = collection_loc
+        self.action_name = action_name
+        self.strict = bool(read_check_strict)
+
+    def process(self, context):
+        context_data = self.read(context)
+        unchecked_response = context_data['unchecked']
+        read_check = context_data['read_check']
+
+        if read_check is None or unchecked_response is None:
+            checked_response = unchecked_response
+            self.write((checked_response,), context)
+            return
+
+        checked_response = read_check(unchecked_response, context)
+        if checked_response is None and self.strict:
+            raise NotFound("Resource not found")
+
+        self.write((checked_response,), context)
+
+
+ReadPermissionCheck = ProcessorConstruction(
+    NO_CONSTRUCTORS, ReadPermissionCheckProcessor)

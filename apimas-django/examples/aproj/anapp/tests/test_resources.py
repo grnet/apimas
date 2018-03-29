@@ -19,6 +19,7 @@ def test_permissions(client):
     api = client.copy(prefix='/api/prefix/')
     admin = client.copy(prefix='/api/prefix', auth_token='admin-admin-1234')
     user = client.copy(prefix='/api/prefix', auth_token='user-user-1234')
+    xristis = client.copy(prefix='/api/prefix', auth_token='xristis-user-1234')
 
     # anonymous can't list
     resp = api.get('posts')
@@ -58,6 +59,7 @@ def test_permissions(client):
 
     # admin can create and view a posted post
     post['status'] = 'posted'
+    post['body'] = 'Post xristis content'
     resp = admin.post('posts', post)
     assert resp.status_code == 201
     body = resp.json()
@@ -83,6 +85,7 @@ def test_permissions(client):
     assert all(map(lambda s: s != 'hidden',
                    (elem['status'] for elem in body)))
 
+    ### Updates
     # user can update the pending post
     resp = user.patch('posts/%s' % post_pending_id, {'title': 'another title'})
     assert resp.status_code == 200
@@ -140,7 +143,7 @@ def test_permissions(client):
     assert set(body.keys()) == set(['id', 'url', 'title', 'body', 'status'])
     assert body['status'] == 'posted'
 
-    ### Checks
+    ### Write checks
     # user can't change state to hidden
     resp = user.patch('posts/%s' % post_pending_id, {'title': 'new title',
                                                      'status': 'hidden'})
@@ -151,12 +154,45 @@ def test_permissions(client):
                                                      'status': 'posted'})
     assert resp.status_code == 200
     assert resp.json()['status'] == 'posted'
+    post_nowposted_id = post_pending_id
 
     # admin can change state to hidden
-    post_nowposted_id = post_pending_id
     resp = admin.patch('posts/%s' % post_nowposted_id, {'status': 'hidden'})
     assert resp.status_code == 200
     assert resp.json()['status'] == 'hidden'
+
+    # and back to posted
+    resp = admin.patch('posts/%s' % post_nowposted_id, {'status': 'posted'})
+    assert resp.status_code == 200
+    assert resp.json()['status'] == 'posted'
+
+    ### Read checks
+    resp = xristis.get('posts')
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 1
+    assert body[0]['id'] == post_nowposted_id
+
+    # This particular user can't see this post
+    resp = xristis.get('posts/%s' % post_posted_id)
+    assert resp.status_code == 404
+
+    resp = user.get('posts/%s' % post_posted_id)
+    assert resp.status_code == 200
+
+    # This particular user can create this post but cannot view it
+    post = {'title': 'title', 'body': 'xristis mentioned'}
+    resp = xristis.post('posts', post)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body is None
+
+    # The other user can create and view it too
+    post = {'title': 'title', 'body': 'xristis mentioned'}
+    resp = user.post('posts', post)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body['body'] == 'xristis mentioned'
 
 
 def test_groups(client):
