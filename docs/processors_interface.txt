@@ -67,12 +67,12 @@ in: request/meta/kwargs/pk
     permissions/write/filter
 out: backend/instance
 
-CheckFlagsAndDefault
+LoadData (check flags and defaults)
 in: imported/content
     backend/instance  # in case of update
 out: backend/input
 
-ApplyWriteStateChecks
+WritePermissionCheck
 in: backend/input
     backend/instance  # in case of update
     permissions/write/check
@@ -92,24 +92,24 @@ out: backend/extra
 CreateHandler:
 in: backend/input
     backend/extra
-out: backend/unfiltered_response
+out: backend/raw_response
 
 UpdateHandler:
 in: backend/input
     backend/extra
     backend/instance
-out: backend/unfiltered_response
+out: backend/raw_response
 
 ListHandler:
 in: request/meta/kwargs  # just to check scope
-out: backend/unfiltered_response
+out: backend/raw_response
 
 RetrieveHandler:
 in: request/meta/kwargs/pk
-out: backend/unfiltered_response
+out: backend/raw_response
 
-PermissionResponseFiltering
-in: backend/unfiltered_response  # in all but list, this is an instance
+FilterResponse
+in: backend/raw_response  # in all but list, this is an instance
     permissions/read/filter
 out: backend/filtered_response
 
@@ -133,7 +133,7 @@ in: backend/filtered_response
     imported/pagination
 out: backend/filtered_response
 
-PermissionResponseCheck
+ReadPermissionCheck
 in: backend/filtered_response
     permissions/read/check
 out: backend/checked_response

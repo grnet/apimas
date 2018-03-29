@@ -191,7 +191,7 @@ class DjangoBaseHandler(BaseProcessor):
     }
 
     WRITE_KEYS = (
-        'backend/content',
+        'backend/raw_response',
     )
 
     REQUIRED_KEYS = {
@@ -372,11 +372,6 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         'data',
     }
 
-    WRITE_KEYS = (
-        'backend/content',
-        'backend/instance',  # to enable read permissions in response
-    )
-
     def execute(self, context_data):
         """ Creates a new django model instance. """
 
@@ -385,7 +380,7 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         key = kwargs.get('id0')
         instance = create_resource(
             self.collection_name, self.spec, data, key=key)
-        return (instance, instance)
+        return (instance,)
 
 
 CreateHandler = _django_base_construction(CreateHandlerProcessor)

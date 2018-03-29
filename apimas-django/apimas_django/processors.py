@@ -74,7 +74,7 @@ INSTANCETODICT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
 
 class InstanceToDictProcessor(BaseProcessor):
     READ_KEYS = {
-        'instance': 'backend/content',
+        'instance': 'backend/checked_response',
     }
 
     WRITE_KEYS = (

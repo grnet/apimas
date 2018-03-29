@@ -79,11 +79,11 @@ def make_query(search_filters, value, operator='contains'):
 class SearchProcessor(BaseProcessor):
     READ_KEYS = {
         'imported_search': 'imported/search',
-        'queryset': 'backend/content',
+        'queryset': 'backend/filtered_response',
     }
 
     WRITE_KEYS = (
-        'backend/content',
+        'backend/filtered_response',
     )
 
     def __init__(self, collection_loc, action_name, fields, source):

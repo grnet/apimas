@@ -137,11 +137,11 @@ class FilteringProcessor(BaseProcessor):
     """
     READ_KEYS = {
         'imported_filters': 'imported/filters',
-        'queryset': 'backend/content',
+        'queryset': 'backend/filtered_response',
     }
 
     WRITE_KEYS = (
-        'backend/content',
+        'backend/filtered_response',
     )
 
     # CONSTRUCTORS = {

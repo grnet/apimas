@@ -56,11 +56,11 @@ ORDERING_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
 class OrderingProcessor(BaseProcessor):
     READ_KEYS = {
         'imported_ordering': 'imported/ordering',
-        'queryset': 'backend/content',
+        'queryset': 'backend/filtered_response',
     }
 
     WRITE_KEYS = (
-        'backend/content',
+        'backend/filtered_response',
     )
 
     # CONSTRUCTORS = {

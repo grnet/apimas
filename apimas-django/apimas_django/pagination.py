@@ -15,11 +15,11 @@ PAGINATION_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
 class PaginationProcessor(BaseProcessor):
     READ_KEYS = {
         'imported_pagination': 'imported/pagination',
-        'queryset': 'backend/content',
+        'queryset': 'backend/filtered_response',
     }
 
     WRITE_KEYS = (
-        'backend/content',
+        'backend/filtered_response',
     )
 
     def __init__(

@@ -24,13 +24,13 @@ def filter_resource(spec, pk, kwargs, filter_func, context, strict):
 
 class FilterResourceResponseProcessor(BaseProcessor):
     READ_KEYS = {
-        'unfiltered': 'backend/content',
+        'unfiltered': 'backend/raw_response',
         'kwargs': 'request/meta/kwargs',
         'read_filter': 'permissions/read/filter',
     }
 
     WRITE_KEYS = (
-        'backend/content',
+        'backend/filtered_response',
     )
 
     def __init__(self, collection_loc, action_name, spec,
@@ -47,12 +47,13 @@ class FilterResourceResponseProcessor(BaseProcessor):
         read_filter = context_data['read_filter']
 
         if read_filter is None:
-            return
+            filtered_response = unfiltered_response
+        else:
+            assert isinstance(unfiltered_response, models.Model)
+            pk = unfiltered_response.pk
+            filtered_response = filter_resource(
+                self.spec, pk, kwargs, read_filter, context, self.strict)
 
-        assert isinstance(unfiltered_response, models.Model)
-        pk = unfiltered_response.pk
-        filtered_response = filter_resource(
-            self.spec, pk, kwargs, read_filter, context, self.strict)
         self.write((filtered_response,), context)
 
 
@@ -62,12 +63,12 @@ FilterResourceResponse = _django_base_construction(
 
 class FilterCollectionResponseProcessor(BaseProcessor):
     READ_KEYS = {
-        'unfiltered': 'backend/content',
+        'unfiltered': 'backend/raw_response',
         'read_filter': 'permissions/read/filter',
     }
 
     WRITE_KEYS = (
-        'backend/content',
+        'backend/filtered_response',
     )
 
     def __init__(self, collection_loc, action_name, spec):
@@ -81,11 +82,12 @@ class FilterCollectionResponseProcessor(BaseProcessor):
         read_filter = context_data['read_filter']
 
         if read_filter is None:
-            return
+            filtered_response = unfiltered_response
+        else:
+            assert isinstance(unfiltered_response, QuerySet)
+            filtered_response = filter_collection(
+                unfiltered_response, read_filter, context)
 
-        assert isinstance(unfiltered_response, QuerySet)
-        filtered_response = filter_collection(
-            unfiltered_response, read_filter, context)
         self.write((filtered_response,), context)
 
 
@@ -126,12 +128,12 @@ WritePermissionCheck = ProcessorConstruction(
 
 class ReadPermissionCheckProcessor(BaseProcessor):
     READ_KEYS = {
-        'unchecked': 'backend/content',
+        'unchecked': 'backend/filtered_response',
         'read_check': 'permissions/read/check',
     }
 
     WRITE_KEYS = (
-        'backend/content',
+        'backend/checked_response',
     )
 
     def __init__(self, collection_loc, action_name, read_check_strict):
