@@ -25,10 +25,10 @@ RULES = [
     ('api/prefix/posts', 'list', 'user', 'non_hidden', '*', '*', '*'),
 
     ('api/prefix/posts', 'create', 'admin', '*', '*', '*', '*'),
-    ('api/prefix/posts', 'create', 'user', '*', '*', '*', '*'),
+    ('api/prefix/posts', 'create', 'user', '*', 'create_check', '*', '*'),
 
     ('api/prefix/posts', 'partial_update', 'admin', '*', '*', '*', '*'),
-    ('api/prefix/posts', 'partial_update', 'user', 'is_pending', '*', '*', '*'),
+    ('api/prefix/posts', 'partial_update', 'user', 'is_pending', 'update_check', '*', '*'),
 
     ('api/prefix/posts', 'delete', 'admin', 'is_hidden', '*', '*', '*'),
 
@@ -36,7 +36,7 @@ RULES = [
     ('api/prefix/posts', 'retrieve', 'user', 'non_hidden', '*', '*', '*'),
     ('api/prefix/posts', 'retrieve', 'anonymous', 'is_posted', '*', 'id,title,status', '*'),
 
-    ('api/prefix/posts2', 'retrieve', '*', 'models.is_posted', '*', '*', '*'),
+    ('api/prefix/posts2', 'retrieve', '*', 'checks.is_posted', '*', '*', '*'),
 
     ('api/prefix/nulltest', 'create', '*', '*', '*', '*', '*'),
     ('api/prefix/nulltest', 'retrieve', '*', '*', '*', '*', '*'),

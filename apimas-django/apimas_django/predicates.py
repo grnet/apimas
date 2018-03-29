@@ -69,6 +69,11 @@ spec_list = [
     },
 
     {
+        '.processor.write_permission_check': {},
+        'module_path': 'apimas_django.permissions.WritePermissionCheck',
+    },
+
+    {
         '.processor.create': {},
         'module_path': 'apimas_django.handlers.CreateHandler',
     },
@@ -108,6 +113,7 @@ spec_list = [
                 '3': {'.processor.permissions.write': {}},
                 '4': {'.processor.import_write_data': {}},
                 '5': {'.processor.load_data': {}},
+                '6': {'.processor.write_permission_check': {}},
             },
             'handler': {'.processor.create': {}},
             'post': {
@@ -184,6 +190,7 @@ spec_list = [
                 '4': {'.processor.import_write_data': {}},
                 '5': {'.processor.object_retrieval_for_update': {}},
                 '6': {'.processor.load_data.partial': {}},
+                '7': {'.processor.write_permission_check': {}},
             },
             'handler': {'.processor.update': {}},
             'post': {
@@ -211,6 +218,7 @@ spec_list = [
                 '4': {'.processor.import_write_data': {}},
                 '5': {'.processor.object_retrieval_for_update': {}},
                 '6': {'.processor.load_data': {}},
+                '7': {'.processor.write_permission_check': {}},
             },
             'handler': {'.processor.update': {}},
             'post': {

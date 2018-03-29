@@ -1,4 +1,3 @@
-
 from django.db import models
 import uuid
 
@@ -51,22 +50,6 @@ class Post(models.Model):
     title = models.TextField()
     body = models.TextField()
     status = models.CharField(max_length=100)
-
-
-def is_posted(context):
-    return models.Q(status='posted')
-
-
-def is_pending(context):
-    return models.Q(status='pending')
-
-
-def is_hidden(context):
-    return models.Q(status='hidden')
-
-
-def non_hidden(context):
-    return ~models.Q(status='hidden')
 
 
 class Nulltest(models.Model):

@@ -31,6 +31,10 @@ class BaseProcessor(object):
 
     name = 'apimas.components.BaseProcessor'
 
+    def __init__(self, collection_loc, action_name):
+        self.collection_loc = collection_loc
+        self.action_name = action_name
+
     def extract(self, context, path):
         """
         Extracts a specific key from context.

@@ -43,6 +43,11 @@ def test_permissions(client):
     assert body['status'] == 'pending'
     assert set(body.keys()) == set(['id', 'url', 'title', 'body', 'status'])
 
+    # user can't create a posted post
+    post['status'] = 'posted'
+    resp = user.post('posts', post)
+    assert resp.status_code == 400
+
     # user can create a hidden post but cannot view it
     post['status'] = 'hidden'
     resp = user.post('posts', post)
@@ -51,9 +56,9 @@ def test_permissions(client):
     assert body is None
     post_hidden_id = post_pending_id + 1
 
-    # user can create and view a posted post
+    # admin can create and view a posted post
     post['status'] = 'posted'
-    resp = user.post('posts', post)
+    resp = admin.post('posts', post)
     assert resp.status_code == 201
     body = resp.json()
     assert body['status'] == 'posted'
@@ -134,6 +139,24 @@ def test_permissions(client):
     body = resp.json()
     assert set(body.keys()) == set(['id', 'url', 'title', 'body', 'status'])
     assert body['status'] == 'posted'
+
+    ### Checks
+    # user can't change state to hidden
+    resp = user.patch('posts/%s' % post_pending_id, {'title': 'new title',
+                                                     'status': 'hidden'})
+    assert resp.status_code == 400
+
+    # user can change state to posted
+    resp = user.patch('posts/%s' % post_pending_id, {'title': 'new title',
+                                                     'status': 'posted'})
+    assert resp.status_code == 200
+    assert resp.json()['status'] == 'posted'
+
+    # admin can change state to hidden
+    post_nowposted_id = post_pending_id
+    resp = admin.patch('posts/%s' % post_nowposted_id, {'status': 'hidden'})
+    assert resp.status_code == 200
+    assert resp.json()['status'] == 'hidden'
 
 
 def test_groups(client):

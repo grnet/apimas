@@ -2,8 +2,9 @@ from django.db import models
 from django.db.models.query import QuerySet
 from apimas_django.handlers import \
     get_model_instance, _django_base_construction
-from apimas.components import BaseProcessor
+from apimas.components import BaseProcessor, ProcessorConstruction
 from apimas.errors import NotFound
+import docular
 
 
 def filter_collection(queryset, filter_func, context):
@@ -90,3 +91,34 @@ class FilterCollectionResponseProcessor(BaseProcessor):
 
 FilterCollectionResponse = _django_base_construction(
     FilterCollectionResponseProcessor)
+
+
+class WritePermissionCheckProcessor(BaseProcessor):
+    READ_KEYS = {
+        'input': 'backend/input',
+        'instance': 'backend/instance',
+        'write_check': 'permissions/write/check',
+    }
+
+    def process(self, context):
+        context_data = self.read(context)
+        backend_input = context_data['input']
+        instance = context_data['instance']
+        write_check = context_data['write_check']
+
+        if write_check is None:
+            return
+
+        write_check(backend_input, instance, context)
+
+
+def no_constructor(instance):
+    pass
+
+
+NO_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
+    {}, default=no_constructor)
+
+
+WritePermissionCheck = ProcessorConstruction(
+    NO_CONSTRUCTORS, WritePermissionCheckProcessor)

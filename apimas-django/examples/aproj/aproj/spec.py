@@ -7,7 +7,7 @@ DEPLOY_CONFIG = {
 POSTS = {
     ".field.collection.django": {},
 
-    ':permissions_namespace': 'anapp.models',
+    ':permissions_namespace': 'anapp.checks',
     ":authenticator": "apimas.auth.TokenAuthentication",
     ":verifier": "anapp.auth.token_verifier",
     ":user_resolver": "anapp.auth.user_resolver",
