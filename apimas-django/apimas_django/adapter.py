@@ -1,14 +1,9 @@
 import copy
-from collections import defaultdict
-from urlparse import urljoin
 from django.conf.urls import url
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-# from apimas import documents as doc, utils
 from apimas import utils
-from apimas.tabmatch import Tabmatch
-from apimas.errors import (InvalidInput, ConflictError, AdapterError,
-                           InvalidSpec)
+from apimas.errors import InvalidSpec
 from apimas.adapters.actions import ApimasAction
 from apimas_django.wrapper import django_views
 from apimas_django.predicates import PREDICATES
@@ -16,7 +11,6 @@ from apimas_django.collect_construction import collect_processors
 
 import docular
 import docular.constructors
-import pprint
 
 
 def read_action_spec(action_spec):
@@ -58,7 +52,7 @@ def get_subcollection_views(collection_spec):
 def mk_collection_views(collection_spec, context):
     actions = docular.doc_get(collection_spec, ("actions",))
     if not actions:
-        print "NO ACTIONS", pprint_spec(collection_spec)
+        print "NO ACTIONS"
 
     views = get_subcollection_views(collection_spec)
 
@@ -130,16 +124,6 @@ def _construct_url(path, action_url):
     return url_pattern
 
 
-    pattern = named_pattern('pk') if not on_collection else ''
-    path = join_urls(path, pattern)
-    if action_url != '/':
-        url_pattern = r'^' + join_urls(path, action_url)
-    else:
-        url_pattern = r'^' + path
-    url_pattern = url_pattern.rstrip('/') + '/$'
-    return url_pattern
-
-
 def construct_processors(processors, spec):
     artifacts = {}
     for processor in processors:
@@ -191,7 +175,6 @@ def mk_action_view(
     method = params['method']
     status_code = params['status_code']
     content_type = params['content_type']
-    on_collection = params['on_collection']
     action_url = params['url']
 
     loc = context['loc']
@@ -316,7 +299,3 @@ def construct_views(spec):
     spec[':artifacts'] = {'=': artifacts}
     docular.doc_spec_construct(spec, PREDICATES, REGISTERED_CONSTRUCTORS)
     return docular.doc_spec_get(spec)
-
-
-def pprint_spec(spec):
-    pprint.pprint(docular.doc_strip_spec(spec))
