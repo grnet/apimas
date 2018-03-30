@@ -1,7 +1,6 @@
 import numbers
 import uuid
 import re
-import types
 from collections import Iterable, Mapping
 from datetime import date, datetime
 from urlparse import urlparse
@@ -16,32 +15,6 @@ Nothing = object()
 def isnumeric(value):
     return isinstance(value, numbers.Number) or (
             isinstance(value, (str, unicode)) and value.isdigit())
-
-
-def extract_value(obj, attr):
-    """
-    Tries to extract the value denoted by the second argument from the given
-    object.
-
-    * First, it tries to evaluate the `obj[attr]` expression.
-    * Secondly, it tries to find any attribute named as `attr`.
-
-    Args:
-        obj: Object to extract its value.
-        attr (str): An identifier used to extract the value from object.
-
-    Raises:
-        InvalidInput: if value cannot be extracted from the given object.
-    """
-    try:
-        return obj[attr]
-    except (KeyError, TypeError):
-        try:
-            return getattr(obj, attr)
-        except AttributeError:
-            raise InvalidInput(
-                'Cannot access attribute {attr!r} from given object'.format(
-                    attr=attr))
 
 
 class DataConverter(object):
