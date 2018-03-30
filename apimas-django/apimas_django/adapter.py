@@ -11,7 +11,6 @@ from apimas.errors import (InvalidInput, ConflictError, AdapterError,
                            InvalidSpec)
 from apimas.adapters.actions import ApimasAction
 from apimas_django.wrapper import django_views
-from apimas_django.testing import TestCase
 from apimas_django.predicates import PREDICATES
 from apimas_django.collect_construction import collect_processors
 
