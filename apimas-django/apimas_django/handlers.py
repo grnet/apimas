@@ -197,12 +197,22 @@ class DjangoBaseHandler(BaseProcessor):
     REQUIRED_KEYS = {
     }
 
-    def __init__(self, collection_loc, action_name, spec):
+    def __init__(self, collection_loc, action_name, spec, post_handler):
         self.collection_loc = collection_loc
         self.collection_name = collection_loc[-1]
         self.spec = spec
-        # self.model = value['model']
-        # self.bounds = value['bounds']
+        self.post_handler = utils.import_object(post_handler) \
+                            if post_handler else None
+
+    def process(self, context):
+        context_data = self.read(context)
+        output = self.execute(context_data)
+        if output is not None:
+            self.write(output, context)
+
+        if self.post_handler:
+            raw_response = self.extract(context, 'backend/raw_response')
+            self.post_handler(raw_response, context)
 
 
 def get_fields(subspecs, data):

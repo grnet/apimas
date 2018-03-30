@@ -217,7 +217,7 @@ InstanceToDict = ProcessorConstruction(
     INSTANCETODICT_CONSTRUCTORS, InstanceToDictProcessor)
 
 
-class ObjectRetrievalForUpdateProcessor(handlers.DjangoBaseHandler):
+class ObjectRetrievalForUpdateProcessor(BaseProcessor):
     READ_KEYS = {
         'kwargs': 'request/meta/kwargs',
         'pk': 'request/meta/kwargs/pk',
@@ -227,6 +227,9 @@ class ObjectRetrievalForUpdateProcessor(handlers.DjangoBaseHandler):
     WRITE_KEYS = (
         'backend/instance',
     )
+
+    def __init__(self, collection_loc, action_name, spec):
+        self.spec = spec
 
     def process(self, context):
         context_data = self.read(context)

@@ -36,6 +36,8 @@ def test_permissions(client):
     assert resp.status_code == 403
     assert not resp.has_header('WWW-Authenticate')
 
+    assert not models.PostLog.objects.all().exists()
+
     # user creates pending post
     resp = user.post('posts', post)
     assert resp.status_code == 201
@@ -43,6 +45,11 @@ def test_permissions(client):
     post_pending_id = body['id']
     assert body['status'] == 'pending'
     assert set(body.keys()) == set(['id', 'url', 'title', 'body', 'status'])
+
+    assert models.PostLog.objects.filter(
+        post_id=post_pending_id,
+        username='user',
+        action='create').exists()
 
     # user can't create a posted post
     post['status'] = 'posted'
@@ -122,11 +129,18 @@ def test_permissions(client):
     resp = admin.delete('posts/%s' % post_posted_id)
     assert resp.status_code == 404
 
+    assert not models.PostLog.objects.filter(action='delete').exists()
+
     # admin can delete a hidden post
     resp = admin.delete('posts/%s' % post_hidden_id)
     assert resp.status_code == 204
 
-    # admin can delete a hidden post
+    assert models.PostLog.objects.filter(
+        post_id=post_hidden_id,
+        username='admin',
+        action='delete').exists()
+
+    # post is deleted
     resp = admin.get('posts/%s' % post_hidden_id)
     assert resp.status_code == 404
 

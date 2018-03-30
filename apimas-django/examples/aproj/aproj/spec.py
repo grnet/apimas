@@ -20,6 +20,12 @@ POSTS = {
         '.action-template.django.retrieve': {},
         '.action-template.django.partial_update': {},
         '.action-template.django.delete': {},
+        'create': {
+            ':post_handler': 'anapp.models.post_create_post',
+        },
+        'delete': {
+            ':post_handler': 'anapp.models.post_delete_post',
+        },
     },
     "fields": {
         "id": {".field.serial": {}},

@@ -86,27 +86,32 @@ spec_list = [
     },
 
     {
-        '.processor.create': {},
+        '.processor.handler.*': {},
+        ':post_handler': {'.string': {}},
+    },
+
+    {
+        '.processor.handler.create': {},
         'module_path': 'apimas_django.handlers.CreateHandler',
     },
 
     {
-        '.processor.list': {},
+        '.processor.handler.list': {},
         'module_path': 'apimas_django.handlers.ListHandler',
     },
 
     {
-        '.processor.retrieve': {},
+        '.processor.handler.retrieve': {},
         'module_path': 'apimas_django.handlers.RetrieveHandler',
     },
 
     {
-        '.processor.update': {},
+        '.processor.handler.update': {},
         'module_path': 'apimas_django.handlers.UpdateHandler',
     },
 
     {
-        '.processor.delete': {},
+        '.processor.handler.delete': {},
         'module_path': 'apimas_django.handlers.DeleteHandler',
     },
 
@@ -127,7 +132,7 @@ spec_list = [
                 '5': {'.processor.load_data': {}},
                 '6': {'.processor.write_permission_check': {}},
             },
-            'handler': {'.processor.create': {}},
+            'handler': {'.processor.handler.create': {}},
             'post': {
                 '1': {'.processor.permissions.read.nonstrict': {}},
                 '2': {'.processor.response_filtering_resource': {}},
@@ -152,7 +157,7 @@ spec_list = [
                 '3': {'.processor.permissions.read': {}},
                 '4': {'.processor.import_params': {}},
             },
-            'handler': {'.processor.list': {}},
+            'handler': {'.processor.handler.list': {}},
             'post': {
                 '1': {'.processor.response_filtering_collection': {}},
                 '2': {'.processor.filtering': {}},
@@ -179,7 +184,7 @@ spec_list = [
                 '2': {'.processor.user_retrieval': {}},
                 '3': {'.processor.permissions.read': {}},
             },
-            'handler': {'.processor.retrieve': {}},
+            'handler': {'.processor.handler.retrieve': {}},
             'post': {
                 '1': {'.processor.response_filtering_resource.strict': {}},
                 '2': {'.processor.read_permission_check.strict': {}},
@@ -207,7 +212,7 @@ spec_list = [
                 '6': {'.processor.load_data.partial': {}},
                 '7': {'.processor.write_permission_check': {}},
             },
-            'handler': {'.processor.update': {}},
+            'handler': {'.processor.handler.update': {}},
             'post': {
                 '1': {'.processor.permissions.read.nonstrict': {}},
                 '2': {'.processor.response_filtering_resource': {}},
@@ -236,7 +241,7 @@ spec_list = [
                 '6': {'.processor.load_data': {}},
                 '7': {'.processor.write_permission_check': {}},
             },
-            'handler': {'.processor.update': {}},
+            'handler': {'.processor.handler.update': {}},
             'post': {
                 '1': {'.processor.permissions.read.nonstrict': {}},
                 '2': {'.processor.response_filtering_resource': {}},
@@ -261,7 +266,7 @@ spec_list = [
                 '3': {'.processor.permissions.write': {}},
                 '4': {'.processor.object_retrieval_for_update': {}},
             },
-            'handler': {'.processor.delete': {}},
+            'handler': {'.processor.handler.delete': {}},
         },
     }
 ]
