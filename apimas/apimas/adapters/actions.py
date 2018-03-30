@@ -1,6 +1,4 @@
-from functools import wraps
-from apimas import utils
-from apimas.errors import (AccessDeniedError, NotFound, InvalidInput,
+from apimas.errors import (AccessDeniedError, NotFound,
                            ValidationError, UnauthorizedError)
 from docular import doc_get
 from apimas.utils import normalize_path
@@ -30,9 +28,6 @@ class ApimasAction(object):
         self.handler = handler
         self.request_proc = request_proc or []
         self.response_proc = response_proc or []
-
-    def get_post_processors(self):
-        return self.response_proc
 
     def handle_error(self, func, context):
         try:
@@ -82,16 +77,16 @@ class ApimasAction(object):
         return context['response']
 
 
-def extract_from_action(action_spec):
-    handler = action_spec.get('handler')
-    if handler is None:
-        raise InvalidInput('Handler cannot be None')
+# def extract_from_action(action_spec):
+#     handler = action_spec.get('handler')
+#     if handler is None:
+#         raise InvalidInput('Handler cannot be None')
 
-    action_url = action_spec.get('url')
-    if action_url is None:
-        raise InvalidInput('URL not found for action')
+#     action_url = action_spec.get('url')
+#     if action_url is None:
+#         raise InvalidInput('URL not found for action')
 
-    handler = utils.import_object(handler)
-    pre = [utils.import_object(x) for x in action_spec.get('pre', [])]
-    post = [utils.import_object(x) for x in action_spec.get('post', [])]
-    return action_url, handler, pre, post
+#     handler = utils.import_object(handler)
+#     pre = [utils.import_object(x) for x in action_spec.get('pre', [])]
+#     post = [utils.import_object(x) for x in action_spec.get('post', [])]
+#     return action_url, handler, pre, post
