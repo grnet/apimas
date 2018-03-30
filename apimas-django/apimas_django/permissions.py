@@ -61,6 +61,37 @@ FilterResourceResponse = _django_base_construction(
     FilterResourceResponseProcessor)
 
 
+class ObjectRetrievalForUpdateProcessor(BaseProcessor):
+    READ_KEYS = {
+        'kwargs': 'request/meta/kwargs',
+        'pk': 'request/meta/kwargs/pk',
+        'write_filter': 'permissions/write/filter',
+    }
+
+    WRITE_KEYS = (
+        'backend/instance',
+    )
+
+    def __init__(self, collection_loc, action_name, spec):
+        self.spec = spec
+
+    def process(self, context):
+        context_data = self.read(context)
+        pk = context_data['pk']
+        kwargs = context_data['kwargs']
+        write_filter = context_data['write_filter']
+        filters = []
+        if write_filter is not None:
+            filters.append(write_filter(context))
+
+        instance = get_model_instance(self.spec, pk, kwargs, filters)
+        self.write((instance,), context)
+
+
+ObjectRetrievalForUpdate = _django_base_construction(
+    ObjectRetrievalForUpdateProcessor)
+
+
 class FilterCollectionResponseProcessor(BaseProcessor):
     READ_KEYS = {
         'unfiltered': 'backend/raw_response',

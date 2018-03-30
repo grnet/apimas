@@ -36,7 +36,7 @@ spec_list = [
 
     {
         '.processor.object_retrieval_for_update': {},
-        'module_path': 'apimas_django.processors.ObjectRetrievalForUpdate',
+        'module_path': 'apimas_django.permissions.ObjectRetrievalForUpdate',
     },
 
     {

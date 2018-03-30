@@ -7,7 +7,6 @@ from apimas.errors import (AccessDeniedError, ConflictError, InvalidInput,
 from apimas.components import BaseProcessor, ProcessorConstruction
 from apimas_django import utils as django_utils
 from apimas.converters import Date, DateTime, Integer, Float, Boolean, List
-from apimas_django import handlers
 import docular
 
 
@@ -215,34 +214,3 @@ class InstanceToDictProcessor(BaseProcessor):
 
 InstanceToDict = ProcessorConstruction(
     INSTANCETODICT_CONSTRUCTORS, InstanceToDictProcessor)
-
-
-class ObjectRetrievalForUpdateProcessor(BaseProcessor):
-    READ_KEYS = {
-        'kwargs': 'request/meta/kwargs',
-        'pk': 'request/meta/kwargs/pk',
-        'write_filter': 'permissions/write/filter',
-    }
-
-    WRITE_KEYS = (
-        'backend/instance',
-    )
-
-    def __init__(self, collection_loc, action_name, spec):
-        self.spec = spec
-
-    def process(self, context):
-        context_data = self.read(context)
-        pk = context_data['pk']
-        kwargs = context_data['kwargs']
-        write_filter = context_data['write_filter']
-        filters = []
-        if write_filter is not None:
-            filters.append(write_filter(context))
-
-        instance = handlers.get_model_instance(self.spec, pk, kwargs, filters)
-        self.write((instance,), context)
-
-
-ObjectRetrievalForUpdate = handlers._django_base_construction(
-    ObjectRetrievalForUpdateProcessor)
