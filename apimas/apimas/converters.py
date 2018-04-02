@@ -212,8 +212,8 @@ class Boolean(DataConverter):
             return True
         if value in self.FALSE_VALUES:
             return False
-        msg = 'Field is not boolean. {type!r} found instead.'
-        raise ValidationError(msg.format(val=type(value)))
+        msg = 'Field is not boolean. {typ!r} found instead.'
+        raise ValidationError(msg.format(typ=type(value)))
 
     def get_repr_value(self, value, permissions, flat):
         try:
@@ -322,7 +322,6 @@ class Choices(DataConverter):
         except KeyError:
             msg = self.ERROR_MESSAGE.format(values=','.join(self.displayed))
             raise ValidationError(msg)
-        return value
 
 
 class Identity(DataConverter):
@@ -349,6 +348,7 @@ class Identity(DataConverter):
             self.TRAILING_SLASH) + self.TRAILING_SLASH
 
         self.rel_url = utils.urljoin(root_url, to) if root_url else to
+        self.parsed_rel_url = urlparse(self.rel_url)
         super(Identity, self).__init__(**kwargs)
 
     def get_repr_value(self, value, permissions, flat):
@@ -368,14 +368,15 @@ class Ref(Identity):
             return str(value)
 
         parsed_value = urlparse(value)
-        parsed_url = urlparse(self.rel_url)
-        _, match, suffix = parsed_value.path.partition(parsed_url.path)
-        if not match:
+        if not parsed_value.netloc:
+            # It's not a URL; assume it's a plain id
             return value
 
-        issame = (parsed_value.scheme == parsed_url.scheme and
-                  parsed_value.netloc == parsed_url.netloc)
-        if not suffix and not issame:
+        _, match, suffix = parsed_value.path.partition(
+            self.parsed_rel_url.path)
+        issame = (parsed_value.scheme == self.parsed_rel_url.scheme and
+                  parsed_value.netloc == self.parsed_rel_url.netloc)
+        if not match or not suffix or not issame:
             msg = ('Given URL {!r} does not correspond to the collection'
                    ' of {!r}')
             raise ValidationError(msg.format(

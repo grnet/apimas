@@ -125,7 +125,13 @@ def get_apimas_request(request, **kwargs):
     headers = get_headers(request)
     body, files = get_body_and_files(request)
     # Merge data and the files of the request.
-    data = dict(body, **files)
+    if files:
+        if not isinstance(body, dict):
+            raise ValidationError("Files given along with a non-dict body.")
+        data = dict(body, **files)
+    else:
+        data = body
+
     meta = {
         'params': params,
         'files': files,

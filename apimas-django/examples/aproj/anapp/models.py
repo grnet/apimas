@@ -76,3 +76,5 @@ def post_delete_post(raw_response, context):
 class Nulltest(models.Model):
     fdef = models.IntegerField(null=True)
     fnodef = models.IntegerField(null=True)
+    fstr = models.CharField(max_length=100)
+    fbool = models.BooleanField()

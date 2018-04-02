@@ -57,6 +57,10 @@ NULLTEST = {
                  '.flag.nullable.default': {}},
         'fnodef': {'.field.integer': {},
                    '.flag.nullable': {}},
+        'fstr': {'.field.string': {},
+                 'default': 'other'},
+        'fbool': {'.field.boolean': {},
+                  'default': True},
     },
 }
 

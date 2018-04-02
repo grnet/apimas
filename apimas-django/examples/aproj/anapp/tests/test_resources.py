@@ -170,6 +170,10 @@ def test_permissions(client):
     assert resp.json()['status'] == 'posted'
     post_nowposted_id = post_pending_id
 
+    # user can't change body field
+    resp = user.patch('posts/%s' % post_pending_id, {'body': 'new body'})
+    assert resp.status_code == 403
+
     # admin can change state to hidden
     resp = admin.patch('posts/%s' % post_nowposted_id, {'status': 'hidden'})
     assert resp.status_code == 200
@@ -278,6 +282,10 @@ def test_orderable(client):
     for inst in insts:
         models.Institution.objects.create(**inst)
 
+    resp = api.get('institutions', {'ordering': 'category'})
+    assert resp.status_code == 403
+    assert "not orderable" in resp.content
+
     resp = api.get('institutions', {'ordering': 'active,-name'})
     body = resp.json()
     cleaned = map(filter_dict(['name', 'active']), body)
@@ -316,6 +324,10 @@ def test_filter(client):
     assert resp.status_code == 400
     assert 'Unrecognized parameter' in resp.json()['details']
 
+    resp = api.get('groups', {'flt__name': 'users'})
+    assert resp.status_code == 403
+    assert "not filterable" in resp.content
+
     resp = api.get('groups', {'flt__institution_id': 1})
     assert resp.status_code == 200
     assert len(resp.json()) == 2
@@ -331,6 +343,10 @@ def test_filter(client):
     resp = api.get('groups', {'flt__users.onoma': 'Georg'})
     assert resp.status_code == 200
     assert len(resp.json()) == 0
+
+    resp = api.get('groups', {'flt__users.onoma__illegal': 'Georg'})
+    assert resp.status_code == 403
+    assert "No such operator" in resp.content
 
     resp = api.get('groups', {'flt__users.onoma__startswith': 'Georg'})
     assert resp.status_code == 200
@@ -606,6 +622,89 @@ def test_nullable(client):
     body = resp.json()
     assert body['fdef'] is None
     assert body['fnodef'] == 4
+
+
+def test_importing(client):
+    api = client.copy(prefix='/api/prefix/')
+
+    data = {'fnodef': None}
+    resp = api.post('nulltest', data)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body['fnodef'] == None
+    assert body['fstr'] == 'other'
+
+    data = {'fnodef': None, 'fstr': None}
+    resp = api.post('nulltest', data)
+    assert resp.status_code == 400
+    assert "cannot be None" in resp.content
+
+    data = {'fnodef': None, 'fstr': 17}
+    resp = api.post('nulltest', data)
+    assert resp.status_code == 400
+    assert "is not of type 'string'" in resp.content
+
+    data = {'fnodef': None, 'fbool': 17}
+    resp = api.post('nulltest', data)
+    assert resp.status_code == 400
+    assert "is not boolean" in resp.content
+
+    data = {'fnodef': 'other'}
+    resp = api.post('nulltest', data)
+    assert resp.status_code == 400
+    assert "is not numeric" in resp.content
+
+    data = 42
+    resp = api.post('nulltest', data)
+    assert resp.status_code == 400
+    assert "Must be a dict" in resp.content
+
+    data = []
+    resp = api.post('nulltest', data)
+    assert resp.status_code == 400
+    assert "Must be a dict" in resp.content
+
+    inst = models.Institution.objects.create(name='inst', active=True)
+    data = {
+        'name': 'users',
+        'founded': '2014-12-31',
+        'institution_id': inst.id,
+        'email': 'email@example.com',
+    }
+    resp = api.post('groups', data)
+    assert resp.status_code == 201
+
+    data['users'] = {}
+    resp = api.post('groups', data)
+    assert resp.status_code == 400
+    assert "is not a list-like" in resp.content
+
+    data['users'] = []
+    resp = api.post('groups', data)
+    assert resp.status_code == 201
+
+    data['institution_id'] = 'http://127.0.0.1:8000/wrong/1/'
+    resp = api.post('groups', data)
+    assert resp.status_code == 400
+    assert "does not correspond to the collection" in resp.content
+
+    data['institution_id'] = inst.id
+    resp = api.post('groups', data)
+    assert resp.status_code == 201
+
+    data['founded'] = 'illegal date'
+    resp = api.post('groups', data)
+    assert resp.status_code == 400
+    assert "cannot be converted into a date object" in resp.content
+
+    data['founded'] = '2014-12-31'
+    resp = api.post('groups', data)
+    assert resp.status_code == 201
+
+    data['email'] = 'invalid email'
+    resp = api.post('groups', data)
+    assert resp.status_code == 400
+    assert "is not a valid email" in resp.content
 
 
 def test_pagination(client):

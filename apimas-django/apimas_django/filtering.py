@@ -14,7 +14,7 @@ class Filter(object):
         """
         operators = getattr(self, 'OPERATORS', [])
         if operator and operator not in operators:
-            raise InvalidInput("No such operator")
+            raise AccessDeniedError("No such operator")
 
         kwargs = {
             source + ('__' + operator if operator else ''): value
@@ -158,13 +158,13 @@ class FilteringProcessor(BaseProcessor):
         for segment in filter_path:
             spec = spec['filters']
             if segment not in spec:
-                raise InvalidInput('%s not filterable (at %s)' %
-                                   (str(filter_path), segment))
+                raise AccessDeniedError('%s not filterable (at %s)' %
+                                        (str(filter_path), segment))
             spec = spec[segment]
             source_path.append(spec['source'])
 
         if 'filter' not in spec:
-            raise InvalidInput('%s not filterable' % str(filter_path))
+            raise AccessDeniedError('%s not filterable' % str(filter_path))
         return spec['filter'], '__'.join(source_path)
 
     def execute(self, context_data):

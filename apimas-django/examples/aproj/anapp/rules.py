@@ -28,7 +28,7 @@ RULES = [
     ('api/prefix/posts', 'create', 'user', '*', 'create_check', '*', '*'),
 
     ('api/prefix/posts', 'partial_update', 'admin', '*', '*', '*', '*'),
-    ('api/prefix/posts', 'partial_update', 'user', 'is_pending', 'update_check', '*', '*'),
+    ('api/prefix/posts', 'partial_update', 'user', 'is_pending', 'update_check', 'title,status', '*'),
 
     ('api/prefix/posts', 'delete', 'admin', 'is_hidden', '*', '*', '*'),
 

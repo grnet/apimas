@@ -142,28 +142,6 @@ class ImportExportData(BaseProcessor):
         self.converter = converter if on_collection else converter.converter
 
 
-def check_field(allowed, field):
-    while True:
-        if field in allowed:
-            return field
-        splits = field.rsplit('/', 1)
-        prefix = splits[0]
-        if field == prefix:
-            return False
-        field = prefix
-        continue
-
-
-def check_field_permissions(allowed, write_data):
-    if allowed is doc.ANY:
-        return
-
-
-def path_exists(doc, path):
-    feed, trail, nodes = docular.doc_locate(doc, path)
-    return not feed
-
-
 def import_integer(value):
     return cnvs.Integer().import_data(value, permissions=True)
 
@@ -304,8 +282,6 @@ class ImportWriteDataProcessor(ImportExportData):
 
     def process_write_data(self, context_data):
         write_data = context_data['write_data']
-        if not write_data:
-            return write_data
         can_write = context_data['can_write']
         if not can_write:
             raise AccessDeniedError(

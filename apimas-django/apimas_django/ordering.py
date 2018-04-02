@@ -1,7 +1,7 @@
 import docular
 from django.db.models.query import QuerySet
 from apimas.components import BaseProcessor, ProcessorConstruction
-from apimas.errors import InvalidInput
+from apimas.errors import InvalidInput, AccessDeniedError
 
 
 def field_constructor(context, instance, loc):
@@ -77,13 +77,13 @@ class OrderingProcessor(BaseProcessor):
         for segment in ordering_path:
             spec = spec['fields']
             if segment not in spec:
-                raise InvalidInput('%s not orderable (at %s)' %
-                                   (str(ordering_path), segment))
+                raise AccessDeniedError('%s not orderable (at %s)' %
+                                        (str(ordering_path), segment))
             spec = spec[segment]
             source_path.append(spec['source'])
 
         if 'orderable' not in spec:
-            raise InvalidInput('%s not orderable' % str(ordering_path))
+            raise AccessDeniedError('%s not orderable' % str(ordering_path))
         return '__'.join(source_path)
 
     def execute(self, context_data):
