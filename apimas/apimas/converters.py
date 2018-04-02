@@ -24,26 +24,12 @@ class DataConverter(object):
     vice versa.
 
     Attributes:
-        default: (Optional) Default deserialized value if `None` is found
-            during deserialization.
-        readonly (bool): `True` if value must not be deserialized; `False`
-            otherwise.
-        writeonly (bool): `True` if value must not be serialized; `False`
-            otherwise.
-        extractor (callablel): A callable used to extract the python native
-            value from a given object during serialization.
+        writeonly (bool): `True` if value must not be exported.
+        nullable (bool): `True` if value can be None.
     """
-    def __init__(self, default=Nothing, readonly=False, writeonly=False,
-                 extractor=None, nullable=False):
-        assert not (readonly and writeonly), (
-            '`readonly` and `writeonly` properties are mutually exclusive')
-        self.default = default
-        self.nullable = nullable
-        self.readonly = readonly
+    def __init__(self, writeonly=False, nullable=False):
         self.writeonly = writeonly
-        if extractor:
-            assert callable(extractor), ('extractor must be a callable')
-        self.extractor = extractor
+        self.nullable = nullable
 
     def get_native_value(self, value, permissions, flat):
         """ Gets the python native value from a given value. """
@@ -65,8 +51,6 @@ class DataConverter(object):
 
         if self.writeonly:
             return Nothing
-
-        value = self.extractor(value) if self.extractor else value
 
         if value is None:
             return None

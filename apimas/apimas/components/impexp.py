@@ -7,8 +7,6 @@ from apimas.components import BaseProcessor, ProcessorConstruction
 
 Null = object()
 
-FIELD_ARGS = ['default']
-
 
 def converter_obj(cls, dependencies=None, extra_args=None):
     def constructor(context, instance, loc, top_spec, config):
@@ -21,7 +19,7 @@ def converter_obj(cls, dependencies=None, extra_args=None):
             kwargs[key] = docular.doc_spec_get(config[':'+key])
 
         extra_check = extra_args or []
-        for field_arg in FIELD_ARGS + extra_check:
+        for field_arg in extra_check:
             argdoc = instance.get(field_arg)
             if argdoc:
                 v = docular.doc_spec_get(argdoc, default=Null)
@@ -115,7 +113,6 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
         cnvs.Choices, extra_args=['allowed', 'displayed']),
 
     '.flag.*': no_constructor,
-    '.flag.readonly': cerberus_flag('readonly'),
     '.flag.writeonly': cerberus_flag('writeonly'),
     '.flag.nullable': cerberus_flag('nullable'),
     '.string': construct_string,
