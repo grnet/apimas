@@ -13,7 +13,7 @@ def check_flags(name, spec, value, full, instance):
         return Nothing
 
     if full and value is Nothing:
-        value = default
+        value = Nothing if default is Nothing else default()
 
     if full and value is Nothing:
         raise ValidationError("'%s': Field is required" % name)

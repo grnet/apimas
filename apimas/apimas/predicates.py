@@ -26,6 +26,7 @@ spec_list = [
         'source': {'.string': {}},
         '.flag.*': {},
         'default': {},
+        'default_fn': {'.string': {}},
         '*': {},
     },
 

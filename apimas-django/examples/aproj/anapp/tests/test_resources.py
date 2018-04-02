@@ -701,6 +701,13 @@ def test_importing(client):
     resp = api.post('groups', data)
     assert resp.status_code == 201
 
+    del data['founded']
+    resp = api.post('groups', data)
+    assert resp.status_code == 201
+    body = resp.json()
+    today = datetime.now().strftime('%Y-%m-%d')
+    assert body['founded'] == today
+
     data['email'] = 'invalid email'
     resp = api.post('groups', data)
     assert resp.status_code == 400

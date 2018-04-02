@@ -2,7 +2,7 @@ from django.db.models import ProtectedError
 from apimas import utils
 from apimas_django import utils as django_utils
 from apimas.components import BaseProcessor, ProcessorConstruction
-from apimas.errors import AccessDeniedError
+from apimas.errors import AccessDeniedError, InvalidInput
 import docular
 
 
@@ -90,11 +90,18 @@ def field_constructor(instance, loc):
     source = docular.doc_spec_get(instance.get('source', {}))
     spec['source'] = source if source else loc[-1]
 
-    argdoc = instance.get('default')
-    if argdoc:
-        v = docular.doc_spec_get(argdoc, default=Nothing)
-        if v is not Nothing:
-            spec['default'] = v
+    def_doc = docular.doc_spec_get(instance, 'default', default=Nothing)
+    deffn_doc = docular.doc_spec_get(
+        instance, 'default_fn', default=Nothing)
+
+    if def_doc is not Nothing and deffn_doc is not Nothing:
+        raise InvalidInput("Multiple default values given")
+
+    if def_doc is not Nothing:
+        spec['default'] = lambda: def_doc
+    elif deffn_doc is not Nothing:
+        fn = utils.import_object(deffn_doc)
+        spec['default'] = fn
 
     value['spec'] = spec
     docular.doc_spec_set(instance, value)
