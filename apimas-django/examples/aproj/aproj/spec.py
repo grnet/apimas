@@ -184,7 +184,15 @@ FEATURES = {
         "name": {".field.string": {},
                  '.flag.orderable': {}},
         "group_id": {'.field.ref': {},
-                     'to': 'api/prefix/groups'}
+                     'to': 'api/prefix/groups'},
+        'group_name': {
+            '.field.string': {},
+            '.flag.readonly': {},
+            'source': 'group.name'},
+        'institution_name': {
+            '.field.string': {},
+            '.flag.readonly': {},
+            'source': 'group.institution.name'},
     }
 }
 

@@ -562,6 +562,8 @@ def test_ref(client):
     assert resp.status_code == 201
     body = resp.json()
     assert body['group_id'] == group_url
+    assert body['group_name'] == 'group1'
+    assert body['institution_name'] == 'inst1'
 
 
 def test_choices(client):
