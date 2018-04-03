@@ -122,7 +122,7 @@ spec_list = [
             'status_code': 201,
             'content_type': 'application/json',
             'on_collection': False,
-            'read_permissions': 'retrieve',
+            ':permissions_read': 'retrieve',
             'url': '/',
             'pre': {
                 '1': {'.processor.authentication': {}},
@@ -201,7 +201,7 @@ spec_list = [
             'status_code': 200,
             'content_type': 'application/json',
             'on_collection': False,
-            'read_permissions': 'retrieve',
+            ':permissions_read': 'retrieve',
             'url': '/*/',
             'pre': {
                 '1': {'.processor.authentication': {}},
@@ -230,7 +230,7 @@ spec_list = [
             'status_code': 200,
             'content_type': 'application/json',
             'on_collection': False,
-            'read_permissions': 'retrieve',
+            ':permissions_read': 'retrieve',
             'url': '/*/',
             'pre': {
                 '1': {'.processor.authentication': {}},

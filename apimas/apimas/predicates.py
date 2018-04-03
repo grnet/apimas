@@ -78,8 +78,6 @@ spec_list = [
                 'method': {'.string': {}},
                 'status_code': {'.integer': {}},
                 'content_type': {'.string': {}},
-                'read_permissions': {'.string': {}},
-                'write_permissions': {'.string': {}},
                 'url': {'.string': {}},
                 'handler': {".processor": {}},
                 'pre': {"*": {".processor": {}}},
@@ -111,6 +109,8 @@ spec_list = [
         ':permissions_namespace': {'.string': {}},
         ':permissions_mode': {'.string': {}},
         ':permissions_strict': {'.boolean': {}},
+        ':permissions_read': {'.string': {}},
+        ':permissions_write': {'.string': {}},
     },
 
     {

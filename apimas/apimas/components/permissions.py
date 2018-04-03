@@ -71,16 +71,6 @@ def mk_collection_path(loc):
     return '/'.join(reversed(segments))
 
 
-def action_constructor(instance, loc):
-    action_name = loc[-1]
-    value = {}
-    value['read_permissions'] = docular.doc_spec_get(
-        instance['read_permissions']) or action_name
-    value['write_permissions'] = docular.doc_spec_get(
-        instance['write_permissions']) or action_name
-    docular.doc_spec_set(instance, value)
-
-
 def make_fields_spec(instance):
     fields_spec = {}
     for key, value in docular.doc_spec_iter_values(instance['fields']):
@@ -107,7 +97,7 @@ def struct_constructor(instance):
 PERMISSIONS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
     {'.field.collection.*': collection_constructor,
      '.field.struct': struct_constructor,
-     '.action': action_constructor},
+    },
     default=no_constructor)
 
 
@@ -131,7 +121,7 @@ class PermissionsProcessor(BaseProcessor):
 
     def __init__(self, collection_loc, action_name,
                  permission_rules, collection_path, fields_spec,
-                 read_permissions, write_permissions, permissions_namespace,
+                 permissions_read, permissions_write, permissions_namespace,
                  permissions_mode, permissions_strict):
 
         rules_funcname = permission_rules
@@ -141,8 +131,8 @@ class PermissionsProcessor(BaseProcessor):
         self.fields_spec = fields_spec
         self.collection_path = collection_path
         self.action_name = action_name
-        self.read_permissions_tag = read_permissions
-        self.write_permissions_tag = write_permissions
+        self.read_permissions_tag = permissions_read or action_name
+        self.write_permissions_tag = permissions_write or action_name
         self.namespace = permissions_namespace
         mode = permissions_mode
         self.check_read = mode is None or mode == 'read'
