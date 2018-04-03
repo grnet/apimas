@@ -1,4 +1,4 @@
-# COLUMNS = ('collection', 'action', 'role', 'filter', 'check' 'fields', 'comment')
+# COLUMNS = ('collection', 'action', 'role', 'filter', 'check', 'fields', 'comment')
 
 RULES = [
 
