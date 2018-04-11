@@ -206,10 +206,7 @@ class DjangoBaseHandler(BaseProcessor):
                             if post_handler else None
 
     def process(self, context):
-        context_data = self.read(context)
-        output = self.execute(context_data)
-        if output is not None:
-            self.write(output, context)
+        BaseProcessor.process(self, context)
 
         if self.post_handler:
             raw_response = context.extract('backend/raw_response')
