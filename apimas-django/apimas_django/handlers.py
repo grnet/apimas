@@ -1,3 +1,4 @@
+import logging
 from django.db.models import ProtectedError
 from apimas import utils
 from apimas_django import utils as django_utils
@@ -5,6 +6,7 @@ from apimas.components import BaseProcessor, ProcessorConstruction
 from apimas.errors import AccessDeniedError, InvalidInput
 import docular
 
+logger = logging.getLogger('apimas')
 
 REF = '.ref'
 STRUCT = '.struct='
@@ -245,7 +247,7 @@ def do_create(key, spec, data, precreated=None):
 
     create_args.update(get_fields(spec['subfields'], data))
 
-    print "CREATE_ARGS", create_args
+    logger.debug('Creating values: %s', create_args)
     return model.objects.create(**create_args)
 
 
@@ -295,7 +297,7 @@ def delete_subcollection(key, spec):
     bound_name = get_bound_name(spec)
     assert bound_name is not None
     flt = {bound_name: key}
-    print "DELETING for", flt
+    logger.debug('Deleting with filter: %s', flt)
     delete_queryset(model.objects.filter(**flt))
 
 
@@ -339,7 +341,7 @@ def do_update(spec, data, instance, precreated=None):
 
     update_args.update(get_fields(spec['subfields'], data))
 
-    print "UPDATE ARGS", update_args
+    logger.debug('Updating values: %s', update_args)
     for key, value in update_args.iteritems():
         setattr(instance, key, value)
     instance.save()
@@ -351,7 +353,7 @@ def update_resource(name, spec, data, instance):
         return Nothing
 
     if data is None:
-        print "DELETING instance", instance
+        logger.debug('Deleting instance: %s', instance)
         delete_instance(instance)
         return None
 

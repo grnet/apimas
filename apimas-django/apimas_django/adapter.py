@@ -1,3 +1,4 @@
+import logging
 import copy
 from django.conf.urls import url
 from django.views.decorators.http import require_http_methods
@@ -11,6 +12,8 @@ from apimas_django.collect_construction import collect_processors
 
 import docular
 import docular.constructors
+
+logger = logging.getLogger('apimas')
 
 
 def read_action_spec(action_spec):
@@ -35,7 +38,7 @@ def read_action_spec(action_spec):
 
 
 def collection_django_constructor(instance, context, loc):
-    print "On collection_django_constructor loc:", loc
+    logger.info("Constructing collection %s", loc)
     docular.doc_spec_set(instance,
                          mk_collection_views(instance, context))
 
@@ -52,7 +55,7 @@ def get_subcollection_views(collection_spec):
 def mk_collection_views(collection_spec, context):
     actions = docular.doc_get(collection_spec, ("actions",))
     if not actions:
-        print "NO ACTIONS"
+        logger.warning("No actions to construct")
 
     views = get_subcollection_views(collection_spec)
 
@@ -127,7 +130,7 @@ def _construct_url(path, action_url):
 def construct_processors(processors, spec):
     artifacts = {}
     for processor in processors:
-        print 'Constructing:', processor
+        logger.info('Constructing processor: %s', processor)
         proc = utils.import_object(processor)
         newspec = copy.deepcopy(spec)
         docular.doc_spec_construct(newspec, PREDICATES, proc.constructors)
@@ -188,7 +191,7 @@ def mk_action_view(
         msg = 'Handler not found for action {!r}'.format(action_name)
         raise InvalidSpec(msg, loc=loc)
 
-    print "ACTION", action_name
+    logger.info("Constructing action: %s", action_name)
     collection_path = mk_url_prefix(loc)
     urlpattern = _construct_url(collection_path, action_url)
     method = method.upper()
@@ -216,7 +219,6 @@ def processor_constructor(instance, config):
 
 
 def endpoint_constructor(instance):
-    print "On endpoint_constructor"
     views = {name:
              mk_django_urls(docular.doc_spec_get(collection_spec))
              for name, collection_spec in docular.doc_spec_iter(
@@ -236,16 +238,15 @@ def mk_django_urls(action_urls):
 
 
 def apimas_app_constructor(instance):
-    print "On apimas_constructor"
     urlpatterns = []
     for endpoint, endpoint_patterns in docular.doc_spec_iter(
             instance['endpoints']):
         endpoint_patterns = docular.doc_spec_get(endpoint_patterns)
         for collection, collection_patterns in endpoint_patterns.iteritems():
             urlpatterns.extend(collection_patterns)
-    print "URLPATTERNS:"
+    logger.info("Built URL patterns:")
     for urlpattern in urlpatterns:
-        print urlpattern
+        logger.info(urlpattern)
     docular.doc_spec_set(instance, urlpatterns)
 
 
@@ -294,7 +295,6 @@ def configure_spec(spec, config):
 
 def construct_views(spec):
     processors = collect_processors(spec)
-    print "FOUND PROCESSORS:", processors
     artifacts = construct_processors(processors, spec)
     spec[':artifacts'] = {'=': artifacts}
     docular.doc_spec_construct(spec, PREDICATES, REGISTERED_CONSTRUCTORS)
