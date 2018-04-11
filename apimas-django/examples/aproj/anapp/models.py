@@ -60,15 +60,15 @@ class PostLog(models.Model):
 
 
 def post_create_post(post, context):
-    auth_user = context['auth']['user']
+    auth_user = context.extract('auth/user')
     username = auth_user.username
     PostLog.objects.create(post_id=post.id, action='create', username=username)
 
 
 def post_delete_post(raw_response, context):
     assert raw_response is None
-    pk = context['request']['meta']['kwargs']['pk']
-    auth_user = context['auth']['user']
+    pk = context.extract('request/meta/kwargs/pk')
+    auth_user = context.extract('auth/user')
     username = auth_user.username
     PostLog.objects.create(post_id=pk, action='delete', username=username)
 

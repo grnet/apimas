@@ -212,7 +212,7 @@ class DjangoBaseHandler(BaseProcessor):
             self.write(output, context)
 
         if self.post_handler:
-            raw_response = self.extract(context, 'backend/raw_response')
+            raw_response = context.extract('backend/raw_response')
             self.post_handler(raw_response, context)
 
 

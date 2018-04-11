@@ -1,7 +1,7 @@
 from apimas.errors import (AccessDeniedError, NotFound,
                            ValidationError, UnauthorizedError)
 from docular import doc_get
-from apimas.utils import normalize_path
+from apimas.components import Context
 
 
 EXC_CODES = {
@@ -10,11 +10,6 @@ EXC_CODES = {
     AccessDeniedError: 403,
     NotFound: 404,
 }
-
-
-def extract(context, path):
-    path = normalize_path(path)
-    return doc_get(context, path)
 
 
 class ApimasAction(object):
@@ -39,7 +34,7 @@ class ApimasAction(object):
                 import traceback
                 print traceback.format_exc()
 
-            headers = extract(context, 'response/meta/headers') or {}
+            headers = context.extract('response/meta/headers') or {}
             details = getattr(exc, 'kwargs', {}).get('details')
             content = details if details else {'details': exc.message}
             return {
@@ -59,10 +54,10 @@ class ApimasAction(object):
             },
         }
 
-        context = {
+        context = Context({
             'request': request,
             'response': response,
-        }
+        })
         return self.handle_error(self.process_context, context)
 
     def process_context(self, context):
@@ -74,7 +69,7 @@ class ApimasAction(object):
         for processor in self.response_proc:
             processor.process(context)
 
-        return context['response']
+        return context.extract('response')
 
 
 # def extract_from_action(action_spec):

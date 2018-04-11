@@ -11,6 +11,37 @@ ProcessorConstruction = namedtuple(
 Null = object()
 
 
+class Context(object):
+    def __init__(self, d=None):
+        self._d = d or {}
+
+    def extract(self, path):
+        """
+        Extracts a specific key from context.
+
+        Args:
+            path (str|tuple): Key where desired value is located, either
+                string or tuple format (e.g. `foo/bar` or `('foo', bar')`.
+
+        Returns:
+            The value of the desired key.
+        """
+        path = normalize_path(path)
+        return doc_get(self._d, path)
+
+    def save(self, path, value):
+        """
+        Saves a value to the context.
+
+        Args:
+            path (str|tuple): Path where desired value is located, either
+                string or tuple format (e.g. `foo/bar` or `('foo', bar')`.
+            value: Value to be saved to the context.
+        """
+        path = normalize_path(path)
+        doc_set(self._d, path, value, multival=False)
+
+
 class BaseProcessor(object):
     """
     Interface for implementing apimas processors.
@@ -34,37 +65,6 @@ class BaseProcessor(object):
     def __init__(self, collection_loc, action_name):
         self.collection_loc = collection_loc
         self.action_name = action_name
-
-    def extract(self, context, path):
-        """
-        Extracts a specific key from context.
-
-        Args:
-            context: Context from which processor reads.
-            path (str|tuple): Key where desired value is located, either
-                string or tuple format (e.g. `foo/bar` or `('foo', bar')`.
-
-        Returns:
-            The value of the desired key.
-        """
-        path = normalize_path(path)
-        return doc_get(context, path)
-
-    def save(self, context, path, value):
-        """
-        Saves a value to the context.
-
-        Args:
-            context: Context to which processor writes.
-            path (str|tuple): Path where desired value is located, either
-                string or tuple format (e.g. `foo/bar` or `('foo', bar')`.
-            value: Value to be saved to the context.
-        """
-        if context is None:
-            raise InvalidInput(
-                'Cannot save to context. Context is `NoneType`')
-        path = normalize_path(path)
-        doc_set(context, path, value, multival=False)
 
     def read(self, context):
         """
@@ -99,19 +99,19 @@ class BaseProcessor(object):
                                     type(keys)))
         if isinstance(keys, (list, tuple)):
             keys = {k: k for k in keys}
-        return {k: self.extract(context, v) for k, v in keys.iteritems()}
+        return {k: context.extract(v) for k, v in keys.iteritems()}
 
     def _write_list(self, context, keys, data):
         for i, k in enumerate(keys):
             value = data[i]
-            self.save(context, k, value)
+            context.save(k, value)
 
     def _write_dict(self, context, keys, data):
         for k, v in keys.iteritems():
             value = data.get(k, Null)
             if value is Null:
                 continue
-            self.save(context, v, value)
+            context.save(v, value)
 
     def write(self, data, context):
         """
