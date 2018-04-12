@@ -131,11 +131,11 @@ GROUPS = {
             '.field.struct': {},
             '.flag.readonly': {},
             'fields': INSTITUTIONS['fields']},
-        "users": {
+        "members": {
             '.field.collection.django': {},
             ':filter_compat': True,
-            'model': 'anapp.models.User',
-            'source': 'users',
+            'model': 'anapp.models.Member',
+            'source': 'members',
             'bound': 'group',
             'actions': {
                 '.action-template.django.list': {},

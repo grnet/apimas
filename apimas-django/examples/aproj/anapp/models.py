@@ -34,16 +34,11 @@ class Variants(models.Model):
     el = models.TextField()
 
 
-class User(models.Model):
+class Member(models.Model):
     username = models.TextField()
     age = models.IntegerField()
-    group = models.ForeignKey(Group, related_name='users')
+    group = models.ForeignKey(Group, related_name='members')
     name_variants = models.ForeignKey(Variants, null=True)
-
-
-class Email(models.Model):
-    email = models.TextField()
-    user = models.ForeignKey(User)
 
 
 class Post(models.Model):

@@ -307,24 +307,24 @@ def test_filter(client):
 
     data = {'onoma': 'Georgios', 'age': 22,
             'variants': {'en': 'George', 'el': 'Giorgos'}}
-    resp = api.post('groups/%s/users' % gr.id, data)
+    resp = api.post('groups/%s/members' % gr.id, data)
     assert resp.status_code == 201
 
     data = {'onoma': 'Georgia', 'age': 22,
             'variants': {'en': 'Georgia', 'el': 'Giorgia'}}
-    resp = api.post('groups/%s/users' % gr.id, data)
+    resp = api.post('groups/%s/members' % gr.id, data)
     assert resp.status_code == 201
 
     data = {'onoma': 'Konstantinos', 'age': 33,
             'variants': {'en': 'Constantine', 'el': 'Kostas'}}
-    resp = api.post('groups/%s/users' % gr.id, data)
+    resp = api.post('groups/%s/members' % gr.id, data)
     assert resp.status_code == 201
 
     resp = api.get('groups', {'institution_id': 1})
     assert resp.status_code == 400
     assert 'Unrecognized parameter' in resp.json()['details']
 
-    resp = api.get('groups', {'flt__name': 'users'})
+    resp = api.get('groups', {'flt__name': 'members'})
     assert resp.status_code == 403
     assert "not filterable" in resp.content
 
@@ -340,41 +340,41 @@ def test_filter(client):
     assert resp.status_code == 200
     assert len(resp.json()) == 0
 
-    resp = api.get('groups', {'flt__users.onoma': 'Georg'})
+    resp = api.get('groups', {'flt__members.onoma': 'Georg'})
     assert resp.status_code == 200
     assert len(resp.json()) == 0
 
-    resp = api.get('groups', {'flt__users.onoma__illegal': 'Georg'})
+    resp = api.get('groups', {'flt__members.onoma__illegal': 'Georg'})
     assert resp.status_code == 403
     assert "No such operator" in resp.content
 
-    resp = api.get('groups', {'flt__users.onoma__startswith': 'Georg'})
+    resp = api.get('groups', {'flt__members.onoma__startswith': 'Georg'})
     assert resp.status_code == 200
     assert len(resp.json()) == 1
 
     # Using filter_compat = True
-    users_path = 'groups/%s/users' % gr.id
+    members_path = 'groups/%s/members' % gr.id
 
-    resp = api.get(users_path, {'flt__onoma': 'Georg'})
+    resp = api.get(members_path, {'flt__onoma': 'Georg'})
     assert resp.status_code == 403
 
-    resp = api.get(users_path, {'onoma': 'Georg'})
+    resp = api.get(members_path, {'onoma': 'Georg'})
     assert resp.status_code == 200
     assert len(resp.json()) == 0
 
-    resp = api.get(users_path, {'onoma': 'Georgios'})
+    resp = api.get(members_path, {'onoma': 'Georgios'})
     assert resp.status_code == 200
     assert len(resp.json()) == 1
 
-    resp = api.get(users_path, {'age': 22, 'variants__en': 'George'})
+    resp = api.get(members_path, {'age': 22, 'variants__en': 'George'})
     assert resp.status_code == 200
     assert len(resp.json()) == 1
 
-    resp = api.get(users_path, {'age': 22})
+    resp = api.get(members_path, {'age': 22})
     assert resp.status_code == 200
     assert len(resp.json()) == 2
 
-    resp = api.get(users_path)
+    resp = api.get(members_path)
     assert resp.status_code == 200
     assert len(resp.json()) == 3
 
@@ -388,27 +388,27 @@ def test_search(client):
 
     data = {'onoma': 'Georgios', 'age': 22,
             'variants': {'en': 'George', 'el': 'Giorgos'}}
-    resp = api.post('groups/%s/users' % gr.id, data)
+    resp = api.post('groups/%s/members' % gr.id, data)
     assert resp.status_code == 201
 
     data = {'onoma': 'Georgia', 'age': 22,
             'variants': {'en': 'Georgia', 'el': 'Giorgia'}}
-    resp = api.post('groups/%s/users' % gr.id, data)
+    resp = api.post('groups/%s/members' % gr.id, data)
     assert resp.status_code == 201
 
-    resp = api.get('groups/%s/users' % gr.id, {'search': 'nonex'})
+    resp = api.get('groups/%s/members' % gr.id, {'search': 'nonex'})
     assert resp.status_code == 200
     assert resp.json() == []
 
-    resp = api.get('groups/%s/users' % gr.id, {'search': 'Georg'})
+    resp = api.get('groups/%s/members' % gr.id, {'search': 'Georg'})
     assert resp.status_code == 200
     assert len(resp.json()) == 2
 
-    resp = api.get('groups/%s/users' % gr.id, {'search': 'Georgios'})
+    resp = api.get('groups/%s/members' % gr.id, {'search': 'Georgios'})
     assert resp.status_code == 200
     assert len(resp.json()) == 1
 
-    resp = api.get('groups/%s/users' % gr.id, {'search': 'Giorgos'})
+    resp = api.get('groups/%s/members' % gr.id, {'search': 'Giorgos'})
     assert resp.status_code == 200
     assert len(resp.json()) == 1
 
@@ -433,8 +433,8 @@ def test_subelements(client):
         'institution_id': inst_id,
         'institution': {'name': 'one'},
         'email': 'email@example.com',
-        'users': [{'onoma': 'Georgios', 'age': 22,
-                   'variants': {'el': 'Giorgos', 'en': 'George'}}],
+        'members': [{'onoma': 'Georgios', 'age': 22,
+                     'variants': {'el': 'Giorgos', 'en': 'George'}}],
     }
     resp = api.post('groups', data)
     assert resp.status_code == 400
@@ -446,15 +446,15 @@ def test_subelements(client):
     body = resp.json()
     group_id = body['id']
     assert body['institution'] == inst
-    users = body['users']
-    assert len(users) == 1
-    assert users[0]['onoma'] == 'Georgios'
-    user_id = users[0]['id']
+    members = body['members']
+    assert len(members) == 1
+    assert members[0]['onoma'] == 'Georgios'
+    user_id = members[0]['id']
 
     data = {
         'email': 'other@example.com',
-        'users': [{'onoma': 'Georgios', 'age': 22,
-                   'variants': {'el': 'Giorgos', 'en': 'George'}}],
+        'members': [{'onoma': 'Georgios', 'age': 22,
+                     'variants': {'el': 'Giorgos', 'en': 'George'}}],
     }
 
     group_path = 'groups/%s' % group_id
@@ -462,21 +462,22 @@ def test_subelements(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body['email'] == 'other@example.com'
-    users = body['users']
-    assert len(users) == 1
-    assert users[0]['onoma'] == 'Georgios'
-    new_user_id = users[0]['id']
+    members = body['members']
+    assert len(members) == 1
+    assert members[0]['onoma'] == 'Georgios'
+    new_user_id = members[0]['id']
     assert new_user_id > user_id
-    assert not models.User.objects.filter(id=user_id).exists()
+    assert not models.Member.objects.filter(id=user_id).exists()
 
-    name_variants_id = models.User.objects.get(id=new_user_id).name_variants_id
-    user_path = group_path + '/users/%s' % new_user_id
+    name_variants_id = models.Member.objects.get(
+        id=new_user_id).name_variants_id
+    user_path = group_path + '/members/%s' % new_user_id
     data = {'onoma': 'Georgia', 'variants': {'el': 'Giorgia', 'en': 'Georgia'}}
     resp = api.patch(user_path, data)
     assert resp.status_code == 200
     body = resp.json()
     assert body['variants']['el'] == 'Giorgia'
-    new_name_variants_id = models.User.objects.get(
+    new_name_variants_id = models.Member.objects.get(
         id=new_user_id).name_variants_id
 
     assert name_variants_id == new_name_variants_id
@@ -599,8 +600,8 @@ def test_files(client):
 
     logo = SimpleUploadedFile('logo1.png', 'logodata')
     resp = api.patch('institutions/1',
-                   {'name': 'bbb', 'logo': logo},
-                   content_type=MULTIPART_CONTENT)
+                     {'name': 'bbb', 'logo': logo},
+                     content_type=MULTIPART_CONTENT)
 
     assert resp.status_code == 200
     assert resp.json()['logo'].startswith('logos/logo1')
@@ -633,7 +634,7 @@ def test_importing(client):
     resp = api.post('nulltest', data)
     assert resp.status_code == 201
     body = resp.json()
-    assert body['fnodef'] == None
+    assert body['fnodef'] is None
     assert body['fstr'] == 'other'
 
     data = {'fnodef': None, 'fstr': None}
@@ -676,12 +677,12 @@ def test_importing(client):
     resp = api.post('groups', data)
     assert resp.status_code == 201
 
-    data['users'] = {}
+    data['members'] = {}
     resp = api.post('groups', data)
     assert resp.status_code == 400
     assert "is not a list-like" in resp.content
 
-    data['users'] = []
+    data['members'] = []
     resp = api.post('groups', data)
     assert resp.status_code == 201
 

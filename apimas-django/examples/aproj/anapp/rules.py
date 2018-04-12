@@ -15,11 +15,11 @@ RULES = [
     ('api/prefix/groups', 'create', '*', '*', '*', '*', '*'),
     ('api/prefix/groups', 'delete', '*', '*', '*', '*', '*'),
 
-    ('api/prefix/groups/users', 'list', '*', '*', '*', '*', '*'),
-    ('api/prefix/groups/users', 'create', '*', '*', '*', '*', '*'),
-    ('api/prefix/groups/users', 'retrieve', '*', '*', '*', '*', '*'),
-    ('api/prefix/groups/users', 'partial_update', '*', '*', '*', '*', '*'),
-    ('api/prefix/groups/users', 'delete', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups/members', 'list', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups/members', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups/members', 'retrieve', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups/members', 'partial_update', '*', '*', '*', '*', '*'),
+    ('api/prefix/groups/members', 'delete', '*', '*', '*', '*', '*'),
 
     ('api/prefix/posts', 'list', 'admin', '*', '*', '*', '*'),
     ('api/prefix/posts', 'list', 'user', 'non_hidden', 'censor_all', '*', '*'),
