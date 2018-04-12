@@ -43,7 +43,6 @@ EXTRA_KWARGS = {
             'apimas=apimas.cmd:main'
         }
     },
-    'scripts': ['auto/builder/docker/home/bin/mkdeb'],
 }
 
 setup_package(description='API Modeling and Serving', **EXTRA_KWARGS)
