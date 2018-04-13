@@ -16,10 +16,15 @@ def is_uuid(value):
 
 
 def test_permissions(client):
+    models.User.objects.create_user('admin', role='admin', token='ADMINTOKEN')
+    models.User.objects.create_user('user', role='user', token='USERTOKEN')
+    models.User.objects.create_user(
+        'xristis', role='user', token='XRISTISTOKEN')
+
     api = client.copy(prefix='/api/prefix/')
-    admin = client.copy(prefix='/api/prefix', auth_token='admin-admin-1234')
-    user = client.copy(prefix='/api/prefix', auth_token='user-user-1234')
-    xristis = client.copy(prefix='/api/prefix', auth_token='xristis-user-1234')
+    admin = client.copy(prefix='/api/prefix', auth_token='ADMINTOKEN')
+    user = client.copy(prefix='/api/prefix', auth_token='USERTOKEN')
+    xristis = client.copy(prefix='/api/prefix', auth_token='XRISTISTOKEN')
 
     # anonymous can't list
     resp = api.get('posts')
@@ -760,7 +765,9 @@ def test_pagination(client):
 
 
 def test_pagination_default_limit(client):
-    api = client.copy(prefix='/api/prefix', auth_token='admin-admin-1234')
+    models.User.objects.create_user('admin', role='admin', token='ADMINTOKEN')
+
+    api = client.copy(prefix='/api/prefix', auth_token='ADMINTOKEN')
     for i in range(1, 21):
         title = 'title%s' % (i % 10)
         body = 'body'

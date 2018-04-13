@@ -1,20 +1,14 @@
 from collections import namedtuple
 from apimas.errors import UnauthorizedError
-
-
-User = namedtuple('User', ('username', 'apimas_roles',))
+from anapp.models import User
 
 
 def token_verifier(token):
-    # if not token.startswith('admin-'):
-    #     raise UnauthorizedError('Unauthorized token: %s' % token)
-
-    return "verified-%s" % token
+    try:
+        return User.objects.get(token=token)
+    except User.DoesNotExist:
+        return None
 
 
 def user_resolver(identity, context=None):
-    """
-    Given a user identity resolve user attributes
-    """
-    _, username, roles, token = identity.split('-')
-    return User(username=username, apimas_roles=roles.split(","))
+    return identity

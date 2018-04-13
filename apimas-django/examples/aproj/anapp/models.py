@@ -1,5 +1,15 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 import uuid
+
+class User(AbstractUser):
+    role = models.CharField(max_length=20)
+    token = models.CharField(max_length=255, unique=True)
+
+    @property
+    def apimas_roles(self):
+        return [self.role]
+
 
 INSTITUTION_CATEGORIES = [
     ["Institution", "Institution"],
