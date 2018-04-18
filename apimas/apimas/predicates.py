@@ -12,6 +12,7 @@ spec_list = [
 
     {'.flag.*': {}},
     {'.flag.readonly': {}},
+    {'.flag.writeonly': {}},
     {'.flag.nullable.*': {}},
 
     {'.flag.nullable.default': {},

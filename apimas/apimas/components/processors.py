@@ -72,7 +72,7 @@ CERBERUS_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.field.struct': propagate_resource_constructor,
     '.field.integer': cerberus_type('integer'),
     '.flag.*': no_constructor,
-    '.flag.readonly': cerberus_flag('readonly'),
+    '.flag.writeonly': cerberus_flag('writeonly'),
     '.flag.nullable': cerberus_flag('nullable'),
     '.string': construct_string,
 }, default=no_constructor)
