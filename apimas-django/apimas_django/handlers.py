@@ -258,7 +258,7 @@ def defer_create_subcollections(spec, data):
         subdata = data.get(subsource, Nothing)
         if subdata is Nothing:
             continue
-        deferred.extend((subname, subspec, elem) for elem in subdata)
+        deferred.extend((subspec, elem) for elem in subdata)
     return deferred
 
 
@@ -271,13 +271,13 @@ def create_substructs(spec, data):
         struct_model = field.related_model
         subspec['model'] = struct_model
         subdata = data.get(subsource, Nothing)
-        struct_instance = create_resource(subname, subspec, subdata)
+        struct_instance = create_resource(subspec, subdata)
         if struct_instance is not Nothing:
             created[subsource] = struct_instance
     return created
 
 
-def create_resource(name, spec, data, key=None):
+def create_resource(spec, data, key=None):
     if data is Nothing:
         return Nothing
 
@@ -309,7 +309,7 @@ def update_subcollections(spec, data, instance):
             continue
         delete_subcollection(instance.id, subspec)
         for elem in subdata:
-            create_resource(subname, subspec, elem, key=instance.id)
+            create_resource(subspec, elem, key=instance.id)
 
 
 def update_substructs(spec, data, instance):
@@ -323,12 +323,11 @@ def update_substructs(spec, data, instance):
         subdata = data.get(subsource, Nothing)
         subinstance = getattr(instance, subsource)
         if subinstance is None:
-            struct_instance = create_resource(subname, subspec, subdata)
+            struct_instance = create_resource(subspec, subdata)
             if struct_instance is not Nothing:
                 created[subsource] = struct_instance
         else:
-            struct_instance = update_resource(
-                subname, subspec, subdata, subinstance)
+            struct_instance = update_resource(subspec, subdata, subinstance)
             if struct_instance is None:
                 created[subsource] = None
     return created
@@ -348,7 +347,7 @@ def do_update(spec, data, instance, precreated=None):
     return instance
 
 
-def update_resource(name, spec, data, instance):
+def update_resource(spec, data, instance):
     if data is Nothing:
         return Nothing
 
@@ -387,8 +386,7 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         data = context_data['data']
         kwargs = context_data['kwargs']
         key = kwargs.get('id0')
-        instance = create_resource(
-            self.collection_name, self.spec, data, key=key)
+        instance = create_resource(self.spec, data, key=key)
         return (instance,)
 
 
@@ -502,8 +500,7 @@ class UpdateHandlerProcessor(DjangoBaseHandler):
         if not instance:
             instance = get_model_instance(self.spec, pk, kwargs)
 
-        update_resource(
-            self.collection_name, self.spec, data, instance)
+        update_resource(self.spec, data, instance)
         instance = get_model_instance(self.spec, pk, kwargs)
         return (instance,)
 
