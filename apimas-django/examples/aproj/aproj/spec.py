@@ -19,6 +19,9 @@ ENHANCEDUSER = {
     'fields': {
         'id': {
             '.field.serial': {}},
+        'is_verified': {
+            '.field.boolean': {},
+            '.flag.readonly': {}},
         'feature': {
             '.field.string': {}},
         'user': {

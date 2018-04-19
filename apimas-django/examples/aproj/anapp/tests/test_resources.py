@@ -52,6 +52,9 @@ def test_users(client):
     assert body['user']['username'] == unicodedata.normalize('NFKC', username)
     user_id = body['user']['id']
 
+    # anonymous user created, not verified
+    assert not body['is_verified']
+
     # other users fails to retrieve
     models.User.objects.create_user(
         'xristis', role='user', token='XRISTISTOKEN')

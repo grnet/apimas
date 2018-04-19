@@ -29,12 +29,20 @@ class User(AbstractUser):
 
 class EnhancedUser(models.Model):
     user = models.OneToOneField(User)
+    is_verified = models.BooleanField()
     feature = models.CharField(max_length=255)
 
     @staticmethod
     def is_own(context):
         auth_user = context.extract('auth/user')
         return models.Q(user=auth_user)
+
+    @staticmethod
+    def set_verification(backend_input, instance, context):
+        assert instance is None
+        auth_user = context.extract('auth/user')
+        backend_input['is_verified'] = bool(
+            auth_user and auth_user.role == 'admin')
 
 
 INSTITUTION_CATEGORIES = [

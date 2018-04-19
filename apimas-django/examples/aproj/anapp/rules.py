@@ -2,7 +2,10 @@
 
 RULES = [
 
-    ('api/prefix/enhanceduser', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/enhanceduser', 'create', '*',
+     '*', 'anapp.models.EnhancedUser.set_verification', '*', '*'),
+
+    ('api/prefix/enhanceduser', 'retrieve', 'admin', '*', '*', '*', '*'),
     ('api/prefix/enhanceduser', 'retrieve', 'anonymous', '*', '*', 'id', '*'),
     ('api/prefix/enhanceduser', 'retrieve', 'user',
      'anapp.models.EnhancedUser.is_own', '*', '*', '*'),
