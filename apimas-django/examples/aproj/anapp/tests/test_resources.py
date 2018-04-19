@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from apimas_django.test import *
 from anapp import models
 from datetime import datetime
 import uuid
+import unicodedata
 
 pytestmark = pytest.mark.django_db(transaction=False)
 
@@ -13,6 +16,64 @@ def is_uuid(value):
         return True
     except:
         return False
+
+
+def test_users(client):
+    api = client.copy(prefix='/api/prefix/')
+    username = unicodedata.normalize('NFD', u'Jörg')
+    data = {
+        'feature': 'feature',
+        'user': {
+            'username': username,
+            'password': 'pass',
+            'first_name': 'first',
+            'last_name': 'last',
+            'email': 'uname@example.org',
+            'role': 'user',
+            'token': 'usertoken',
+        }
+    }
+    r = api.post('enhanceduser', data)
+    assert r.status_code == 201
+    body = r.json()
+    assert len(body) == 1
+    enhanceduser_id = body['id']
+
+    e_user = models.EnhancedUser.objects.get(id=enhanceduser_id)
+    assert e_user.user.username != username
+    assert e_user.user.username == unicodedata.normalize('NFKC', username)
+    first_password = e_user.user.password
+    assert first_password.startswith('pbkdf2')
+
+    user = client.copy(prefix='/api/prefix', auth_token='usertoken')
+    r = user.get('enhanceduser/%s' % enhanceduser_id)
+    assert r.status_code == 200
+    body = r.json()
+    assert body['user']['username'] == unicodedata.normalize('NFKC', username)
+    user_id = body['user']['id']
+
+    # other users fails to retrieve
+    models.User.objects.create_user(
+        'xristis', role='user', token='XRISTISTOKEN')
+    xristis = client.copy(prefix='/api/prefix', auth_token='XRISTISTOKEN')
+    r = xristis.get('enhanceduser/%s' % enhanceduser_id)
+    assert r.status_code == 404
+
+    data = {
+        'user': {
+            'first_name': 'First',
+            'last_name': 'Last',
+            'password': 'newpass',
+        }
+    }
+    r = user.patch('enhanceduser/%s' % enhanceduser_id, data)
+    assert r.status_code == 200
+
+    e_user = models.EnhancedUser.objects.get(id=enhanceduser_id)
+    assert e_user.user_id == user_id
+    assert e_user.user.first_name == 'First'
+    assert e_user.user.password != first_password
+    assert e_user.user.password.startswith('pbkdf2')
 
 
 def test_permissions(client):

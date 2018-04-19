@@ -2,13 +2,39 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 import uuid
 
+Nothing = type('Nothing', (), {'__repr__': lambda self: 'Nothing'})()
+
+
 class User(AbstractUser):
     role = models.CharField(max_length=20)
     token = models.CharField(max_length=255, unique=True)
 
+    @classmethod
+    def apimas_create(cls, *args, **kwargs):
+        return cls.objects.create_user(*args, **kwargs)
+
+    def apimas_update(self, update_args):
+        password = update_args.pop('password', Nothing)
+        for key, value in update_args.iteritems():
+            setattr(self, key, value)
+
+        if password is not Nothing:
+            self.set_password(password)
+        self.save()
+
     @property
     def apimas_roles(self):
         return [self.role]
+
+
+class EnhancedUser(models.Model):
+    user = models.OneToOneField(User)
+    feature = models.CharField(max_length=255)
+
+    @staticmethod
+    def is_own(context):
+        auth_user = context.extract('auth/user')
+        return models.Q(user=auth_user)
 
 
 INSTITUTION_CATEGORIES = [

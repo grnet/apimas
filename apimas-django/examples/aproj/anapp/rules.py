@@ -2,6 +2,15 @@
 
 RULES = [
 
+    ('api/prefix/enhanceduser', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/enhanceduser', 'retrieve', 'anonymous', '*', '*', 'id', '*'),
+    ('api/prefix/enhanceduser', 'retrieve', 'user',
+     'anapp.models.EnhancedUser.is_own', '*', '*', '*'),
+
+    ('api/prefix/enhanceduser', 'partial_update', 'user',
+     'anapp.models.EnhancedUser.is_own', '*',
+     'user/first_name,user/last_name,user/password', '*'),
+
     ('api/prefix/institutions', 'retrieve', '*', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'list', '*', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'create', '*', '*', '*', '*', '*'),

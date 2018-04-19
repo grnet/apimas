@@ -234,6 +234,26 @@ def get_bound_name(spec):
     return None
 
 
+def model_create_fn(model):
+    try:
+        return getattr(model, 'apimas_create')
+    except AttributeError:
+        return model.objects.create
+
+
+def standard_update(instance, update_args):
+    for key, value in update_args.iteritems():
+        setattr(instance, key, value)
+    instance.save()
+
+
+def model_update_fn(model):
+    try:
+        return getattr(model, 'apimas_update')
+    except AttributeError:
+        return standard_update
+
+
 def do_create(key, spec, data, precreated=None):
     create_args = {}
     if precreated:
@@ -248,7 +268,7 @@ def do_create(key, spec, data, precreated=None):
     create_args.update(get_fields(spec['subfields'], data))
 
     logger.debug('Creating values: %s', create_args)
-    return model.objects.create(**create_args)
+    return model_create_fn(model)(**create_args)
 
 
 def defer_create_subcollections(spec, data):
@@ -341,9 +361,8 @@ def do_update(spec, data, instance, precreated=None):
     update_args.update(get_fields(spec['subfields'], data))
 
     logger.debug('Updating values: %s', update_args)
-    for key, value in update_args.iteritems():
-        setattr(instance, key, value)
-    instance.save()
+    model = spec['model']
+    model_update_fn(model)(instance, update_args)
     return instance
 
 
