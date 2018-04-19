@@ -10,6 +10,7 @@ RULES = [
     ('api/prefix/enhanceduser', 'retrieve', 'user',
      'anapp.models.EnhancedUser.is_own', '*', '*', '*'),
 
+    ('api/prefix/enhanceduser', 'partial_update', 'admin', '*', '*', '*', '*'),
     ('api/prefix/enhanceduser', 'partial_update', 'user',
      'anapp.models.EnhancedUser.is_own', '*',
      'user/first_name,user/last_name,user/password', '*'),

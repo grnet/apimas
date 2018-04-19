@@ -552,6 +552,58 @@ def test_subelements(client):
     assert name_variants_id == new_name_variants_id
 
 
+def test_manytomany(client):
+    for i in range(1, 11):
+        name = 'inst%s' % i
+        models.Institution.objects.create(name=name, active=True)
+
+    models.User.objects.create_user('admin', role='admin', token='ADMINTOKEN')
+    admin = client.copy(prefix='/api/prefix', auth_token='ADMINTOKEN')
+    data = {
+        'feature': 'feature',
+        'user': {
+            'username': 'user',
+            'password': 'pass',
+            'first_name': 'first',
+            'last_name': 'last',
+            'email': 'uname@example.org',
+            'role': 'user',
+            'token': 'usertoken',
+        },
+        'institutions': [
+            {'institution': 1},
+            {'institution': 3},
+            {'institution': 5},
+        ]
+    }
+    r = admin.post('enhanceduser', data)
+    assert r.status_code == 201
+    body = r.json()
+    enhanceduser_id = body['id']
+    institutions = body['institutions']
+    ids = set(inst['id'] for inst in institutions)
+    assert ids == set([1, 2, 3])
+
+    e_user = models.EnhancedUser.objects.get(id=enhanceduser_id)
+    institutions = set(e_user.institutions.all().values_list('id', flat=True))
+    assert institutions == set([1, 3, 5])
+
+    data = {
+        'institutions': [
+            {'institution': 2},
+            {'institution': 4},
+        ]
+    }
+    r = admin.patch('enhanceduser/%s' % enhanceduser_id, data)
+    assert r.status_code == 200
+    body = r.json()
+    institutions = body['institutions']
+    ids = set(inst['id'] for inst in institutions)
+    assert ids == set([4, 5])
+
+    assert models.Institution.objects.all().count() == 10
+
+
 def test_update(client):
     api = client.copy(prefix='/api/prefix/')
     models.Institution.objects.create(name='aaa', active=True)

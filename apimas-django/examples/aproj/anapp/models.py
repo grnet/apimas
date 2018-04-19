@@ -5,6 +5,19 @@ import uuid
 Nothing = type('Nothing', (), {'__repr__': lambda self: 'Nothing'})()
 
 
+INSTITUTION_CATEGORIES = [
+    ["Institution", "Institution"],
+    ["Research", "Research Center"]
+]
+
+class Institution(models.Model):
+    name = models.TextField()
+    active = models.BooleanField()
+    category = models.CharField(
+        choices=INSTITUTION_CATEGORIES, max_length=100, default='Research')
+    logo = models.FileField(upload_to='logos/')
+
+
 class User(AbstractUser):
     role = models.CharField(max_length=20)
     token = models.CharField(max_length=255, unique=True)
@@ -31,6 +44,7 @@ class EnhancedUser(models.Model):
     user = models.OneToOneField(User)
     is_verified = models.BooleanField()
     feature = models.CharField(max_length=255)
+    institutions = models.ManyToManyField(Institution)
 
     @staticmethod
     def is_own(context):
@@ -43,19 +57,6 @@ class EnhancedUser(models.Model):
         auth_user = context.extract('auth/user')
         backend_input['is_verified'] = bool(
             auth_user and auth_user.role == 'admin')
-
-
-INSTITUTION_CATEGORIES = [
-    ["Institution", "Institution"],
-    ["Research", "Research Center"]
-]
-
-class Institution(models.Model):
-    name = models.TextField()
-    active = models.BooleanField()
-    category = models.CharField(
-        choices=INSTITUTION_CATEGORIES, max_length=100, default='Research')
-    logo = models.FileField(upload_to='logos/')
 
 
 class Group(models.Model):

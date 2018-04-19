@@ -45,7 +45,19 @@ ENHANCEDUSER = {
                 'email': {
                     '.field.email': {}},
             }
-        }
+        },
+        'institutions': {
+            '.field.collection.django': {},
+            'model': 'anapp.models.EnhancedUser.institutions.through',
+            'bound': 'enhanceduser',
+            'fields': {
+                'id': {
+                    '.field.serial': {}},
+                'institution': {'.field.ref': {},
+                                'source': 'institution_id',
+                                'to': 'api/prefix/institutions'},
+            }
+        },
     }
 }
 
