@@ -22,7 +22,7 @@ def get_module(module_name):
             mod = importlib.import_module(name)
             return mod, list(reversed(trail))
         except ImportError:
-            splits = module_name.rsplit('.', 1)
+            splits = name.rsplit('.', 1)
             if len(splits) != 2:
                 raise
             name = splits[0]
