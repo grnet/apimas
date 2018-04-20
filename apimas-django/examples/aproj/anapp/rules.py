@@ -15,6 +15,11 @@ RULES = [
      'anapp.models.EnhancedUser.is_own', '*',
      'user/first_name,user/last_name,user/password', '*'),
 
+    ('api/prefix/enhanceduser/institutions', 'list', 'admin', '*', '*', '*', ''),
+    ('api/prefix/enhanceduser/institutions', 'retrieve', 'admin', '*', '*', '*', ''),
+    ('api/prefix/enhanceduser/institutions', 'create', 'admin', '*', '*', '*', ''),
+    ('api/prefix/enhanceduser/institutions', 'delete', 'admin', '*', '*', '*', ''),
+
     ('api/prefix/institutions', 'retrieve', '*', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'list', '*', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'create', '*', '*', '*', '*', '*'),

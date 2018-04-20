@@ -557,8 +557,14 @@ def test_manytomany(client):
         name = 'inst%s' % i
         models.Institution.objects.create(name=name, active=True)
 
-    models.User.objects.create_user('admin', role='admin', token='ADMINTOKEN')
+    admin_user = models.User.objects.create_user(
+        'admin', role='admin', token='ADMINTOKEN')
+    eu_admin = models.EnhancedUser.objects.create(
+        user=admin_user, feature='', is_verified=True)
+    eu_admin.institutions.add(1)
+
     admin = client.copy(prefix='/api/prefix', auth_token='ADMINTOKEN')
+
     data = {
         'feature': 'feature',
         'user': {
@@ -582,7 +588,7 @@ def test_manytomany(client):
     enhanceduser_id = body['id']
     institutions = body['institutions']
     ids = set(inst['id'] for inst in institutions)
-    assert ids == set([1, 2, 3])
+    assert ids == set([2, 3, 4])
 
     e_user = models.EnhancedUser.objects.get(id=enhanceduser_id)
     institutions = set(e_user.institutions.all().values_list('id', flat=True))
@@ -599,7 +605,22 @@ def test_manytomany(client):
     body = r.json()
     institutions = body['institutions']
     ids = set(inst['id'] for inst in institutions)
-    assert ids == set([4, 5])
+    assert ids == set([5, 6])
+
+    insts_path = 'enhanceduser/%s/institutions' % enhanceduser_id
+    r = admin.delete('%s/%s' % (insts_path, 5))
+    assert r.status_code == 204
+
+    r = admin.get(insts_path)
+    assert r.status_code == 200
+    body = r.json()
+    ids = set(inst['id'] for inst in body)
+    assert ids == set([6])
+
+    r = admin.post(insts_path, {'institution': 9})
+    assert r.status_code == 201
+    body = r.json()
+    assert body['id'] == 7
 
     assert models.Institution.objects.all().count() == 10
 

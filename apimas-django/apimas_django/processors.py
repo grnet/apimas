@@ -61,9 +61,10 @@ INSTANCETODICT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
     default=no_constructor)
 
 
-def access_relation(value):
+def access_relation(value, key):
     if hasattr(value, 'through'):
-        value = value.through.objects
+        flt = {value.source_field_name: key}
+        return value.through.objects.filter(**flt)
     return value.all()
 
 
@@ -101,7 +102,7 @@ class InstanceToDictProcessor(BaseProcessor):
 
             if fields:
                 if fields_type == 'collection':
-                    subvalues = access_relation(value)
+                    subvalues = access_relation(value, key=instance)
                     value = [self.to_dict(subvalue, fields)
                              for subvalue in subvalues]
                 elif fields_type == 'struct':
