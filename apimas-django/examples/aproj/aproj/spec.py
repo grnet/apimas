@@ -4,7 +4,7 @@ DEPLOY_CONFIG = {
     ":root_url": "http://127.0.0.1:8000/",
 }
 
-ENHANCEDUSER = {
+ENHANCEDUSERS = {
     '.field.collection.django': {},
     ":authenticator": "apimas.auth.TokenAuthentication",
     ":verifier": "anapp.auth.token_verifier",
@@ -264,7 +264,7 @@ APP_CONFIG = {
     'endpoints': {
         "api/prefix": {
             "collections": {
-                "enhanceduser": ENHANCEDUSER,
+                "enhancedusers": ENHANCEDUSERS,
                 "posts": POSTS,
                 "posts2": POSTS2,
                 'nulltest': NULLTEST,

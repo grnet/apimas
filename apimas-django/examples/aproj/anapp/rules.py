@@ -2,23 +2,23 @@
 
 RULES = [
 
-    ('api/prefix/enhanceduser', 'create', '*',
+    ('api/prefix/enhancedusers', 'create', '*',
      '*', 'anapp.models.EnhancedUser.set_verification', '*', '*'),
 
-    ('api/prefix/enhanceduser', 'retrieve', 'admin', '*', '*', '*', '*'),
-    ('api/prefix/enhanceduser', 'retrieve', 'anonymous', '*', '*', 'id', '*'),
-    ('api/prefix/enhanceduser', 'retrieve', 'user',
+    ('api/prefix/enhancedusers', 'retrieve', 'admin', '*', '*', '*', '*'),
+    ('api/prefix/enhancedusers', 'retrieve', 'anonymous', '*', '*', 'id', '*'),
+    ('api/prefix/enhancedusers', 'retrieve', 'user',
      'anapp.models.EnhancedUser.is_own', '*', '*', '*'),
 
-    ('api/prefix/enhanceduser', 'partial_update', 'admin', '*', '*', '*', '*'),
-    ('api/prefix/enhanceduser', 'partial_update', 'user',
+    ('api/prefix/enhancedusers', 'partial_update', 'admin', '*', '*', '*', '*'),
+    ('api/prefix/enhancedusers', 'partial_update', 'user',
      'anapp.models.EnhancedUser.is_own', '*',
      'user/first_name,user/last_name,user/password', '*'),
 
-    ('api/prefix/enhanceduser/institutions', 'list', 'admin', '*', '*', '*', ''),
-    ('api/prefix/enhanceduser/institutions', 'retrieve', 'admin', '*', '*', '*', ''),
-    ('api/prefix/enhanceduser/institutions', 'create', 'admin', '*', '*', '*', ''),
-    ('api/prefix/enhanceduser/institutions', 'delete', 'admin', '*', '*', '*', ''),
+    ('api/prefix/enhancedusers/institutions', 'list', 'admin', '*', '*', '*', ''),
+    ('api/prefix/enhancedusers/institutions', 'retrieve', 'admin', '*', '*', '*', ''),
+    ('api/prefix/enhancedusers/institutions', 'create', 'admin', '*', '*', '*', ''),
+    ('api/prefix/enhancedusers/institutions', 'delete', 'admin', '*', '*', '*', ''),
 
     ('api/prefix/institutions', 'retrieve', '*', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'list', '*', '*', '*', '*', '*'),

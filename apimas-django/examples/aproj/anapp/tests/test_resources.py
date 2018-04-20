@@ -33,7 +33,7 @@ def test_users(client):
             'token': 'usertoken',
         }
     }
-    r = api.post('enhanceduser', data)
+    r = api.post('enhancedusers', data)
     assert r.status_code == 201
     body = r.json()
     assert len(body) == 1
@@ -46,7 +46,7 @@ def test_users(client):
     assert first_password.startswith('pbkdf2')
 
     user = client.copy(prefix='/api/prefix', auth_token='usertoken')
-    r = user.get('enhanceduser/%s' % enhanceduser_id)
+    r = user.get('enhancedusers/%s' % enhanceduser_id)
     assert r.status_code == 200
     body = r.json()
     assert body['user']['username'] == unicodedata.normalize('NFKC', username)
@@ -59,7 +59,7 @@ def test_users(client):
     models.User.objects.create_user(
         'xristis', role='user', token='XRISTISTOKEN')
     xristis = client.copy(prefix='/api/prefix', auth_token='XRISTISTOKEN')
-    r = xristis.get('enhanceduser/%s' % enhanceduser_id)
+    r = xristis.get('enhancedusers/%s' % enhanceduser_id)
     assert r.status_code == 404
 
     data = {
@@ -69,7 +69,7 @@ def test_users(client):
             'password': 'newpass',
         }
     }
-    r = user.patch('enhanceduser/%s' % enhanceduser_id, data)
+    r = user.patch('enhancedusers/%s' % enhanceduser_id, data)
     assert r.status_code == 200
 
     e_user = models.EnhancedUser.objects.get(id=enhanceduser_id)
@@ -582,7 +582,7 @@ def test_manytomany(client):
             {'institution': 5},
         ]
     }
-    r = admin.post('enhanceduser', data)
+    r = admin.post('enhancedusers', data)
     assert r.status_code == 201
     body = r.json()
     enhanceduser_id = body['id']
@@ -600,14 +600,14 @@ def test_manytomany(client):
             {'institution': 4},
         ]
     }
-    r = admin.patch('enhanceduser/%s' % enhanceduser_id, data)
+    r = admin.patch('enhancedusers/%s' % enhanceduser_id, data)
     assert r.status_code == 200
     body = r.json()
     institutions = body['institutions']
     ids = set(inst['id'] for inst in institutions)
     assert ids == set([5, 6])
 
-    insts_path = 'enhanceduser/%s/institutions' % enhanceduser_id
+    insts_path = 'enhancedusers/%s/institutions' % enhanceduser_id
     r = admin.delete('%s/%s' % (insts_path, 5))
     assert r.status_code == 204
 
