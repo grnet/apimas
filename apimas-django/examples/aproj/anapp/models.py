@@ -59,6 +59,9 @@ class EnhancedUser(models.Model):
             auth_user and auth_user.role == 'admin')
 
 
+filter_enhanced_admins = models.Q(user__role='admin')
+
+
 class Group(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     name = models.TextField()

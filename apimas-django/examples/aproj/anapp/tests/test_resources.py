@@ -625,6 +625,61 @@ def test_manytomany(client):
     assert models.Institution.objects.all().count() == 10
 
 
+def test_subset(client):
+    api = client.copy(prefix='/api/prefix/')
+    data = {
+        'feature': 'feature',
+        'user': {
+            'username': 'adm1',
+            'password': 'pass',
+            'email': 'adm1@example.org',
+            'role': 'admin',
+            'token': 'admtoken',
+        },
+    }
+    r = api.post('enhancedadmins', data)
+    assert r.status_code == 201
+    body = r.json()
+    assert body['user']['role'] == 'admin'
+
+    # Can still create a non-admin but not view it
+    data['user']['role'] = 'user'
+    data['user']['username'] = 'user1'
+    data['user']['email'] = 'user1@example.org'
+    data['user']['token'] = 'usertoken'
+    r = api.post('enhancedadmins', data)
+    assert r.status_code == 201
+    body = r.json()
+    assert body is None
+
+    r = api.get('enhancedadmins')
+    assert r.status_code == 200
+    body = r.json()
+    assert [admin['id'] for admin in body] == [1]
+
+    r = api.get('enhancedusers')
+    assert r.status_code == 200
+    body = r.json()
+    assert [user['id'] for user in body] == [1, 2]
+
+    r = api.get('enhancedadmins/1')
+    assert r.status_code == 200
+
+    # Can change role but then not view it
+    data = {'user': {'role': 'user', 'token': 'newtoken'}}
+    r = api.patch('enhancedadmins/1', data)
+    assert r.status_code == 200
+    body = r.json()
+    assert body is None
+
+    r = api.get('enhancedadmins/1')
+    assert r.status_code == 404
+
+    # Still accessible from enhancedusers endpoint
+    r = api.get('enhancedusers/1')
+    assert r.status_code == 200
+
+
 def test_update(client):
     api = client.copy(prefix='/api/prefix/')
     models.Institution.objects.create(name='aaa', active=True)

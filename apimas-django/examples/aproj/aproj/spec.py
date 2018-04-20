@@ -13,6 +13,7 @@ ENHANCEDUSERS = {
     'model': 'anapp.models.EnhancedUser',
     'actions': {
         '.action-template.django.create': {},
+        '.action-template.django.list': {},
         '.action-template.django.retrieve': {},
         '.action-template.django.partial_update': {},
     },
@@ -64,6 +65,49 @@ ENHANCEDUSERS = {
             },
         },
     }
+}
+
+ENHANCEDADMINS = {
+    '.field.collection.django': {},
+    ":authenticator": "apimas.auth.TokenAuthentication",
+    ":verifier": "anapp.auth.token_verifier",
+    ":user_resolver": "anapp.auth.user_resolver",
+
+    'model': 'anapp.models.EnhancedUser',
+    'subset': 'anapp.models.filter_enhanced_admins',
+    'actions': {
+        '.action-template.django.create': {},
+        '.action-template.django.list': {},
+        '.action-template.django.retrieve': {},
+        '.action-template.django.partial_update': {},
+    },
+    'fields': {
+        'id': {
+            '.field.serial': {}},
+        'is_verified': {
+            '.field.boolean': {},
+            '.flag.readonly': {}},
+        'feature': {
+            '.field.string': {}},
+        'user': {
+            '.field.struct': {},
+            'fields': {
+                'id': {
+                    '.field.serial': {}},
+                'username': {
+                    '.field.string': {}},
+                'email': {
+                    '.field.email': {}},
+                'role': {
+                    '.field.string': {}},
+                'token': {
+                    '.field.string': {}},
+                'password': {
+                    '.field.string': {},
+                    '.flag.writeonly': {}},
+            },
+        },
+    },
 }
 
 POSTS = {
@@ -265,6 +309,7 @@ APP_CONFIG = {
         "api/prefix": {
             "collections": {
                 "enhancedusers": ENHANCEDUSERS,
+                "enhancedadmins": ENHANCEDADMINS,
                 "posts": POSTS,
                 "posts2": POSTS2,
                 'nulltest': NULLTEST,

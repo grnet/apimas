@@ -71,12 +71,14 @@ def collection_constructor(context, instance, loc, top_spec):
 
     model = docular.doc_spec_get(instance['model'])
     source = docular.doc_spec_get(instance.get('source', {}))
+    subset = docular.doc_spec_get(instance.get('subset'))
     bounds = get_bounds(loc, top_spec)
     subcollections, substructs, subfields = get_sub_elements(instance)
 
     spec['type'] = 'collection'
     spec['model'] = utils.import_object(model)
     spec['source'] = source
+    spec['subset'] = utils.import_object(subset) if subset else None
     spec['bounds'] = bounds
     spec['subcollections'] = subcollections
     spec['substructs'] = substructs
@@ -406,6 +408,9 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         kwargs = context_data['kwargs']
         key = kwargs.get('id0')
         instance = create_resource(self.spec, data, key=key)
+        if self.spec['subset']:
+            instance = get_model_instance(
+                self.spec, instance.pk, kwargs, strict=False)
         return (instance,)
 
 
@@ -448,29 +453,30 @@ class ListHandlerProcessor(DjangoBaseHandler):
         Gets all django model instances based on the orm model extracted
         from request context.
         """
-        model = self.spec['model']
-        bounds = self.spec['bounds']
         kwargs = context_data['kwargs']
-        flts = get_bound_filters(bounds, kwargs)
-
-        objects = model.objects
-        objects = prefetch_related(objects, self.spec['subcollections'])
-        objects = select_related(objects, self.spec['substructs'])
-        return (objects.filter(**flts),)
+        return (get_collection_objects(self.spec, kwargs),)
 
 
 ListHandler = _django_base_construction(ListHandlerProcessor)
 
 
-def get_model_instance(spec, pk, kwargs, filters=None):
+def get_collection_objects(spec, bounds):
     model = spec['model']
-    bound_filters = get_bound_filters(spec['bounds'], kwargs)
+    subset = spec['subset']
+    bound_filters = get_bound_filters(spec['bounds'], bounds)
     objects = model.objects.filter(**bound_filters)
-    if filters:
-        objects = objects.filter(*filters)
+    if subset:
+        objects = objects.filter(subset)
     objects = prefetch_related(objects, spec['subcollections'])
     objects = select_related(objects, spec['substructs'])
-    return django_utils.get_instance(objects, pk)
+    return objects
+
+
+def get_model_instance(spec, pk, kwargs, filters=None, strict=True):
+    objects = get_collection_objects(spec, kwargs)
+    if filters:
+        objects = objects.filter(*filters)
+    return django_utils.get_instance(objects, pk, strict=strict)
 
 
 class RetrieveHandlerProcessor(DjangoBaseHandler):
@@ -520,7 +526,7 @@ class UpdateHandlerProcessor(DjangoBaseHandler):
             instance = get_model_instance(self.spec, pk, kwargs)
 
         update_resource(self.spec, data, instance)
-        instance = get_model_instance(self.spec, pk, kwargs)
+        instance = get_model_instance(self.spec, pk, kwargs, strict=False)
         return (instance,)
 
 

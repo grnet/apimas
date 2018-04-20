@@ -5,6 +5,7 @@ spec_list = [
     {
         '.field.collection.django': {},
         'model': {'.string': {}},
+        'subset': {'.string': {}},
         'bound': {'.string': {}},
     },
 
