@@ -153,7 +153,8 @@ def make_processor(processor_data, collection_loc, action_name, artifacts):
     arguments = dict(collection_values)
     arguments.update(action_values)
     arguments.update(config)
-    return cls(collection_loc, action_name, **arguments)
+    return cls(collection_loc=collection_loc, action_name=action_name,
+               **arguments)
 
 
 def mk_url_prefix(loc):

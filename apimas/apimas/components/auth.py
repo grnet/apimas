@@ -24,7 +24,7 @@ class AuthenticationProcessor(BaseProcessor):
 
     authenticator = None
 
-    def __init__(self, collection, action, authenticator, verifier):
+    def __init__(self, collection_loc, action_name, authenticator, verifier):
 
         if authenticator:
             assert verifier
@@ -73,7 +73,7 @@ class UserRetrievalProcessor(BaseProcessor):
     ANONYMOUS_ROLE = 'anonymous'
     ROLE_HEADER = 'USER_ROLE'
 
-    def __init__(self, collection, action, user_resolver=None):
+    def __init__(self, collection_loc, action_name, user_resolver=None):
         if user_resolver:
             user_resolver = utils.import_object(user_resolver)
             assert callable(user_resolver), (
