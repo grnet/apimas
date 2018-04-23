@@ -1,7 +1,7 @@
 import docular
 from apimas import converters as cnvs
 from apimas import documents as doc
-from apimas.errors import AccessDeniedError, ValidationError
+from apimas.errors import AccessDeniedError, ValidationError, InvalidInput
 from apimas.components import BaseProcessor, ProcessorConstruction
 
 
@@ -304,6 +304,7 @@ class ExportDataProcessor(ImportExportData):
     """
     READ_KEYS = {
         'export_data': 'exportable/content',
+        'meta': 'exportable/meta',
         'can_read': 'permissions/read/enabled',
         'read_fields': 'permissions/read/fields',
     }
@@ -312,7 +313,7 @@ class ExportDataProcessor(ImportExportData):
         'response/content',
     )
 
-    def execute(self, context_data):
+    def export_data(self, context_data):
         export_data = context_data['export_data']
         if export_data is None:
             return None
@@ -322,7 +323,20 @@ class ExportDataProcessor(ImportExportData):
             export_data, can_read_fields)
         if exported_data is cnvs.Nothing:
             return None
-        return (exported_data,)
+        return exported_data
+
+    def execute(self, context_data):
+        exported = self.export_data(context_data)
+        meta = context_data['meta']
+        if not meta:
+            response = exported
+        else:
+            if 'results' in meta:
+                raise InvalidInput("Conflicting key 'results' in meta")
+            response = dict(meta)
+            response['results'] = exported
+
+        return (response, )
 
 
 ExportData = ProcessorConstruction(

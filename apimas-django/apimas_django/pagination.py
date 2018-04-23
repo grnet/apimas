@@ -20,6 +20,7 @@ class PaginationProcessor(BaseProcessor):
 
     WRITE_KEYS = (
         'backend/filtered_response',
+        'exportable/meta/count',
     )
 
     def __init__(
@@ -56,8 +57,9 @@ class PaginationProcessor(BaseProcessor):
             # Create a new queryset to bypass that.
             queryset = queryset.filter()
 
+        count = queryset.count()
         queryset = queryset[begin:end]
-        return (queryset,)
+        return (queryset, count)
 
 
 Pagination = ProcessorConstruction(

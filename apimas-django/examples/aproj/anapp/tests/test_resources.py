@@ -960,14 +960,18 @@ def test_pagination(client):
     resp = api.get('institutions', {'limit': 10, 'offset': 0})
     assert resp.status_code == 200
     body = resp.json()
-    assert len(body) == 10
-    assert [inst['id'] for inst in body] == range(1, 11)
+    assert set(body.keys()) == set(['count', 'results'])
+    assert body['count'] == 20
+    results = body['results']
+    assert len(results) == 10
+    assert [inst['id'] for inst in results] == range(1, 11)
 
     resp = api.get('institutions', {'limit': 10})
     assert resp.status_code == 200
     body = resp.json()
-    assert len(body) == 10
-    assert [inst['id'] for inst in body] == range(1, 11)
+    results = body['results']
+    assert len(results) == 10
+    assert [inst['id'] for inst in results] == range(1, 11)
 
     resp = api.get('institutions', {'offset': 0})
     assert resp.status_code == 400
@@ -975,21 +979,24 @@ def test_pagination(client):
     resp = api.get('institutions', {'limit': 10, 'offset': 10})
     assert resp.status_code == 200
     body = resp.json()
-    assert len(body) == 10
-    assert [inst['id'] for inst in body] == range(11, 21)
+    results = body['results']
+    assert len(results) == 10
+    assert [inst['id'] for inst in results] == range(11, 21)
 
     resp = api.get('institutions', {'limit': 10, 'offset': 15})
     assert resp.status_code == 200
     body = resp.json()
-    assert len(body) == 5
-    assert [inst['id'] for inst in body] == range(16, 21)
+    results = body['results']
+    assert len(results) == 5
+    assert [inst['id'] for inst in results] == range(16, 21)
 
     resp = api.get('institutions',
                    {'limit': 10, 'offset': 0, 'ordering': 'active'})
     assert resp.status_code == 200
     body = resp.json()
-    assert len(body) == 10
-    assert [inst['id'] for inst in body] == range(2, 21, 2)
+    results = body['results']
+    assert len(results) == 10
+    assert [inst['id'] for inst in results] == range(2, 21, 2)
 
 
 def test_pagination_default_limit(client):
@@ -1004,11 +1011,14 @@ def test_pagination_default_limit(client):
     resp = api.get('posts', {'limit': 10, 'offset': 0})
     assert resp.status_code == 200
     body = resp.json()
-    assert len(body) == 10
-    assert [inst['id'] for inst in body] == range(1, 11)
+    assert body['count'] == 20
+    results = body['results']
+    assert len(results) == 10
+    assert [inst['id'] for inst in results] == range(1, 11)
 
     resp = api.get('posts', {'offset': 0})
     assert resp.status_code == 200
     body = resp.json()
-    assert len(body) == 5
-    assert [inst['id'] for inst in body] == range(1, 6)
+    results = body['results']
+    assert len(results) == 5
+    assert [inst['id'] for inst in results] == range(1, 6)
