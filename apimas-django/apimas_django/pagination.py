@@ -21,6 +21,8 @@ class PaginationProcessor(BaseProcessor):
     WRITE_KEYS = (
         'backend/filtered_response',
         'exportable/meta/count',
+        'exportable/meta/next',
+        'exportable/meta/previous',
     )
 
     def __init__(
@@ -58,8 +60,10 @@ class PaginationProcessor(BaseProcessor):
             queryset = queryset.filter()
 
         count = queryset.count()
+        next_page = ''
+        previous_page = ''
         queryset = queryset[begin:end]
-        return (queryset, count)
+        return (queryset, count, next_page, previous_page)
 
 
 Pagination = ProcessorConstruction(
