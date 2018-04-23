@@ -43,6 +43,7 @@ class User(AbstractUser):
 class EnhancedUser(models.Model):
     user = models.OneToOneField(User)
     is_verified = models.BooleanField()
+    verified_at = models.DateTimeField(null=True)
     feature = models.CharField(max_length=255)
     institutions = models.ManyToManyField(Institution)
 

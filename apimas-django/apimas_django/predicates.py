@@ -109,6 +109,7 @@ spec_list = [
     {
         '.processor.handler.update': {},
         'module_path': 'apimas_django.handlers.UpdateHandler',
+        ':custom_update_handler': {'.string': {}},
     },
 
     {
@@ -196,31 +197,36 @@ spec_list = [
     },
 
     {
+        '.action.recipe.partial_update': {},
+        'content_type': 'application/json',
+        'on_collection': False,
+        ':permissions_read': 'retrieve',
+        'pre': {
+            '1': {'.processor.authentication': {}},
+            '2': {'.processor.user_retrieval': {}},
+            '3': {'.processor.permissions.write': {}},
+            '4': {'.processor.import_write_data': {}},
+            '5': {'.processor.object_retrieval_for_update': {}},
+            '6': {'.processor.load_data.partial': {}},
+            '7': {'.processor.write_permission_check': {}},
+        },
+        'handler': {'.processor.handler.update': {}},
+        'post': {
+            '1': {'.processor.permissions.read.nonstrict': {}},
+            '2': {'.processor.response_filtering_resource': {}},
+            '3': {'.processor.read_permission_check': {}},
+            '4': {'.processor.instance_to_dict': {}},
+            '5': {'.processor.export_data': {}},
+        },
+    },
+
+    {
         '.action-template.django.partial_update': {},
         'partial_update': {
+            '.action.recipe.partial_update': {},
             'method': 'PATCH',
             'status_code': 200,
-            'content_type': 'application/json',
-            'on_collection': False,
-            ':permissions_read': 'retrieve',
             'url': '/*/',
-            'pre': {
-                '1': {'.processor.authentication': {}},
-                '2': {'.processor.user_retrieval': {}},
-                '3': {'.processor.permissions.write': {}},
-                '4': {'.processor.import_write_data': {}},
-                '5': {'.processor.object_retrieval_for_update': {}},
-                '6': {'.processor.load_data.partial': {}},
-                '7': {'.processor.write_permission_check': {}},
-            },
-            'handler': {'.processor.handler.update': {}},
-            'post': {
-                '1': {'.processor.permissions.read.nonstrict': {}},
-                '2': {'.processor.response_filtering_resource': {}},
-                '3': {'.processor.read_permission_check': {}},
-                '4': {'.processor.instance_to_dict': {}},
-                '5': {'.processor.export_data': {}},
-            },
         },
     },
 

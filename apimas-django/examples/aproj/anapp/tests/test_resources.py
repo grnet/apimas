@@ -725,6 +725,42 @@ def test_delete(client):
     assert len(resp.json()) == 1
 
 
+def test_custom_action(client):
+    models.User.objects.create_user('admin', role='admin', token='ADMINTOKEN')
+    api = client.copy(prefix='/api/prefix/')
+    admin = client.copy(prefix='/api/prefix', auth_token='ADMINTOKEN')
+
+    data = {
+        'feature': 'feature',
+        'user': {
+            'username': 'user',
+            'password': 'pass',
+            'first_name': 'first',
+            'last_name': 'last',
+            'email': 'uname@example.org',
+            'role': 'user',
+            'token': 'usertoken',
+        }
+    }
+    r = api.post('enhancedusers', data)
+    assert r.status_code == 201
+    body = r.json()
+    assert len(body) == 1
+    enhanceduser_id = body['id']
+
+    r = admin.get('enhancedusers/%s' % enhanceduser_id)
+    assert r.status_code == 200
+    body = r.json()
+    assert body['is_verified'] is False
+    assert body['verified_at'] is None
+
+    r = admin.post('enhancedusers/%s/verify' % enhanceduser_id)
+    assert r.status_code == 200
+    body = r.json()
+    assert body['is_verified'] is True
+    assert body['verified_at'] is not None
+
+
 def test_ref(client):
     api = client.copy(prefix='/api/prefix/')
 

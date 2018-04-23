@@ -16,12 +16,25 @@ ENHANCEDUSERS = {
         '.action-template.django.list': {},
         '.action-template.django.retrieve': {},
         '.action-template.django.partial_update': {},
+
+        'verify': {
+            '.action.recipe.partial_update': {},
+            'method': 'POST',
+            'status_code': 200,
+            'url': '/*/verify/',
+            ':custom_update_handler': 'anapp.actions.verify_user',
+        },
+
     },
     'fields': {
         'id': {
             '.field.serial': {}},
         'is_verified': {
             '.field.boolean': {},
+            '.flag.readonly': {}},
+        'verified_at': {
+            '.field.datetime': {},
+            '.flag.nullable': {},
             '.flag.readonly': {}},
         'feature': {
             '.field.string': {}},

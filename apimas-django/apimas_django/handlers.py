@@ -210,7 +210,10 @@ class DjangoBaseHandler(BaseProcessor):
                             if post_handler else None
 
     def process(self, context):
-        BaseProcessor.process(self, context)
+        context_data = self.read(context)
+        output = self.execute_context(context_data, context)
+        if output is not None:
+            self.write(output, context)
 
         if self.post_handler:
             raw_response = context.extract('backend/raw_response')
@@ -401,7 +404,7 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         'data',
     }
 
-    def execute(self, context_data):
+    def execute_context(self, context_data, context):
         """ Creates a new django model instance. """
 
         data = context_data['data']
@@ -448,7 +451,7 @@ class ListHandlerProcessor(DjangoBaseHandler):
     REQUIRED_KEYS = {
     }
 
-    def execute(self, context_data):
+    def execute_context(self, context_data, context):
         """
         Gets all django model instances based on the orm model extracted
         from request context.
@@ -488,7 +491,7 @@ class RetrieveHandlerProcessor(DjangoBaseHandler):
         'pk',
     }
 
-    def execute(self, context_data):
+    def execute_context(self, context_data, context):
         """
         Gets a single model instance which based on the orm model and
         resource ID extracted from request context.
@@ -514,7 +517,12 @@ class UpdateHandlerProcessor(DjangoBaseHandler):
         'data',
     }
 
-    def execute(self, context_data):
+    def __init__(self, custom_update_handler, **kwargs):
+        self.custom_update_handler = utils.import_object(
+            custom_update_handler) if custom_update_handler else None
+        DjangoBaseHandler.__init__(self, **kwargs)
+
+    def execute_context(self, context_data, context):
         """
         Updates an existing model instance based on the data of request.
         """
@@ -525,7 +533,11 @@ class UpdateHandlerProcessor(DjangoBaseHandler):
         if not instance:
             instance = get_model_instance(self.spec, pk, kwargs)
 
-        update_resource(self.spec, data, instance)
+        if self.custom_update_handler:
+            self.custom_update_handler(data, instance, context)
+        else:
+            update_resource(self.spec, data, instance)
+
         instance = get_model_instance(self.spec, pk, kwargs, strict=False)
         return (instance,)
 
@@ -534,9 +546,10 @@ UpdateHandler = _django_base_construction(UpdateHandlerProcessor)
 
 
 class DeleteHandlerProcessor(RetrieveHandlerProcessor):
-    def execute(self, context_data):
+    def execute_context(self, context_data, context):
         """ Deletes an existing model instance. """
-        (instance,) = RetrieveHandlerProcessor.execute(self, context_data)
+        (instance,) = RetrieveHandlerProcessor.execute_context(
+            self, context_data, context)
         delete_instance(instance)
         return None
 

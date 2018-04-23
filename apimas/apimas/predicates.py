@@ -73,7 +73,7 @@ spec_list = [
         'actions': {
             '.action-template.*': {},
             '*': {
-                ".action": {},
+                ".action.*": {},
                 ':*': {},
                 'on_collection': {'.boolean': {}},
                 'method': {'.string': {}},
