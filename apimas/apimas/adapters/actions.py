@@ -70,18 +70,3 @@ class ApimasAction(object):
             processor.process(context)
 
         return context.extract('response')
-
-
-# def extract_from_action(action_spec):
-#     handler = action_spec.get('handler')
-#     if handler is None:
-#         raise InvalidInput('Handler cannot be None')
-
-#     action_url = action_spec.get('url')
-#     if action_url is None:
-#         raise InvalidInput('URL not found for action')
-
-#     handler = utils.import_object(handler)
-#     pre = [utils.import_object(x) for x in action_spec.get('pre', [])]
-#     post = [utils.import_object(x) for x in action_spec.get('post', [])]
-#     return action_url, handler, pre, post
