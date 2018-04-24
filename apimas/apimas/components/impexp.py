@@ -185,7 +185,7 @@ class ImportParamsProcessor(ImportExportData):
             converter = converter.converter
 
         imported_filters = converter.import_data(
-            filter_data, can_read_fields, flat=True)
+            filter_data, can_read_fields, single=True)
         return docular.doc_merge(operators, imported_filters)
 
     def process_ordering(self, ordering_param, can_read_fields):
