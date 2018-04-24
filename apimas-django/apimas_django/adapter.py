@@ -5,7 +5,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from apimas import utils
 from apimas.errors import InvalidSpec
-from apimas.adapters.actions import ApimasAction
+from apimas_django.execution import ApimasAction
 from apimas_django.wrapper import django_views
 from apimas_django.predicates import PREDICATES
 from apimas_django.collect_construction import collect_processors
