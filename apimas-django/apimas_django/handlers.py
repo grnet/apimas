@@ -1,5 +1,6 @@
 import logging
 from django.db.models import ProtectedError
+from django.db import transaction
 from apimas import utils
 from apimas_django import utils as django_utils
 from apimas.components import BaseProcessor, ProcessorConstruction
@@ -475,10 +476,17 @@ def get_collection_objects(spec, bounds):
     return objects
 
 
-def get_model_instance(spec, pk, kwargs, filters=None, strict=True):
+def running_in_transaction():
+    return not transaction.get_autocommit()
+
+
+def get_model_instance(spec, pk, kwargs, filters=None, strict=True,
+                       for_update=False):
     objects = get_collection_objects(spec, kwargs)
     if filters:
         objects = objects.filter(*filters)
+    if for_update and running_in_transaction():
+        objects = objects.select_for_update()
     return django_utils.get_instance(objects, pk, strict=strict)
 
 
@@ -531,7 +539,8 @@ class UpdateHandlerProcessor(DjangoBaseHandler):
         data = context_data['data']
         instance = context_data['instance']
         if not instance:
-            instance = get_model_instance(self.spec, pk, kwargs)
+            instance = get_model_instance(self.spec, pk, kwargs,
+                                          for_update=True)
 
         if self.custom_update_handler:
             self.custom_update_handler(data, instance, context)

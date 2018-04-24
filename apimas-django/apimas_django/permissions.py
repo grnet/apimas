@@ -84,7 +84,8 @@ class ObjectRetrievalForUpdateProcessor(BaseProcessor):
         if write_filter is not None:
             filters.append(write_filter(context))
 
-        instance = get_model_instance(self.spec, pk, kwargs, filters)
+        instance = get_model_instance(self.spec, pk, kwargs, filters,
+                                      for_update=True)
         self.write((instance,), context)
 
 

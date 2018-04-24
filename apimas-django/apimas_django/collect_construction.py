@@ -13,15 +13,9 @@ def processor_constructor(instance):
 
 
 def action_constructor(instance):
-    v = set()
-    preprocessors = dict(docular.doc_spec_iter_values(instance.get('pre', {}))).values()
-    postprocessors = dict(docular.doc_spec_iter_values(instance.get('post', {}))).values()
-    v.update(preprocessors)
-    v.update(postprocessors)
-    handler = docular.doc_spec_get(instance.get('handler'))
-    if handler:
-        v.update({handler})
-    docular.doc_spec_set(instance, v)
+    processors = dict(docular.doc_spec_iter_values(instance.get('processors', {}))).values()
+    processors = set(processors)
+    docular.doc_spec_set(instance, processors)
 
 
 def collection_constructor(instance):

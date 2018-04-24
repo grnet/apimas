@@ -18,23 +18,15 @@ logger = logging.getLogger('apimas')
 
 def read_action_spec(action_spec):
     param_keys = ('method', 'status_code', 'content_type',
-                  'on_collection', 'url')
+                  'on_collection', 'url',
+                  'transaction_begin_before', 'transaction_end_after')
     params = {k:v for k, v in (docular.doc_spec_iter_values(action_spec))
               if k in param_keys}
 
-    handler = docular.doc_spec_get(action_spec, 'handler')
-    pre = action_spec.pop('pre', {})
-    post = action_spec.pop('post', {})
+    processors_spec = action_spec.get('processors', {})
+    processors_sorted = sorted(docular.doc_spec_iter_values(processors_spec))
 
-    # Initialize pre processors and post processors with spec.
-    pre_keys = sorted(key for key in pre.keys()
-                      if key[:1] not in ("*", ".", "="))
-    pre_proc = [docular.doc_spec_get(pre.get(key)) for key in pre_keys]
-    post_keys = sorted(key for key in post.keys()
-                      if key[:1] not in ("*", ".", "="))
-    post_proc = [docular.doc_spec_get(post.get(key)) for key in post_keys]
-
-    return params, handler, pre_proc, post_proc
+    return params, processors_sorted
 
 
 def collection_django_constructor(instance, context, loc):
@@ -175,11 +167,13 @@ def mk_url_prefix(loc):
 
 def mk_action_view(
         action_name, action_spec, collection_spec, context):
-    params, handler, pre_proc, post_proc = read_action_spec(action_spec)
+    params, processors_sorted = read_action_spec(action_spec)
     method = params['method']
     status_code = params['status_code']
     content_type = params['content_type']
     action_url = params['url']
+    transaction_begin_before = params['transaction_begin_before']
+    transaction_end_after = params['transaction_end_after']
 
     loc = context['loc']
     if method is None:
@@ -187,9 +181,6 @@ def mk_action_view(
         raise InvalidSpec(msg, loc=loc)
     if action_url is None:
         msg = 'HTTP method not found for action {!r}'.format(action_name)
-        raise InvalidSpec(msg, loc=loc)
-    if handler is None:
-        msg = 'Handler not found for action {!r}'.format(action_name)
         raise InvalidSpec(msg, loc=loc)
 
     logger.info("Constructing action: %s", action_name)
@@ -199,13 +190,16 @@ def mk_action_view(
 
     top_spec = context['top_spec']
     artifacts = docular.doc_spec_get(top_spec, ':artifacts')
-    pre_proc = [make_processor(proc, loc, action_name, artifacts) for proc in pre_proc]
-    post_proc = [make_processor(proc, loc, action_name, artifacts) for proc in post_proc]
-    handler = make_processor(handler, loc, action_name, artifacts)
+
+    initialized_processors = []
+    for key, proc in processors_sorted:
+        initialized = make_processor(proc, loc, action_name, artifacts)
+        initialized_processors.append((key, initialized))
 
     apimas_action = ApimasAction(
         collection_path, action_url, action_name, status_code, content_type,
-        handler, request_proc=pre_proc, response_proc=post_proc)
+        transaction_begin_before, transaction_end_after,
+        initialized_processors)
     return urlpattern, method, apimas_action
 
 

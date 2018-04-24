@@ -18,7 +18,7 @@ ENHANCEDUSERS = {
         '.action-template.django.partial_update': {},
 
         'verify': {
-            '.action.recipe.partial_update': {},
+            '.action.django.recipe.partial_update': {},
             'method': 'POST',
             'status_code': 200,
             'url': '/*/verify/',

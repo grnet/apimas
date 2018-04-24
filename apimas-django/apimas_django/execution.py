@@ -1,7 +1,8 @@
-from apimas.errors import (AccessDeniedError, NotFound,
+from apimas.errors import (AccessDeniedError, NotFound, InvalidInput,
                            ValidationError, UnauthorizedError)
 from docular import doc_get
 from apimas.components import Context
+from django.db import transaction
 
 
 EXC_CODES = {
@@ -12,17 +13,51 @@ EXC_CODES = {
 }
 
 
+def get_indices(processors, begin_before, end_after):
+    begin_before_idx, end_after_idx = None, None
+    for idx, (key, processor) in enumerate(processors):
+        if begin_before == key:
+            begin_before_idx = idx
+        if end_after == key:
+            end_after_idx = idx
+    if begin_before_idx is None or end_after_idx is None:
+        raise InvalidInput('Failed to configure transaction')
+    return begin_before_idx, end_after_idx
+
+
+def seconds(tuple_list):
+    if not tuple_list:
+        return []
+    return zip(*tuple_list)[1]
+
+
+def run_processors(processors, context):
+    for processor in processors:
+        processor.process(context)
+
+
 class ApimasAction(object):
     def __init__(self, collection, url, action_name, status_code, content_type,
-                 handler, request_proc=None, response_proc=None):
+                 transaction_begin_before, transaction_end_after, processors):
         self.collection = collection
         self.action_name = action_name
         self.url = url
         self.status_code = status_code
         self.content_type = content_type
-        self.handler = handler
-        self.request_proc = request_proc or []
-        self.response_proc = response_proc or []
+
+        if transaction_begin_before is not None and \
+           transaction_end_after is not None:
+            begin_before_idx, end_after_idx = get_indices(
+                processors, transaction_begin_before, transaction_end_after)
+            self.before_transaction = seconds(processors[0:begin_before_idx])
+            self.in_transaction = seconds(
+                processors[begin_before_idx:end_after_idx + 1])
+            self.after_transaction = seconds(
+                processors[end_after_idx + 1:])
+        else:
+            self.before_transaction = seconds(processors)
+            self.in_transaction = []
+            self.after_transaction = []
 
     def handle_error(self, func, context):
         try:
@@ -61,12 +96,12 @@ class ApimasAction(object):
         return self.handle_error(self.process_context, context)
 
     def process_context(self, context):
-        for processor in self.request_proc:
-            processor.process(context)
+        run_processors(self.before_transaction, context)
 
-        self.handler.process(context)
+        if self.in_transaction:
+            with transaction.atomic():
+                run_processors(self.in_transaction, context)
 
-        for processor in self.response_proc:
-            processor.process(context)
+        run_processors(self.after_transaction, context)
 
         return context.extract('response')
