@@ -31,6 +31,13 @@ RULES = [
     ('api/prefix/enhancedadmins', 'list', '*', '*', '*', '*', '*'),
     ('api/prefix/enhancedadmins', 'partial_update', '*', '*', '*', '*', '*'),
 
+    ('api/prefix/uuidresources', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/uuidresources', 'retrieve', '*', '*', '*', '*', '*'),
+
+    ('api/prefix/uuidresources/institutions', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/uuidresources/institutions', 'retrieve', '*', '*', '*', '*', '*'),
+    ('api/prefix/uuidresources/institutions', 'list', '*', '*', '*', '*', '*'),
+
     ('api/prefix/institutions', 'retrieve', '*', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'list', '*', '*', '*', '*', '*'),
     ('api/prefix/institutions', 'create', '*', '*', '*', '*', '*'),

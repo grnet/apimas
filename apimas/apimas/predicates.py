@@ -69,6 +69,7 @@ spec_list = [
 
     {
         '.field.collection.*': {},
+        'id_field': {'.string': {}},
         ':*': {},
         'actions': {
             '.action-template.*': {},

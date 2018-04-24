@@ -72,13 +72,23 @@ def collection_constructor(context, instance, loc, top_spec):
 
     model = docular.doc_spec_get(instance['model'])
     source = docular.doc_spec_get(instance.get('source', {}))
+    id_field = docular.doc_spec_get(instance, 'id_field', default='id')
+
     subset = docular.doc_spec_get(instance.get('subset'))
     bounds = get_bounds(loc, top_spec)
     subcollections, substructs, subfields = get_sub_elements(instance)
 
+    if id_field not in subfields:
+        raise InvalidInput("'id_field' not specified as field")
+
+    id_field_spec = subfields[id_field]
+    db_key = id_field_spec['source']
+
     spec['type'] = 'collection'
     spec['model'] = utils.import_object(model)
     spec['source'] = source
+    spec['id_field'] = id_field
+    spec['db_key'] = db_key
     spec['subset'] = utils.import_object(subset) if subset else None
     spec['bounds'] = bounds
     spec['subcollections'] = subcollections
@@ -314,7 +324,7 @@ def create_resource(spec, data, key=None):
     precreated = create_substructs(spec, data)
     instance = do_create(key, spec, data, precreated)
     for args in deferred:
-        create_resource(*args, key=instance.id)
+        create_resource(*args, key=instance.pk)
     return instance
 
 
@@ -333,9 +343,9 @@ def update_subcollections(spec, data, instance):
         subdata = data.get(subsource, Nothing)
         if subdata is Nothing:
             continue
-        delete_subcollection(instance.id, subspec)
+        delete_subcollection(instance.pk, subspec)
         for elem in subdata:
-            create_resource(subspec, elem, key=instance.id)
+            create_resource(subspec, elem, key=instance.pk)
 
 
 def update_substructs(spec, data, instance):
@@ -482,12 +492,14 @@ def running_in_transaction():
 
 def get_model_instance(spec, pk, kwargs, filters=None, strict=True,
                        for_update=False):
+    db_key = spec['db_key']
     objects = get_collection_objects(spec, kwargs)
     if filters:
         objects = objects.filter(*filters)
     if for_update and running_in_transaction():
         objects = objects.select_for_update()
-    return django_utils.get_instance(objects, pk, strict=strict)
+    return django_utils.get_instance(
+        objects, pk, pk_name=db_key, strict=strict)
 
 
 class RetrieveHandlerProcessor(DjangoBaseHandler):

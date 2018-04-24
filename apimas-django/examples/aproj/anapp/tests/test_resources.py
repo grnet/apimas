@@ -4,7 +4,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from apimas_django.test import *
 from anapp import models
 from datetime import datetime
-import uuid
+import uuid as uuid_lib
 import unicodedata
 
 pytestmark = pytest.mark.django_db(transaction=False)
@@ -12,7 +12,7 @@ pytestmark = pytest.mark.django_db(transaction=False)
 
 def is_uuid(value):
     try:
-        uuid.UUID(value)
+        uuid_lib.UUID(value)
         return True
     except:
         return False
@@ -623,6 +623,57 @@ def test_manytomany(client):
     assert body['id'] == 7
 
     assert models.Institution.objects.all().count() == 10
+
+
+def test_id_field(client):
+    api = client.copy(prefix='/api/prefix/')
+    for i in range(1, 11):
+        name = 'inst%s' % i
+        models.Institution.objects.create(name=name, active=True)
+
+    data = {
+        'value': 'one',
+        'institutions': [
+            {'institution': 2},
+            {'institution': 4},
+        ]
+    }
+    r = api.post('uuidresources', data)
+    assert r.status_code == 201
+    body = r.json()
+    uuid = body['uuid']
+    assert is_uuid(uuid)
+    institutions = body['institutions']
+    assert sorted(institutions, key=lambda inst: inst['id']) == \
+        [{'id': 1, 'institution': 2}, {'id': 2, 'institution': 4}]
+
+    r = api.get('uuidresources/%s' % uuid)
+    assert r.status_code == 200
+    body = r.json()
+    assert body['value'] == 'one'
+
+    institutions_path = 'uuidresources/%s/institutions' % uuid
+    r = api.get('%s/%s' % (institutions_path, 1))
+    assert r.status_code == 404
+
+    # field 'institution' is the identifier rather than 'id'
+    r = api.get('%s/%s' % (institutions_path, 2))
+    assert r.status_code == 200
+    body = r.json()
+    assert body['id'] == 1
+    assert body['institution'] == 2
+
+    data = {'institution': 8}
+    r = api.post(institutions_path, data)
+    assert r.status_code == 201
+
+    r = api.get(institutions_path)
+    assert r.status_code == 200
+    institutions = r.json()
+    assert sorted(institutions, key=lambda inst: inst['id']) == \
+        [{'id': 1, 'institution': 2},
+         {'id': 2, 'institution': 4},
+         {'id': 3, 'institution': 8}]
 
 
 def test_subset(client):

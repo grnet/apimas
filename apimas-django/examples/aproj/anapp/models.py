@@ -63,6 +63,12 @@ class EnhancedUser(models.Model):
 filter_enhanced_admins = models.Q(user__role='admin')
 
 
+class UUIDResource(models.Model):
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    value = models.CharField(max_length=100)
+    institutions = models.ManyToManyField(Institution)
+
+
 class Group(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     name = models.TextField()

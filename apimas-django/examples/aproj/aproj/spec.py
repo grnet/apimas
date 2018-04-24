@@ -123,6 +123,41 @@ ENHANCEDADMINS = {
     },
 }
 
+UUIDRESOURCES = {
+    '.field.collection.django': {},
+    'model': 'anapp.models.UUIDResource',
+    'id_field': 'uuid',
+    'actions': {
+        '.action-template.django.create': {},
+        '.action-template.django.list': {},
+        '.action-template.django.retrieve': {},
+        '.action-template.django.partial_update': {},
+    },
+    'fields': {
+        'uuid': {
+            '.field.uuid': {},
+            '.flag.readonly': {}},
+        'value': {'.field.string': {}},
+        'institutions': {
+            '.field.collection.django': {},
+            'model': 'anapp.models.UUIDResource.institutions.through',
+            'bound': 'uuidresource',
+            'id_field': 'institution',  # together with bound
+            'fields': {
+                'id': {
+                    '.field.serial': {}},
+                'institution': {'.field.integer': {},
+                                'source': 'institution_id'},
+            },
+            'actions': {
+                '.action-template.django.list': {},
+                '.action-template.django.create': {},
+                '.action-template.django.retrieve': {},
+            },
+        },
+    },
+}
+
 POSTS = {
     ".field.collection.django": {},
 
@@ -323,6 +358,7 @@ APP_CONFIG = {
             "collections": {
                 "enhancedusers": ENHANCEDUSERS,
                 "enhancedadmins": ENHANCEDADMINS,
+                "uuidresources": UUIDRESOURCES,
                 "posts": POSTS,
                 "posts2": POSTS2,
                 'nulltest': NULLTEST,
