@@ -22,6 +22,8 @@ RULES = [
     ('api/prefix/enhancedusers/institutions', 'create', 'admin', '*', '*', '*', ''),
     ('api/prefix/enhancedusers/institutions', 'delete', 'admin', '*', '*', '*', ''),
 
+    ('api/prefix/enhancedusers/institutions_flat', 'retrieve', 'admin', '*', '*', '*', ''),
+
     ('api/prefix/enhancedusers', 'verify', 'admin', '*', '*', '*', ''),
 
     ('api/prefix/enhancedadmins', 'create', '*',

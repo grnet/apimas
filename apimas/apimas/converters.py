@@ -367,6 +367,9 @@ class Ref(Identity):
         if isinstance(value, numbers.Number):
             return str(value)
 
+        if not isinstance(value, basestring):
+            raise ValidationError('Ref is neither number nor string')
+
         parsed_value = urlparse(value)
         if not parsed_value.netloc:
             # It's not a URL; assume it's a plain id
@@ -423,8 +426,12 @@ class Struct(DataConverter):
         {'foo': 'x', 'bar': 10}
     """
 
-    def __init__(self, schema, **kwargs):
+    def __init__(self, schema, flat=False, **kwargs):
         self.schema = schema
+        self.flat = flat
+        if flat and len(self.schema) != 1:
+            raise InvalidInput(
+                'Flat collections must specify exactly one field')
         super(Struct, self).__init__(**kwargs)
 
     def get_dict_values(self, value, permissions, single, importing):
@@ -448,12 +455,21 @@ class Struct(DataConverter):
         if not isinstance(value, dict):
             raise ValidationError("Must be a dict")
 
-        return self.get_dict_values(
+        value = self.get_dict_values(
             value, permissions, single, importing=False)
 
+        if self.flat:
+            key = self.schema.keys()[0]
+            value = value[key]
+        return value
+
     def get_native_value(self, value, permissions, single):
-        if not isinstance(value, dict):
+        if not self.flat and not isinstance(value, dict):
             raise ValidationError("Must be a dict")
+
+        if self.flat:
+            key = self.schema.keys()[0]
+            value = {key: value}
 
         input_keys = set(value.keys())
         permitted_keys = set(permissions.keys())

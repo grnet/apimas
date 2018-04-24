@@ -72,11 +72,29 @@ ENHANCEDUSERS = {
                                 'to': 'api/prefix/institutions'},
             },
             'actions': {
+                '.action-template.django.retrieve': {},
                 '.action-template.django.list': {},
                 '.action-template.django.create': {},
                 '.action-template.django.delete': {},
             },
         },
+        'institutions_flat': {
+            '.field.collection.django': {},
+            'model': 'anapp.models.EnhancedUser.institutions.through',
+            'bound': 'enhanceduser',
+            'id_field': 'institution',
+            'source': 'institutions',
+            'flat': True,
+            'fields': {
+                'institution': {'.field.ref': {},
+                                'source': 'institution_id',
+                                'to': 'api/prefix/institutions'},
+            },
+            'actions': {
+                '.action-template.django.retrieve': {},
+            },
+        },
+
     }
 }
 

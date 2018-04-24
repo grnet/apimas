@@ -60,8 +60,9 @@ def list_constructor(context, instance, loc, top_spec, config):
     value = docular.doc_spec_get(instance, default={})
     args = value.get('args', {})
 
+    flat = docular.doc_spec_get(instance, 'flat', default=False)
     field_converters = dict(docular.doc_spec_iter_values(instance['fields']))
-    resource_converter = cnvs.Struct(schema=field_converters)
+    resource_converter = cnvs.Struct(schema=field_converters, flat=flat)
     args['converter'] = resource_converter
     value['args'] = args
 

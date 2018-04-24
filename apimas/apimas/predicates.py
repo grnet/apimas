@@ -70,6 +70,7 @@ spec_list = [
     {
         '.field.collection.*': {},
         'id_field': {'.string': {}},
+        'flat': {'.boolean': {}},
         ':*': {},
         'actions': {
             '.action-template.*': {},

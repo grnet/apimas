@@ -589,6 +589,10 @@ def test_manytomany(client):
     institutions = body['institutions']
     ids = set(inst['id'] for inst in institutions)
     assert ids == set([2, 3, 4])
+    institutions_flat = body['institutions_flat']
+    assert institutions_flat
+    for inst in institutions_flat:
+        assert isinstance(inst, basestring)
 
     e_user = models.EnhancedUser.objects.get(id=enhanceduser_id)
     institutions = set(e_user.institutions.all().values_list('id', flat=True))
@@ -621,6 +625,26 @@ def test_manytomany(client):
     assert r.status_code == 201
     body = r.json()
     assert body['id'] == 7
+
+    data = {'institutions_flat': [9, 10]}
+    r = admin.patch('enhancedusers/%s' % enhanceduser_id, data)
+    assert r.status_code == 200
+    body = r.json()
+    institutions = body['institutions']
+    ids = set(inst['id'] for inst in institutions)
+    assert ids == set([8, 9])
+
+    r = admin.get('enhancedusers/%s/institutions/%s' % (enhanceduser_id, 9))
+    assert r.status_code == 200
+
+    r = admin.get('enhancedusers/%s/institutions/%s' % (enhanceduser_id, 10))
+    assert r.status_code == 404
+
+    r = admin.get('enhancedusers/%s/institutions_flat/%s' % (enhanceduser_id, 10))
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body, basestring)
+    assert body.rstrip('/').rsplit('/', 1)[-1]
 
     assert models.Institution.objects.all().count() == 10
 
