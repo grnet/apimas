@@ -960,7 +960,7 @@ def test_pagination(client):
     resp = api.get('institutions', {'limit': 10, 'offset': 0})
     assert resp.status_code == 200
     body = resp.json()
-    assert set(body.keys()) == set(['count', 'results'])
+    assert set(body.keys()) == set(['count', 'results', 'next', 'previous'])
     assert body['count'] == 20
     results = body['results']
     assert len(results) == 10
