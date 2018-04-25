@@ -38,11 +38,6 @@ def setup_package(description='', excluded=None, **kwargs):
 
 
 EXTRA_KWARGS = {
-    'entry_points': {
-        'console_scripts': {
-            'apimas=apimas.cmd:main'
-        }
-    },
 }
 
 setup_package(description='API Modeling and Serving', **EXTRA_KWARGS)

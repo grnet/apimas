@@ -1,5 +1,0 @@
-cerberus
-click
-pyyaml
-requests
-pytz
