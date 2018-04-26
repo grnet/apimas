@@ -552,6 +552,36 @@ def test_subelements(client):
     assert name_variants_id == new_name_variants_id
 
 
+def test_readonly_subcollection(client):
+    api = client.copy(prefix='/api/prefix')
+
+    data = {
+        'status': 'OPEN',
+        'contributions': [{'text': 'long text'}],
+    }
+    r = api.post('negotiations', data)
+    assert r.status_code == 400
+    assert "'contributions': Field is readonly" in r.content
+
+    data.pop('contributions')
+    r = api.post('negotiations', data)
+    assert r.status_code == 201
+    body = r.json()
+    neg_id = body['id']
+    neg_path = 'negotiations/%s' % neg_id
+
+    data = {'text': 'new text'}
+    r = api.post('%s/contributions' % neg_path, data)
+    assert r.status_code == 201
+
+    r = api.get(neg_path)
+    assert r.status_code == 200
+    body = r.json()
+    contributions = body['contributions']
+    assert len(contributions) == 1
+    assert contributions[0]['text'] == 'new text'
+
+
 def test_manytomany(client):
     for i in range(1, 11):
         name = 'inst%s' % i

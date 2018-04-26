@@ -128,3 +128,12 @@ class Nulltest(models.Model):
     fnodef = models.IntegerField(null=True)
     fstr = models.CharField(max_length=100)
     fbool = models.BooleanField()
+
+
+class Negotiation(models.Model):
+    status = models.CharField(max_length=100, default='OPEN')
+
+
+class Contribution(models.Model):
+    negotiation = models.ForeignKey(Negotiation, related_name='contributions')
+    text = models.TextField()

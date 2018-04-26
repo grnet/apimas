@@ -368,6 +368,37 @@ FEATURES = {
     }
 }
 
+NEGOTIATIONS = {
+    '.field.collection.django': {},
+    'model': 'anapp.models.Negotiation',
+    'actions': {
+        '.action-template.django.retrieve': {},
+        '.action-template.django.create': {},
+    },
+    'fields': {
+        'id': {
+            '.field.serial': {}},
+        'status': {
+            '.field.string': {}},
+        'contributions': {
+            '.field.collection.django': {},
+            '.flag.readonly': {},
+            'model': 'anapp.models.Contribution',
+            'bound': 'negotiation',
+            'fields': {
+                'id': {
+                    '.field.serial': {}},
+                'text': {
+                    '.field.text': {}},
+            },
+            'actions': {
+                '.action-template.django.retrieve': {},
+                '.action-template.django.create': {},
+            },
+        },
+    },
+}
+
 APP_CONFIG = {
     ".apimas_app": {},
     ":permission_rules": "anapp.rules.get_rules",
@@ -383,6 +414,7 @@ APP_CONFIG = {
                 "institutions": INSTITUTIONS,
                 "groups": GROUPS,
                 "features": FEATURES,
+                "negotiations": NEGOTIATIONS,
             },
         },
     },

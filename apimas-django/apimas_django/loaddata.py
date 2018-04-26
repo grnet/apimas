@@ -3,11 +3,11 @@ from apimas.errors import ValidationError
 from apimas_django.handlers import Nothing, _django_base_construction
 
 
-def check_flags(name, spec, value, full, instance):
+def check_flags(name, spec, value, full, instance, toplevel=False):
     flags = spec.get('flags', [])
     default = spec.get('default', Nothing)
 
-    if 'readonly' in flags:
+    if 'readonly' in flags and not toplevel:
         if value is not Nothing:
             raise ValidationError("'%s': Field is readonly" % name)
         return Nothing
@@ -65,8 +65,8 @@ def load_data_substructs(spec, data, full, instance):
     return loaded
 
 
-def load_data(name, spec, data, full, instance):
-    data = check_flags(name, spec, data, full, instance)
+def load_data(name, spec, data, full, instance, toplevel=False):
+    data = check_flags(name, spec, data, full, instance, toplevel=toplevel)
     if data is Nothing:
         return Nothing
 
@@ -103,7 +103,8 @@ class LoadDataProcessor(BaseProcessor):
         data = context_data['imported_content']
         instance = context_data['instance']
         loaded = load_data(
-            self.collection_name, self.spec, data, self.full, instance)
+            self.collection_name, self.spec, data, self.full, instance,
+            toplevel=True)
         return (loaded,)
 
 

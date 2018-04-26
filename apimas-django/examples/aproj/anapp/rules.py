@@ -81,6 +81,12 @@ RULES = [
 
     ('api/prefix/features', 'create', '*', '*', '*', '*', '*'),
     ('api/prefix/features', 'retrieve', '*', '*', '*', '*', '*'),
+
+    ('api/prefix/negotiations', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/negotiations', 'retrieve', '*', '*', '*', '*', '*'),
+
+    ('api/prefix/negotiations/contributions', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/negotiations/contributions', 'retrieve', '*', '*', '*', '*', '*'),
 ]
 
 def get_rules():
