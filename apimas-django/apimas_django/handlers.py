@@ -415,13 +415,24 @@ class CreateHandlerProcessor(DjangoBaseHandler):
         'data',
     }
 
+    def __init__(self, custom_create_handler, **kwargs):
+        self.custom_create_handler = utils.import_object(
+            custom_create_handler) if custom_create_handler else None
+        DjangoBaseHandler.__init__(self, **kwargs)
+
     def execute_context(self, context_data, context):
         """ Creates a new django model instance. """
 
         data = context_data['data']
         kwargs = context_data['kwargs']
         key = kwargs.get('id0')
-        instance = create_resource(self.spec, data, key=key)
+
+        if self.custom_create_handler:
+            instance = self.custom_create_handler(
+                data, key, context)
+        else:
+            instance = create_resource(self.spec, data, key=key)
+
         if self.spec['subset']:
             instance = get_model_instance(
                 self.spec, instance.pk, kwargs, strict=False)

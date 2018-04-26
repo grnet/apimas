@@ -94,6 +94,7 @@ spec_list = [
     {
         '.processor.handler.create': {},
         'module_path': 'apimas_django.handlers.CreateHandler',
+        ':custom_create_handler': {'.string': {}},
     },
 
     {
