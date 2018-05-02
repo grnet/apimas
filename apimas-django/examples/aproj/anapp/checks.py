@@ -23,7 +23,7 @@ def update_check(backend_input, instance, context):
 
 
 def censor_one(instance, context):
-    auth_user = context.extract('auth/user')
+    auth_user = context.extract(u'auth/user')
     username = auth_user.username
 
     if username in instance.body:
