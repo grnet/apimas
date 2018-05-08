@@ -4,10 +4,11 @@ from setuptools import setup, find_packages
 CURPATH = os.path.dirname(os.path.realpath(__file__))
 
 
-def get_package_info():
+def get_version():
     version_file = os.path.join(CURPATH, "version.txt")
     with open(version_file) as f:
-        return (x.strip() for x in f.read().strip().split())
+        info = [x.strip() for x in f.read().strip().split()]
+        return info[1]
 
 
 def get_requirements():
@@ -19,25 +20,17 @@ def get_requirements():
             if x and x[0] != '#'
         ]
 
+package_name = 'apimas'
+description = 'API Modeling and Serving'
+version = get_version()
 
-def setup_package(description='', excluded=None, **kwargs):
-    package_name, version = get_package_info()
-    requirements = get_requirements()
-    standard_kwargs = {
-        'name': package_name,
-        'version': version,
-        'license': 'Affero GPL v3',
-        'author': 'GRNET S.A.',
-        'author_email': 'apimas@dev.grnet.gr',
-        'description': description,
-        'packages': find_packages(exclude=excluded or []),
-        'install_requires': requirements,
-    }
-    kwargs = dict(standard_kwargs, **kwargs)
-    setup(**kwargs)
-
-
-EXTRA_KWARGS = {
-}
-
-setup_package(description='API Modeling and Serving', **EXTRA_KWARGS)
+setup(
+    name=package_name,
+    version=version,
+    license='Affero GPL v3',
+    author='GRNET S.A.',
+    author_email='apimas@dev.grnet.gr',
+    description=description,
+    packages=find_packages(),
+    install_requires=get_requirements()
+)
