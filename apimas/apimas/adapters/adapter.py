@@ -45,6 +45,7 @@ class Adapter(object):
         '.integer',
         '.biginteger',
         '.float',
+        '.decimal',
         '.string',
         '.text',
         '.choices',

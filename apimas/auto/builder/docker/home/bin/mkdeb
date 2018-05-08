@@ -3,7 +3,7 @@
 set -e
 
 help () {
-    echo "Usage: ${0} [-hr] <commit>" 
+    echo "Usage: ${0} [-hr] <commit>"
     echo 'Build a debian package from a git project.'
     echo ''
     echo 'Options:'
@@ -106,17 +106,18 @@ if [ -z "${project}" ] || [ -z "${version}" ]; then
     exit 2
 fi
 
+git_commit_ref="$(git rev-parse --verify --short ${git_commit})"
+git_commit_ref="$(echo ${git_commit_ref} | tr 'A-Z' 'a-z')"
+
 if [ -z "${release}" ]; then
-    git_commit_ref="+$(git rev-parse --verify --short ${git_commit})"
-    git_commit_ref="$(echo ${git_commit_ref} | tr 'A-Z' 'a-z')"
     git_description="$(git describe --all --exact-match --abbrev=0 ${git_commit} || true)"
     if [ -n "${git_description}" ]; then
         git_tag="+$(basename ${git_description})"
         git_tag="$(echo ${git_tag} | tr 'A-Z' 'a-z')"
     fi
-    extra_version="~dev${git_tag}${git_commit_ref}"
+    extra_version="~dev${git_tag}+${git_commit_ref}"
 else
-    extra_version="+${release}+${git_commit}"
+    extra_version="+${release}+${git_commit_ref}"
 fi
 
 full_version="${version}${extra_version}"
@@ -140,11 +141,12 @@ export DIST="${debian_dist}"
 export DEBFULLNAME="GRNET Development Team"
 export DEBEMAIL="team@dev.grnet.gr"
 
-sed -ie "s/AUTOVERSION/${full_version}-${debian_dist_tag}/" debian/changelog
+dch --distribution "${debian_dist}" --force-distribution \
+	-v "${full_version}-${debian_dist_tag}" "New upstream"
 
-debuild -us -uc
+debuild -b -us -uc
 cd - > /dev/null
 
 if [ -n "${output_dir}" ]; then
-    cp -v "${build_dir}"/*.deb "${output_dir}"
+    rsync -a ${build_dir}/ "${output_dir}" --exclude "${orig_name}"
 fi

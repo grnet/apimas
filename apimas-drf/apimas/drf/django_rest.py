@@ -108,6 +108,16 @@ class DjangoRestAdapter(NaiveAdapter):
                 'map': 'max_length',
             }
         },
+        '.decimal': {
+            'max_digits': {
+                'default': None,
+                'map': 'max_digits',
+            },
+            'decimal_places': {
+                'default': None,
+                'map': 'decimal_places',
+            }
+        },
         '.choices': {
             'allowed': {
                 'default': [],
@@ -119,17 +129,25 @@ class DjangoRestAdapter(NaiveAdapter):
             }
         },
         '.date': {
-            'format': {
+            'input_formats': {
                 'default': ['%Y-%m-%d'],
                 'map': 'input_formats',
-            }
+            },
+            'format': {
+                'default': '%Y-%m-%d',
+                'map': 'format',
+            },
         },
         '.datetime': {
-            'format': {
-                'default': ['%Y-%m-%dT%H:%M:%S'],
+            'input_formats': {
+                'default': ['%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S.%fZ'],
                 'map': 'input_formats',
-            }
-        }
+            },
+            'format': {
+                'default': '%Y-%m-%dT%H:%M:%S.%fZ',
+                'map': 'format',
+            },
+        },
     }
 
     PROPERTY_MAPPING = {
@@ -145,6 +163,7 @@ class DjangoRestAdapter(NaiveAdapter):
         'integer': serializers.IntegerField,
         'biginteger': serializers.IntegerField,
         'float': serializers.FloatField,
+        'decimal': serializers.DecimalField,
         'string': serializers.CharField,
         'text': serializers.CharField,
         'choices': serializers.ChoiceField,
@@ -164,6 +183,7 @@ class DjangoRestAdapter(NaiveAdapter):
         'integer': models.IntegerField,
         'biginteger': models.BigIntegerField,
         'float': models.FloatField,
+        'decimal': models.DecimalField,
         'string': models.CharField,
         'text': models.TextField,
         'choices': models.CharField,

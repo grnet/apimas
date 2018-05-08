@@ -100,6 +100,9 @@ class ApimasPermissions(BasePermission):
         """
         return self.isallowed(request, view, obj)
 
+    def _resolve_data_fields(self, data):
+        return set(doc_to_ns(dict(data)).keys())
+
     def allowed_fields(self, request, view, matches):
         """
         This method determines which fields are allowed given the matches
@@ -112,7 +115,7 @@ class ApimasPermissions(BasePermission):
         allowed_keys = {row.field for row in matches}
         if view.action in ['list', 'retrieve']:
             return allowed_keys
-        fields = set(doc_to_ns(dict(request.data)).keys())
+        fields = self._resolve_data_fields(request.data)
         allowed_keys = set()
         for row in matches:
             if isinstance(row.field, AnyPattern):

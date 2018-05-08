@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Add `after` and `last` decorators to determine the execution order
   of constructors.
 
+## [0.3.3] - 2018-02-15
+### Fixed
+- Proper format for datetime field
+
+### Added
+- Support for decimal field
+
+## [0.3.2] - 2018-01-25
+### Fixed
+- Specify compatible versions of dependencies.
+
 ## [0.3.1] - 2017-08-03
 ### Fixed
 - Regular expressions for validating email addresses.
@@ -42,5 +53,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Client side data validation between two consecutive calls.
 
 [Unreleased]: https://github.com/grnet/apimas
+[0.3.3]: https://github.com/grnet/apimas/tree/0.3.3
+[0.3.2]: https://github.com/grnet/apimas/tree/0.3.2
 [0.3.1]: https://github.com/grnet/apimas/tree/0.3.1
 [0.3]: https://github.com/grnet/apimas/tree/0.3
