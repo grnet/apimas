@@ -29,7 +29,7 @@ setup(
     version=version,
     license='Affero GPL v3',
     author='GRNET S.A.',
-    author_email='apimas@dev.grnet.gr',
+    author_email='team@dev.grnet.gr',
     description=description,
     packages=find_packages(),
     install_requires=get_requirements()
