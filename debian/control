@@ -11,7 +11,7 @@ Standards-Version: 3.9.6
 
 Package: python-apimas
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}, python-docular (>= 0.1), python-docular (<< 0.2)
 Description: API Modeling and Serving
  apimas provides an intuitive way to build scalable REST APIs and serving your
  application. The goal of apimas is to provide a flexible way for building,
