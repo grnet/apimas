@@ -4,11 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
-### Added
-- A `--version` CLI option to print the current version.
-- Add `after` and `last` decorators to determine the execution order
-  of constructors.
+## [0.4] - Unreleased
+### Changed
+- This version brings major backwards-incompatible changes.
+
+### Removed
+- Support for DRF was dropped in favor of a native django support
 
 ## [0.3.3] - 2018-02-15
 ### Fixed
