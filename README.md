@@ -1,40 +1,45 @@
-API Modelling and Serving
-=========================
+API Modeling and Serving
+========================
 
 apimas provides an intuitive way to build scalable REST APIs and
-serving your application. The goal of apimas is to provide a flexible
+serve an application. The goal of apimas is to provide a flexible
 way for building, modifying and extending your application without
 the cumbersome management due to the complexity and the size of it.
 
-Trying it out
--------------
+Three packages are provided:
 
-## apimas
+* apimas: Basic mechanism and backend-independent tools
 
-Explore apimas package to find out how to model your REST API, and
-build and deploy your application.
+* apimas-django: Support for building Django applications
 
-### Installation
+* docular: Tool to handle recursive object-documents
 
-```
-pip install apimas
-```
 
-## apimas-drf
+Installation
+------------
 
-For apimas support for building django applications,
-you should checkout apimas-drf package. 
-
-### Installation
+Install from pypi using:
 
 ```
-pip install apimas-drf
+pip install docular apimas apimas-django
 ```
+
+Alternatively, to install from the repository, issue:
+
+```
+python setup.py install
+```
+
+in all package subdirectories.
+
 
 Documentation
 -------------
 Please see the [APIMAS documentation](http://apimas.readthedocs.io/en/latest/index.html)
 for information on using APIMAS.
+
+Note: Documentation is not up-to-date. For a concrete working example of a
+django application using apimas, see under apimas-django/examples/.
 
 
 Copyright and license
