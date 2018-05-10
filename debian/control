@@ -9,9 +9,15 @@ Standards-Version: 3.9.6
 #Vcs-Git: git://anonscm.debian.org/collab-maint/apimas.git
 #Vcs-Browser: http://anonscm.debian.org/?p=collab-maint/apimas.git;a=summary
 
+Package: python-docular
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}
+Description: Recursive object-documents
+ Recursive object-documents
+
 Package: python-apimas
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}, python-docular (>= 0.1), python-docular (<< 0.2)
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}, python-docular (= ${binary:Version})
 Description: API Modeling and Serving
  apimas provides an intuitive way to build scalable REST APIs and serving your
  application. The goal of apimas is to provide a flexible way for building,
