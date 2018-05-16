@@ -400,6 +400,25 @@ NEGOTIATIONS = {
     },
 }
 
+ACCOUNTS = {
+    '.field.collection.django': {},
+    'model': 'anapp.models.Account',
+    ':decimal_places': 4,
+    'actions': {
+        '.action-template.django.retrieve': {},
+        '.action-template.django.create': {},
+    },
+    'fields': {
+        'id': {
+            '.field.serial': {}},
+        'balance': {
+            '.field.decimal': {},
+            ':decimal_places': 2},
+        'change': {
+            '.field.decimal': {}},
+    },
+}
+
 APP_CONFIG = {
     ".apimas_app": {},
     ":permission_rules": "anapp.rules.get_rules",
@@ -416,6 +435,7 @@ APP_CONFIG = {
                 "groups": GROUPS,
                 "features": FEATURES,
                 "negotiations": NEGOTIATIONS,
+                "accounts": ACCOUNTS,
             },
         },
     },

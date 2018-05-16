@@ -1,4 +1,5 @@
 import numbers
+import decimal
 import uuid
 import re
 from collections import Iterable, Mapping
@@ -188,6 +189,24 @@ class Integer(Number):
 
 class Float(Number):
     NUMBER_TYPE = float
+
+
+class Decimal(DataConverter):
+    def __init__(self, decimal_places=None, **kwargs):
+        if decimal_places is None:
+            raise InvalidInput("'decimal_places' must be set.")
+
+        self.decimal_places = decimal_places
+        self.quantizer = decimal.Decimal(10) ** (-decimal_places)
+        super(Decimal, self).__init__(**kwargs)
+
+    def get_repr_value(self, value, permissions, single):
+        if not isinstance(value, decimal.Decimal):
+            raise InvalidInput("Value must be of type Decimal.")
+        return str(value.quantize(self.quantizer))
+
+    def get_native_value(self, value, permissions, single):
+        return decimal.Decimal(value).quantize(self.quantizer)
 
 
 class Boolean(DataConverter):

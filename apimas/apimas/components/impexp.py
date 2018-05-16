@@ -103,6 +103,8 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
         cnvs.Ref, dependencies=['root_url'], extra_args=['to']),
     '.field.integer': converter_obj(cnvs.Integer),
     '.field.float': converter_obj(cnvs.Float),
+    '.field.decimal': converter_obj(
+        cnvs.Decimal, dependencies=['decimal_places']),
     '.field.uuid': converter_obj(cnvs.UUID),
     '.field.text': converter_obj(cnvs.String),
     '.field.email': converter_obj(cnvs.Email),

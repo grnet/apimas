@@ -39,6 +39,9 @@ spec_list = [
     {'.field.integer': {}},
     {'.field.float': {}},
 
+    {'.field.decimal': {},
+     ':decimal_places': {'.integer': {}}},
+
     {'.field.ref': {},
      ':root_url': {'.string': {}},
      'to': {'.string': {}}},

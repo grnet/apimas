@@ -118,6 +118,7 @@ FILTERING_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.field.ref': filter_obj(Filter),
     '.field.integer': filter_obj(IntegerFilter),
     '.field.float': filter_obj(FloatFilter),
+    '.field.decimal': filter_obj(Filter),
     '.field.uuid': filter_obj(Filter),
     '.field.text': filter_obj(StringFilter),
     '.field.email': filter_obj(StringFilter),

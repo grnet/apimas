@@ -935,6 +935,17 @@ def test_choices(client):
     assert inst1.category == 'Research'
 
 
+def test_decimal(client):
+    api = client.copy(prefix='/api/prefix/')
+
+    data = {'balance': '3.1415926', 'change': '2.718281828'}
+    resp = api.post('accounts', data)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body['balance'] == '3.14'
+    assert body['change'] == '2.7183'
+
+
 def test_files(client):
     api = client.copy(prefix='/api/prefix/')
     models.Institution.objects.create(name='aaa', active=True)

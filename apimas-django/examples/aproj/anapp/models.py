@@ -137,3 +137,8 @@ class Negotiation(models.Model):
 class Contribution(models.Model):
     negotiation = models.ForeignKey(Negotiation, related_name='contributions')
     text = models.TextField()
+
+
+class Account(models.Model):
+    balance = models.DecimalField(max_digits=19, decimal_places=10)
+    change = models.DecimalField(max_digits=19, decimal_places=10)
