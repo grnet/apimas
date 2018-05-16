@@ -124,6 +124,7 @@ FILTERING_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.field.boolean': filter_obj(Filter),
     '.field.datetime': filter_obj(DateTimeFilter),
     '.field.date': filter_obj(DateFilter),
+    '.field.choices': filter_obj(Filter),
 
     '.flag.filterable': flag_constructor('filterable'),
 }, default=no_constructor)

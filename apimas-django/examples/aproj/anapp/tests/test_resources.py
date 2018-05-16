@@ -374,6 +374,13 @@ def test_filter(client):
         name='gr2', founded=datetime.now(), active=False,
         email='group2@example.com', institution=inst)
 
+    resp = api.get('institutions', {'flt__category': 'Research Center'})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    resp = api.get('institutions', {'flt__category': 'Research'})
+    assert resp.status_code == 400
+
     data = {'onoma': 'Georgios', 'age': 22,
             'variants': {'en': 'George', 'el': 'Giorgos'}}
     resp = api.post('groups/%s/members' % gr.id, data)

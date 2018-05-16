@@ -255,6 +255,7 @@ INSTITUTIONS = {
                    "default": True,
                    ".flag.orderable": {}},
         "category": {".field.choices": {},
+                     ".flag.filterable": {},
                      "allowed": {
                          '=': ["Institution", "Research"]},
                      "displayed": {
