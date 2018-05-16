@@ -17,13 +17,13 @@ from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
 
-from apimas_django import adapter
+from apimas_django import provider
 from aproj.spec import APP_CONFIG, DEPLOY_CONFIG
 
-app_spec = adapter.configure_apimas_app(APP_CONFIG)
-deployment_spec = adapter.configure_spec(app_spec, DEPLOY_CONFIG)
+app_spec = provider.configure_apimas_app(APP_CONFIG)
+deployment_spec = provider.configure_spec(app_spec, DEPLOY_CONFIG)
 
-api_urls = adapter.construct_views(deployment_spec)
+api_urls = provider.construct_views(deployment_spec)
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
