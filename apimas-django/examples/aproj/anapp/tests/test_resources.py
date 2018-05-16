@@ -514,7 +514,7 @@ def test_subelements(client):
     }
     resp = api.post('groups', data)
     assert resp.status_code == 400
-    assert 'readonly' in resp.json()['details']
+    assert 'not writable' in resp.json()['details']
 
     data.pop('institution')
     resp = api.post('groups', data)
@@ -559,7 +559,7 @@ def test_subelements(client):
     assert name_variants_id == new_name_variants_id
 
 
-def test_readonly_subcollection(client):
+def test_nowrite_subcollection(client):
     api = client.copy(prefix='/api/prefix')
 
     data = {
@@ -568,7 +568,7 @@ def test_readonly_subcollection(client):
     }
     r = api.post('negotiations', data)
     assert r.status_code == 400
-    assert "'contributions': Field is readonly" in r.content
+    assert "'contributions': Field is not writable" in r.content
 
     data.pop('contributions')
     r = api.post('negotiations', data)

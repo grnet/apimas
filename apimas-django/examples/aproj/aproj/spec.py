@@ -31,11 +31,11 @@ ENHANCEDUSERS = {
             '.field.serial': {}},
         'is_verified': {
             '.field.boolean': {},
-            '.flag.readonly': {}},
+            '.flag.nowrite': {}},
         'verified_at': {
             '.field.datetime': {},
             '.flag.nullable': {},
-            '.flag.readonly': {}},
+            '.flag.nowrite': {}},
         'feature': {
             '.field.string': {}},
         'user': {
@@ -117,7 +117,7 @@ ENHANCEDADMINS = {
             '.field.serial': {}},
         'is_verified': {
             '.field.boolean': {},
-            '.flag.readonly': {}},
+            '.flag.nowrite': {}},
         'feature': {
             '.field.string': {}},
         'user': {
@@ -154,7 +154,7 @@ UUIDRESOURCES = {
     'fields': {
         'uuid': {
             '.field.uuid': {},
-            '.flag.readonly': {}},
+            '.flag.nowrite': {}},
         'value': {'.field.string': {}},
         'institutions': {
             '.field.collection.django': {},
@@ -202,7 +202,7 @@ POSTS = {
     "fields": {
         "id": {".field.serial": {}},
         "url": {".field.identity": {},
-                '.flag.readonly': {},
+                '.flag.nowrite': {},
                 "to": "api/prefix/groups",
                 "source": "id"},
         "title": {".field.string": {}},
@@ -263,7 +263,7 @@ INSTITUTIONS = {
                      "default": "Research"},
         "category_raw": {
             ".field.choices": {},
-            ".flag.readonly": {},
+            ".flag.nowrite": {},
             "source": "category",
             "allowed": {
                 '=': ["Institution", "Research"]},
@@ -285,9 +285,9 @@ GROUPS = {
     },
     "fields": {
         "id": {".field.uuid": {},
-               '.flag.readonly': {}},
+               '.flag.nowrite': {}},
         "url": {".field.identity": {},
-                '.flag.readonly': {},
+                '.flag.nowrite': {},
                 "to": "api/prefix/groups",
                 "source": "id"},
         "name": {".field.string": {}},
@@ -302,7 +302,7 @@ GROUPS = {
                            "to": "api/prefix/institutions"},
         'institution': {
             '.field.struct': {},
-            '.flag.readonly': {},
+            '.flag.nowrite': {},
             'fields': INSTITUTIONS['fields']},
         "members": {
             '.field.collection.django': {},
@@ -360,11 +360,11 @@ FEATURES = {
                      'to': 'api/prefix/groups'},
         'group_name': {
             '.field.string': {},
-            '.flag.readonly': {},
+            '.flag.nowrite': {},
             'source': 'group.name'},
         'institution_name': {
             '.field.string': {},
-            '.flag.readonly': {},
+            '.flag.nowrite': {},
             'source': 'group.institution.name'},
     }
 }
@@ -383,7 +383,7 @@ NEGOTIATIONS = {
             '.field.string': {}},
         'contributions': {
             '.field.collection.django': {},
-            '.flag.readonly': {},
+            '.flag.nowrite': {},
             'model': 'anapp.models.Contribution',
             'bound': 'negotiation',
             'fields': {

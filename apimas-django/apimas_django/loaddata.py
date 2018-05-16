@@ -7,9 +7,9 @@ def check_flags(name, spec, value, full, instance, toplevel=False):
     flags = spec.get('flags', [])
     default = spec.get('default', Nothing)
 
-    if 'readonly' in flags and not toplevel:
+    if 'nowrite' in flags and not toplevel:
         if value is not Nothing:
-            raise ValidationError("'%s': Field is readonly" % name)
+            raise ValidationError("'%s': Field is not writable" % name)
         return Nothing
 
     if full and value is Nothing:

@@ -139,7 +139,7 @@ DJANGEBASEHANDLER_CONSTRUCTORS = docular.doc_spec_init_constructor_registry(
         '.field.*': field_constructor,
         '.field.struct': struct_constructor,
         '.field.collection.django': collection_constructor,
-        '.flag.readonly': construct_flag('readonly'),
+        '.flag.nowrite': construct_flag('nowrite'),
         '.flag.writeonly': construct_flag('writeonly'),
         '.flag.nullable': construct_flag('nullable'),
     },

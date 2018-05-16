@@ -11,7 +11,7 @@ spec_list = [
      ':*': {}},
 
     {'.flag.*': {}},
-    {'.flag.readonly': {}},
+    {'.flag.nowrite': {}},
     {'.flag.writeonly': {}},
     {'.flag.nullable.*': {}},
 
@@ -35,7 +35,7 @@ spec_list = [
      'default': {'.string': {}}},
 
     {'.field.serial': {},
-     '.flag.readonly': {}},
+     '.flag.nowrite': {}},
     {'.field.integer': {}},
     {'.field.float': {}},
 
