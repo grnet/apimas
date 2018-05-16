@@ -51,7 +51,7 @@ ENHANCEDUSERS = {
                     '.field.string': {}},
                 'password': {
                     '.field.string': {},
-                    '.flag.writeonly': {}},
+                    '.flag.noread': {}},
                 'first_name': {
                     '.field.string': {}},
                 'last_name': {
@@ -135,7 +135,7 @@ ENHANCEDADMINS = {
                     '.field.string': {}},
                 'password': {
                     '.field.string': {},
-                    '.flag.writeonly': {}},
+                    '.flag.noread': {}},
             },
         },
     },

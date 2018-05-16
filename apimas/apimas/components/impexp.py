@@ -116,7 +116,7 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
         cnvs.Choices, extra_args=['allowed', 'displayed']),
 
     '.flag.*': no_constructor,
-    '.flag.writeonly': cerberus_flag('writeonly'),
+    '.flag.noread': cerberus_flag('noread'),
     '.flag.nullable': cerberus_flag('nullable'),
     '.string': construct_string,
 }, default=no_constructor)

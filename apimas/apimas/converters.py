@@ -25,11 +25,11 @@ class DataConverter(object):
     vice versa.
 
     Attributes:
-        writeonly (bool): `True` if value must not be exported.
+        noread (bool): `True` if value must not be exported.
         nullable (bool): `True` if value can be None.
     """
-    def __init__(self, writeonly=False, nullable=False):
-        self.writeonly = writeonly
+    def __init__(self, noread=False, nullable=False):
+        self.noread = noread
         self.nullable = nullable
 
     def get_native_value(self, value, permissions, single):
@@ -50,7 +50,7 @@ class DataConverter(object):
         if not permissions:
             return Nothing
 
-        if self.writeonly:
+        if self.noread:
             return Nothing
 
         if value is None:
