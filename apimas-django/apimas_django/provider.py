@@ -211,9 +211,8 @@ def action_constructor(instance, loc, context):
 
 
 def endpoint_constructor(instance):
-    views = {name:
-             mk_django_urls(docular.doc_spec_get(collection_spec))
-             for name, collection_spec in docular.doc_spec_iter(
+    views = {name: mk_django_urls(collection_actions)
+             for name, collection_actions in docular.doc_spec_iter_values(
                      instance['collections'])}
     docular.doc_spec_set(instance, views)
 
@@ -231,9 +230,8 @@ def mk_django_urls(action_urls):
 
 def apimas_app_constructor(instance):
     urlpatterns = []
-    for endpoint, endpoint_patterns in docular.doc_spec_iter(
+    for endpoint, endpoint_patterns in docular.doc_spec_iter_values(
             instance['endpoints']):
-        endpoint_patterns = docular.doc_spec_get(endpoint_patterns)
         for collection, collection_patterns in endpoint_patterns.iteritems():
             urlpatterns.extend(collection_patterns)
     logger.info("Built URL patterns:")
