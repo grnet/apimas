@@ -121,17 +121,6 @@ IMPORTEXPORT_CONSTRUCTORS = docular.doc_spec_init_constructor_registry({
     '.string': construct_string,
 }, default=no_constructor)
 
-    # _CONSTRUCTORS = {
-    #     'ref':        Object(cnvs.Ref, kwargs_spec=True, kwargs_instance=True,
-    #                          last=True, post_hook=_post_hook),
-    #     'file':       Object(cnvs.File, kwargs_spec=True, kwargs_instance=True,
-    #                          last=True, post_hook=_post_hook),
-    #     'readonly':   Flag('readonly'),
-    #     'writeonly':  Flag('writeonly'),
-    #     'nullable':   Flag('nullable'),
-    #     'default':    Dummy(),
-    # }
-
 
 class ImportExportData(BaseProcessor):
     """
