@@ -129,10 +129,15 @@ def construct_processors(processors, spec):
     return artifacts
 
 
-def make_processor(processor_data, action_loc, artifacts):
+def processor_constructor(instance, loc, config, top_spec):
+    if loc[-1] == '*':
+        return
+
+    action_loc = loc[:-2]
     action_name = action_loc[-1]
-    processor = processor_data['module_path']
-    config = processor_data['config']
+    processor = docular.doc_spec_get(instance, 'module_path')
+
+    artifacts = docular.doc_spec_get(top_spec, ':artifacts')
     proc_spec, cls = artifacts[processor]
 
     collection_loc = action_loc[:-2]
@@ -142,11 +147,16 @@ def make_processor(processor_data, action_loc, artifacts):
     action_subspec = docular.doc_get(proc_spec, action_loc)
     action_values = docular.doc_spec_get(action_subspec) or {}
 
+    config_values = {}
+    for conf_key, conf_value in docular.doc_spec_iter_values(config):
+        config_values[conf_key[1:]] = conf_value
+
     arguments = dict(collection_values)
     arguments.update(action_values)
-    arguments.update(config)
-    return cls(collection_loc=collection_loc, action_name=action_name,
-               **arguments)
+    arguments.update(config_values)
+    value = cls(collection_loc=collection_loc, action_name=action_name,
+                **arguments)
+    docular.doc_spec_set(instance, value)
 
 
 def mk_url_prefix(loc):
@@ -193,29 +203,11 @@ def action_constructor(instance, loc, context):
     urlpattern = _construct_url(collection_path, action_url)
     method = method.upper()
 
-    top_spec = context['top_spec']
-    artifacts = docular.doc_spec_get(top_spec, ':artifacts')
-
-    initialized_processors = []
-    for key, proc in processors_sorted:
-        initialized = make_processor(proc, loc, artifacts)
-        initialized_processors.append((key, initialized))
-
     apimas_action = ApimasAction(
         collection_path, action_url, action_name, status_code, content_type,
         transaction_begin_before, transaction_end_after,
-        initialized_processors)
+        processors_sorted)
     docular.doc_spec_set(instance, (urlpattern, method, apimas_action))
-
-
-def processor_constructor(instance, config):
-    value = {}
-    value['module_path'] = docular.doc_spec_get(instance['module_path'])
-    config_values = {}
-    for conf_key, conf_value in docular.doc_spec_iter_values(config):
-        config_values[conf_key[1:]] = conf_value
-    value['config'] = config_values
-    docular.doc_spec_set(instance, value)
 
 
 def endpoint_constructor(instance):
