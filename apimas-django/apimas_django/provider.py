@@ -51,9 +51,8 @@ def mk_collection_views(collection_spec, context):
 
     views = get_subcollection_views(collection_spec)
 
-    for key, action_spec in docular.doc_spec_iter(actions):
-        urlpattern, method, view = mk_action_view(
-            key, action_spec, collection_spec, context)
+    for key, view_spec in docular.doc_spec_iter_values(actions):
+        urlpattern, method, view = view_spec
         docular.doc_set(views, (urlpattern, method), view)
     return views
 
@@ -130,15 +129,16 @@ def construct_processors(processors, spec):
     return artifacts
 
 
-def make_processor(processor_data, collection_loc, action_name, artifacts):
+def make_processor(processor_data, action_loc, artifacts):
+    action_name = action_loc[-1]
     processor = processor_data['module_path']
     config = processor_data['config']
     proc_spec, cls = artifacts[processor]
 
+    collection_loc = action_loc[:-2]
     collection_subspec = docular.doc_get(proc_spec, collection_loc)
     collection_values = docular.doc_spec_get(collection_subspec) or {}
 
-    action_loc = collection_loc + ('actions', action_name)
     action_subspec = docular.doc_get(proc_spec, action_loc)
     action_values = docular.doc_spec_get(action_subspec) or {}
 
@@ -165,9 +165,15 @@ def mk_url_prefix(loc):
     return '/'.join(reversed(segments))
 
 
-def mk_action_view(
-        action_name, action_spec, collection_spec, context):
-    params, processors_sorted = read_action_spec(action_spec)
+def action_constructor(instance, loc, context):
+    action_name = loc[-1]
+    assert loc[-2] == 'actions'
+    collection_loc = loc[:-2]
+
+    if action_name == '*':
+        return
+
+    params, processors_sorted = read_action_spec(instance)
     method = params['method']
     status_code = params['status_code']
     content_type = params['content_type']
@@ -175,7 +181,6 @@ def mk_action_view(
     transaction_begin_before = params['transaction_begin_before']
     transaction_end_after = params['transaction_end_after']
 
-    loc = context['loc']
     if method is None:
         msg = 'URL not found for action {!r}'.format(action_name)
         raise InvalidSpec(msg, loc=loc)
@@ -184,7 +189,7 @@ def mk_action_view(
         raise InvalidSpec(msg, loc=loc)
 
     logger.info("Constructing action: %s", action_name)
-    collection_path = mk_url_prefix(loc)
+    collection_path = mk_url_prefix(collection_loc)
     urlpattern = _construct_url(collection_path, action_url)
     method = method.upper()
 
@@ -193,14 +198,14 @@ def mk_action_view(
 
     initialized_processors = []
     for key, proc in processors_sorted:
-        initialized = make_processor(proc, loc, action_name, artifacts)
+        initialized = make_processor(proc, loc, artifacts)
         initialized_processors.append((key, initialized))
 
     apimas_action = ApimasAction(
         collection_path, action_url, action_name, status_code, content_type,
         transaction_begin_before, transaction_end_after,
         initialized_processors)
-    return urlpattern, method, apimas_action
+    docular.doc_spec_set(instance, (urlpattern, method, apimas_action))
 
 
 def processor_constructor(instance, config):
@@ -272,6 +277,7 @@ _CONSTRUCTORS = {
     '.field.collection.django': collection_django_constructor,
     '.endpoint': endpoint_constructor,
     '.processor': processor_constructor,
+    '.action': action_constructor,
     '.string': construct_string,
 }
 
