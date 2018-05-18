@@ -1,8 +1,7 @@
 import docular
 from django.db.models.query import QuerySet
 from apimas.components import BaseProcessor, ProcessorConstruction
-from apimas.errors import ValidationError, InvalidInput, GenericFault, \
-    AccessDeniedError
+from apimas.errors import ValidationError, InvalidInput, AccessDeniedError
 
 
 class Filter(object):

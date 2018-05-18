@@ -1,6 +1,7 @@
 
 class GenericException(Exception):
     """Superclass for all exceptions in this module."""
+    http_code = 500
 
     def __init__(self, message=None, *args, **kwargs):
         self.message = message
@@ -28,80 +29,35 @@ class GenericException(Exception):
         return repr(self)
 
 
-class GenericInputError(GenericException):
-    """Runtime error while handling application input."""
-    pass
-
-
-class GenericProgrammingError(GenericException):
-    """Runtime error due to incorrect programming."""
-    pass
-
-
-class GenericFault(GenericException):
-    """Runtime error due to data corruption or failed assertion."""
-    pass
-
-
-class NotFound(GenericInputError):
-    """A runtime lookup has failed to locate a name or path."""
-    pass
-
-
-class ValidationError(GenericInputError):
+class ValidationError(GenericException):
     """A runtime user input validation check has failed."""
-    pass
-
-
-class FormatError(GenericInputError):
-    """A runtime encoded input cannot be decoded."""
-    pass
-
-
-class ConflictError(GenericInputError):
-    """A runtime request cannot be fulfilled because of conflicting state."""
-    pass
-
-
-class LimitError(GenericInputError):
-    """A runtime request exceeds resources limits."""
-    pass
-
-
-class InvalidInput(GenericProgrammingError):
-    """Code was called with invalid arguments."""
-    pass
-
-
-class IntegrityError(GenericFault):
-    """A runtime assertion for application data integrity failed."""
-    pass
-
-
-class FaultError(GenericFault):
-    """A runtime I/O operation failed unexpectedle."""
-    pass
-
-
-class ProtocolError(GenericFault):
-    """A runtime communication protocol was violated by a remote peer."""
-    pass
-
-
-class TimeoutError(GenericFault):
-    """A runtime communication has timed out."""
-    pass
-
-
-class AccessDeniedError(GenericException):
-    """ Access to a particular resource is denied. """
-    pass
+    http_code = 400
 
 
 class UnauthorizedError(GenericException):
     """
     A party requests for a particular resource but it cannot be authenticated.
     """
+    http_code = 401
+
+
+class AccessDeniedError(GenericException):
+    """ Access to a particular resource is denied. """
+    http_code = 403
+
+
+class NotFound(GenericException):
+    """A runtime lookup has failed to locate a name or path."""
+    http_code = 404
+
+
+class ConflictError(GenericException):
+    """A runtime request cannot be fulfilled because of conflicting state."""
+    http_code = 409
+
+
+class InvalidInput(GenericException):
+    """Code was called with invalid arguments."""
     pass
 
 

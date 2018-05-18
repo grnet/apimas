@@ -6,8 +6,7 @@ from collections import Iterable, Mapping
 from datetime import date, datetime
 from urlparse import urlparse
 from apimas import utils
-from apimas.errors import ValidationError, InvalidInput, GenericFault, \
-    AccessDeniedError
+from apimas.errors import ValidationError, InvalidInput, AccessDeniedError
 
 
 Nothing = object()
@@ -155,7 +154,7 @@ class Number(DataConverter):
     def _get_value(self, value):
         number_type = getattr(self, 'NUMBER_TYPE', None)
         if number_type is None:
-            raise GenericFault('`NUMBER_TYPE` needs to be set')
+            raise InvalidInput('`NUMBER_TYPE` needs to be set')
         if isnumeric(value):
             return number_type(value)
 

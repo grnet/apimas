@@ -1,16 +1,7 @@
-from apimas.errors import (AccessDeniedError, NotFound, InvalidInput,
-                           ValidationError, UnauthorizedError)
+from apimas.errors import GenericException, InvalidInput
 from docular import doc_get
 from apimas.components import Context
 from django.db import transaction
-
-
-EXC_CODES = {
-    ValidationError: 400,
-    UnauthorizedError: 401,
-    AccessDeniedError: 403,
-    NotFound: 404,
-}
 
 
 def get_indices(processors, begin_before, end_after):
@@ -63,8 +54,8 @@ class ApimasAction(object):
         try:
             return func(context)
         except Exception as exc:
-            exc_type = type(exc)
-            status = EXC_CODES.get(exc_type, 500)
+            status = exc.http_code if isinstance(exc, GenericException) \
+                     else 500
             if status == 500:
                 import traceback
                 print traceback.format_exc()
