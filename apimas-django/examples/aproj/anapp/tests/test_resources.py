@@ -792,6 +792,38 @@ def test_subset(client):
     assert r.status_code == 200
 
 
+def test_conflict(client):
+    api = client.copy(prefix='/api/prefix/')
+    admin = client.copy(prefix='/api/prefix', auth_token='TOKEN1')
+
+    user1 = models.User.objects.create_user(
+        'admin1', role='admin', token='TOKEN1')
+    user2 = models.User.objects.create_user(
+        'user2', role='user', token='TOKEN2')
+
+    eu2 = models.EnhancedUser.objects.create(
+        user=user2, feature='', is_verified=True)
+
+    data = {'user': {'token': 'TOKEN1'}}
+    r = admin.patch('enhancedusers/%s' % eu2.id, data)
+    assert r.status_code == 409
+
+    data = {'alpha': 'alpha', 'beta': 'beta'}
+    r = api.post('pairs', data)
+    assert r.status_code == 201
+
+    r = api.post('pairs', data)
+    assert r.status_code == 409
+
+    data2 = {'alpha': 'alpha2', 'beta': 'beta2'}
+    r = api.post('pairs', data2)
+    assert r.status_code == 201
+    pair_id = r.json()['id']
+
+    r = api.patch('pairs/%s' % pair_id, data)
+    assert r.status_code == 409
+
+
 def test_update(client):
     api = client.copy(prefix='/api/prefix/')
     models.Institution.objects.create(name='aaa', active=True)

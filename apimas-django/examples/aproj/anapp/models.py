@@ -142,3 +142,11 @@ class Contribution(models.Model):
 class Account(models.Model):
     balance = models.DecimalField(max_digits=19, decimal_places=10)
     change = models.DecimalField(max_digits=19, decimal_places=10)
+
+
+class Pair(models.Model):
+    alpha = models.CharField(max_length=100)
+    beta = models.CharField(max_length=100)
+
+    class Meta:
+        unique_together = ('alpha', 'beta')

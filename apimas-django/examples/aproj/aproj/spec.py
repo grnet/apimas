@@ -419,6 +419,24 @@ ACCOUNTS = {
     },
 }
 
+PAIRS = {
+    '.field.collection.django': {},
+    'model': 'anapp.models.Pair',
+    'actions': {
+        '.action-template.django.retrieve': {},
+        '.action-template.django.create': {},
+        '.action-template.django.partial_update': {},
+    },
+    'fields': {
+        'id': {
+            '.field.serial': {}},
+        'alpha': {
+            '.field.string': {}},
+        'beta': {
+            '.field.string': {}},
+    },
+}
+
 APP_CONFIG = {
     ".apimas_app": {},
     ":permission_rules": "anapp.rules.get_rules",
@@ -436,6 +454,7 @@ APP_CONFIG = {
                 "features": FEATURES,
                 "negotiations": NEGOTIATIONS,
                 "accounts": ACCOUNTS,
+                "pairs": PAIRS,
             },
         },
     },

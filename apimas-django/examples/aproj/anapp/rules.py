@@ -90,6 +90,10 @@ RULES = [
 
     ('api/prefix/accounts', 'create', '*', '*', '*', '*', '*'),
     ('api/prefix/accounts', 'retrieve', '*', '*', '*', '*', '*'),
+
+    ('api/prefix/pairs', 'create', '*', '*', '*', '*', '*'),
+    ('api/prefix/pairs', 'retrieve', '*', '*', '*', '*', '*'),
+    ('api/prefix/pairs', 'partial_update', '*', '*', '*', '*', '*'),
 ]
 
 def get_rules():

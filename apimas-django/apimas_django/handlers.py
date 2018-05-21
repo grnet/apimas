@@ -1,10 +1,10 @@
 import logging
 from django.db.models import ProtectedError
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from apimas import utils
 from apimas_django import utils as django_utils
 from apimas.components import BaseProcessor, ProcessorConstruction
-from apimas.errors import AccessDeniedError, InvalidInput
+from apimas.errors import AccessDeniedError, InvalidInput, ConflictError
 import docular
 
 logger = logging.getLogger('apimas')
@@ -284,7 +284,12 @@ def do_create(key, spec, data, precreated=None):
     create_args.update(get_fields(spec['subfields'], data))
 
     logger.debug('Creating values: %s', create_args)
-    return model_create_fn(model)(**create_args)
+    try:
+        return model_create_fn(model)(**create_args)
+    except IntegrityError as exc:
+        msg = 'UNIQUE constraint failed'
+        if msg in exc.message:
+            raise ConflictError(msg)
 
 
 def defer_create_subcollections(spec, data):
@@ -378,7 +383,12 @@ def do_update(spec, data, instance, precreated=None):
 
     logger.debug('Updating values: %s', update_args)
     model = spec['model']
-    model_update_fn(model)(instance, update_args)
+    try:
+        model_update_fn(model)(instance, update_args)
+    except IntegrityError as exc:
+        msg = 'UNIQUE constraint failed'
+        if msg in exc.message:
+            raise ConflictError(msg)
     return instance
 
 
