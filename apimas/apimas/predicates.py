@@ -150,6 +150,7 @@ spec_list = [
         '.processor.import_params': {},
         'module_path': 'apimas.components.impexp.ImportParams',
         ':filter_compat': {'.boolean': {}},
+        ':ordering_compat': {'.boolean': {}},
     },
 
     {

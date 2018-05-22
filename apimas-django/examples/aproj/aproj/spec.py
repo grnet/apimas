@@ -307,6 +307,7 @@ GROUPS = {
         "members": {
             '.field.collection.django': {},
             ':filter_compat': True,
+            ':ordering_compat': True,
             'model': 'anapp.models.Member',
             'source': 'members',
             'bound': 'group',

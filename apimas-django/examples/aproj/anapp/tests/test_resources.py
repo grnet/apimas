@@ -428,6 +428,12 @@ def test_filter(client):
     assert resp.status_code == 200
     assert len(resp.json()) == 1
 
+    # Ordering
+    resp = api.get('groups', {'ordering': 'members.variants.en'})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 4  # Results are not distinct
+
     # Using filter_compat = True
     members_path = 'groups/%s/members' % gr.id
 
@@ -453,6 +459,13 @@ def test_filter(client):
     resp = api.get(members_path)
     assert resp.status_code == 200
     assert len(resp.json()) == 3
+
+    # Using ordering_compat = True
+    resp = api.get(members_path, {'ordering': 'variants__en'})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 3
+    assert body[0]['variants']['en'] == 'Constantine'
 
 
 def test_search(client):

@@ -152,12 +152,13 @@ class ImportParamsProcessor(ImportExportData):
         'imported_pagination': 'imported/pagination',
     }
 
-    def __init__(self, collection_loc, action_name, filter_compat=False,
-                 **kwargs):
-        self.filter_compat = filter_compat
+    def __init__(self, collection_loc, action_name, filter_compat,
+                 ordering_compat, **kwargs):
+        self.filter_compat = bool(filter_compat)
+        self.ordering_compat = bool(ordering_compat)
         ImportExportData.__init__(self, collection_loc, action_name, **kwargs)
 
-    def process_filters(self, filters, can_read_fields, compat=False):
+    def process_filters(self, filters, can_read_fields, compat):
         filter_data = {}
         operators = {}
         for param, value in filters.iteritems():
@@ -180,7 +181,7 @@ class ImportParamsProcessor(ImportExportData):
             filter_data, can_read_fields, single=True)
         return docular.doc_merge(operators, imported_filters)
 
-    def process_ordering(self, ordering_param, can_read_fields):
+    def process_ordering(self, ordering_param, can_read_fields, compat):
         results = []
         orderings = ordering_param.split(',')
         for ordering in orderings:
@@ -190,7 +191,8 @@ class ImportParamsProcessor(ImportExportData):
             else:
                 reverse = False
 
-            path = ordering.split('.')
+            separator = '__' if compat else '.'
+            path = ordering.split(separator)
             if not docular.doc_get(can_read_fields, path):
                 raise AccessDeniedError(
                     "You do not have permission to order by this field")
@@ -244,7 +246,7 @@ class ImportParamsProcessor(ImportExportData):
                 filters, read_fields, self.filter_compat)
         if ordering:
             result['imported_ordering'] = self.process_ordering(
-                ordering, read_fields)
+                ordering, read_fields, self.ordering_compat)
         if search:
             result['imported_search'] = self.process_search(search)
         if pagination_offset is not None or pagination_limit is not None:
