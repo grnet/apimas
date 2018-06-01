@@ -13,6 +13,7 @@ spec_list = [
     {'.flag.*': {}},
     {'.flag.nowrite': {}},
     {'.flag.noread': {}},
+    {'.flag.noupdate': {}},
     {'.flag.nullable.*': {}},
 
     {'.flag.nullable.default': {},

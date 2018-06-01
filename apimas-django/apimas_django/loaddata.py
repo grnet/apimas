@@ -21,11 +21,11 @@ def check_flags(name, spec, value, full, instance, toplevel=False):
     if value is None and 'nullable' not in flags:
         raise ValidationError("'%s': Field is not nullable" % name)
 
-    if value is not Nothing and 'writeonce' in flags and instance is not None:
+    if value is not Nothing and 'noupdate' in flags and instance is not None:
         source = spec['source']
         stored_value = getattr(instance, source)
         if value != stored_value:
-            raise ValidationError("'%s': Field is writeonce" % name)
+            raise ValidationError("'%s': Field is not updatable" % name)
 
     return value
 
