@@ -49,7 +49,7 @@ def load_data_subcollections(spec, data, full, instance):
         subdata = data.get(subname, Nothing)
         if subdata is Nothing:
             continue
-        loaded[subsource] = [load_data(subname, subspec, elem, full, instance)
+        loaded[subsource] = [load_data(subname, subspec, elem, full, None)
                              for elem in subdata]
     return loaded
 
