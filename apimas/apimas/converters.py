@@ -131,8 +131,7 @@ class Serial(DataConverter):
         return int(value)
 
     def get_native_value(self, value, permissions, single):
-        raise NotImplementedError('deserialize() is not meaningful for'
-                                  ' \'serial\' field')
+        return self.get_repr_value(value, permissions, single)
 
 
 class Number(DataConverter):
