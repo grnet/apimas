@@ -23,6 +23,9 @@ def get_requirements():
 package_name = 'apimas'
 description = 'API Modeling and Serving'
 version = get_version()
+requirements = get_requirements()
+requirements.append('docular==%s' % version)
+
 
 setup(
     name=package_name,
@@ -32,5 +35,5 @@ setup(
     author_email='team@dev.grnet.gr',
     description=description,
     packages=find_packages(),
-    install_requires=get_requirements()
+    install_requires=requirements
 )

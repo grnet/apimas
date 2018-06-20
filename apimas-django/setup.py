@@ -23,6 +23,8 @@ def get_requirements():
 package_name = 'apimas-django'
 description = 'APIMAS support for django applications'
 version = get_version()
+requirements = get_requirements()
+requirements.append('apimas==%s' % version)
 
 setup(
     name=package_name,
@@ -32,5 +34,5 @@ setup(
     author_email='team@dev.grnet.gr',
     description=description,
     packages=find_packages(exclude=['examples', 'tests']),
-    install_requires=get_requirements()
+    install_requires=requirements
 )
