@@ -314,7 +314,7 @@ class ExportDataProcessor(ImportExportData):
         can_read = context_data['can_read']
         can_read_fields = context_data['read_fields']
         exported_data = self.converter.export_data(
-            export_data, can_read_fields)
+            export_data, can_read_fields, toplevel=True)
         if exported_data is cnvs.Nothing:
             return None
         return exported_data

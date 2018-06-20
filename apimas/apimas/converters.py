@@ -42,14 +42,14 @@ class DataConverter(object):
         """
         raise NotImplementedError('get_repr_value() must be implemented')
 
-    def export_data(self, value, permissions, single=False):
+    def export_data(self, value, permissions, single=False, toplevel=False):
         """
         Converts given value into a representative format.
         """
         if not permissions:
             return Nothing
 
-        if self.noread:
+        if not toplevel and self.noread:
             return Nothing
 
         if value is None:
