@@ -1,4 +1,4 @@
 Django>=1.8,<2.0
 djangorestframework>=3.3.3,<3.5
 django-filter>=0.12,<0.16
-apimas==0.3.4
+apimas==0.3.5

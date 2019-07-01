@@ -1,1 +1,1 @@
-apimas-drf 0.3.4
+apimas-drf 0.3.5
