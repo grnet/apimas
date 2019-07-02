@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.5] - 2019-07-02
+### Changed
+- Further relax restrictions on supported Django versions
+
 ## [0.3.4] - 2018-10-22
 ### Changed
 - Relax restrictions on supported Django versions
@@ -55,3 +59,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 [0.3.2]: https://github.com/grnet/apimas/tree/0.3.2
 [0.3.3]: https://github.com/grnet/apimas/tree/0.3.3
 [0.3.4]: https://github.com/grnet/apimas/tree/0.3.4
+[0.3.5]: https://github.com/grnet/apimas/tree/0.3.5
